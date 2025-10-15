@@ -257,6 +257,16 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let masked_five_torsion_basis_img =
         BasisX::from_points(&masked_X_img_x, &masked_Y_img_x, &masked_XY_img.to_pointx());
 
+    println!("j-invariant for sender's codomain curve:");
+    println!("{}", codomain_curve.j_invariant());
+    println!("{}\n", codomain_curve_verif.j_invariant());
+    assert_eq!(
+        codomain_curve
+            .j_invariant()
+            .equals(&codomain_curve_verif.j_invariant()),
+        0xffffffff
+    );
+
     // Apply sender's secret parallel isogeny to receiver's masked 2^a-torsion basis image points to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB)
     // FIXME: there must be a more straightforward way to operate on individual points in an x-only basis than to
     // lift it to a standard basis -> obtain new P - Q point -> create new x-only basis from x-coordinates
@@ -307,6 +317,16 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let masked_XY_AB = shared_codomain_curve_verif.sub(&masked_X_AB, &masked_Y_AB);
     let shared_secret =
         BasisX::from_points(&masked_X_AB_x, &masked_Y_AB_x, &masked_XY_AB.to_pointx());
+
+    println!("j-invariant for the shared end curve:");
+    println!("{}", shared_codomain_curve.j_invariant());
+    println!("{}\n", shared_codomain_curve_verif.j_invariant());
+    assert_eq!(
+        shared_codomain_curve
+            .j_invariant()
+            .equals(&shared_codomain_curve_verif.j_invariant()),
+        0xffffffff
+    );
 
     let mut kdf = Shake256::default();
     kdf.update(shared_secret.P.to_string().as_bytes());

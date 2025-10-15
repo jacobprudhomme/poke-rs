@@ -136,6 +136,18 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     rng.fill_bytes(&mut D[(1, 0)]);
     rng.fill_bytes(&mut D[(1, 1)]);
 
+    // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>) and psi' (<R_A + [r] S_A>)
+    let psi_kernel = pub_params.starting_curve.three_point_ladder(
+        &pub_params.three_torsion_basis,
+        &r,
+        Fp2::ENCODED_LENGTH << 3,
+    );
+    let psi_prime_kernel = pub_key.codomain_curve.three_point_ladder(
+        &pub_key.masked_three_torsion_basis_img,
+        &r,
+        Fp2::ENCODED_LENGTH << 3,
+    );
+
     unimplemented!()
 }
 

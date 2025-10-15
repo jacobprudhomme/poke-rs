@@ -115,6 +115,9 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     pub_key: &PubKey<Fp2>,
     message: &'a mut [u8],
 ) -> Ciphertext<'a, Fp2> {
+    // FIXME: where can I use vartime functions (i.e. operations on BigUint, gcd)? Where must things be constant-time?
+    // TODO: add actual error handling
+
     /* Sample scalars used for masking torsion points images or generating new kernels */
 
     let mut rng = rand::thread_rng();

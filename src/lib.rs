@@ -95,10 +95,10 @@ pub struct PrvKey<'a, Fp2: Fp2Trait> {
 }
 
 pub struct PubKey<Fp2: Fp2Trait> {
-    codomain_curve: Curve<Fp2>,
-    masked_two_torsion_basis_img: BasisX<Fp2>,
-    masked_three_torsion_basis_img: BasisX<Fp2>,
-    masked_five_torsion_basis_img: BasisX<Fp2>,
+    pub codomain_curve: Curve<Fp2>,
+    pub masked_two_torsion_basis_img: BasisX<Fp2>,
+    pub masked_three_torsion_basis_img: BasisX<Fp2>,
+    pub masked_five_torsion_basis_img: BasisX<Fp2>,
 }
 
 pub struct Ciphertext<'a, Fp2: Fp2Trait> {
@@ -107,7 +107,7 @@ pub struct Ciphertext<'a, Fp2: Fp2Trait> {
     masked_five_torsion_basis_img: BasisX<Fp2>,
     shared_codomain_curve: Curve<Fp2>,
     masked_two_torsion_basis_pushfwd_img: BasisX<Fp2>,
-    encrypted_message: &'a [u8],
+    pub encrypted_message: &'a [u8],
 }
 
 pub mod poke_i {

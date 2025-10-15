@@ -1,6 +1,3 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
 
 // POKE level I: p = 2^129 * 3^164 * 5^18 - 1
 const POKE_I_MODULUS: [u64; 7] = [
@@ -66,11 +63,6 @@ fp2::define_fp2_from_modulus!(
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn it_works() {
-        assert!(true);
-    }
-
     mod poke_i {
         use super::super::{POKE_I_MODULUS, PokeFieldI, PokeFieldIBase};
 

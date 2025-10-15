@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::marker::PhantomData;
+use std::{io::Read as _, marker::PhantomData};
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{basis::BasisX, curve::Curve};
@@ -8,6 +8,10 @@ use ndarray::Array2;
 use ndarray_rand::{RandomExt as _, rand::distributions::Uniform};
 use num_bigint::{BigUint, RandBigInt as _};
 use num_integer::gcd;
+use sha3::{
+    Shake256,
+    digest::{ExtendableOutput as _, Update as _},
+};
 
 // POKE level I: p = 2^129 * 3^164 * 5^18 - 1
 const POKE_I_MODULUS: [u64; 7] = [
@@ -171,7 +175,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
         + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
         % &Z_five_torsion_order;
-    let mut det_gcd = gcd(det.clone(), Z_five_torsion_order.clone());
+    let mut det_gcd = gcd(det.clone(), Z_five_torsion_order.clone()); // TODO: look into a borrowing GCD function
     while det_gcd != ONE {
         println!("det(D) = {}, gcd(det(D), 5^c) = {}, retrying", det, det_gcd);
         D = Array2::random_using(
@@ -182,7 +186,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
             + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
             % &Z_five_torsion_order;
-        det_gcd = gcd(det.clone(), Z_five_torsion_order.clone());
+        det_gcd = gcd(det.clone(), Z_five_torsion_order.clone()); // TODO: look into a borrowing GCD function
     }
     println!();
     let D_bitsize = D.map(|elem| {
@@ -304,7 +308,26 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let shared_secret =
         BasisX::from_points(&masked_X_AB_x, &masked_Y_AB_x, &masked_XY_AB.to_pointx());
 
-    unimplemented!()
+    let mut kdf = Shake256::default();
+    kdf.update(shared_secret.P.to_string().as_bytes());
+    kdf.update(shared_secret.Q.to_string().as_bytes());
+    let mut one_time_pad = kdf.finalize_xof();
+    let mut buffer = vec![0u8; message.len()];
+    let Ok(_) = one_time_pad.read(&mut buffer) else {
+        panic!("Could not read bytes from KDF");
+    };
+    for (message_byte, one_time_pad_byte) in message.iter_mut().zip(buffer) {
+        *message_byte ^= one_time_pad_byte;
+    }
+
+    Ciphertext {
+        codomain_curve,
+        masked_two_torsion_basis_img,
+        masked_five_torsion_basis_img,
+        shared_codomain_curve,
+        masked_two_torsion_basis_pushfwd_img,
+        encrypted_message: message,
+    }
 }
 
 #[cfg(test)]

@@ -1,14 +1,12 @@
-#![allow(incomplete_features)]
 #![allow(non_snake_case)]
-#![feature(generic_const_exprs)]
-#![recursion_limit = "256"]
 
 use std::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{basis::BasisX, curve::Curve};
-use ndarray::arr2;
-use rand::RngCore as _;
+use ndarray::Array2;
+use ndarray_rand::{RandomExt as _, rand::distributions::Uniform};
+use num_bigint::{BigUint, RandBigInt as _};
 
 // POKE level I: p = 2^129 * 3^164 * 5^18 - 1
 const POKE_I_MODULUS: [u64; 7] = [
@@ -111,41 +109,87 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     pub_key: &PubKey<Fp2>,
     message: &'a mut [u8],
-) -> Ciphertext<'a, Fp2>
-    where [(); Fp2::ENCODED_LENGTH]: Sized
-{
+) -> Ciphertext<'a, Fp2> {
     /* Sample scalars used for masking torsion points images or generating new kernels */
 
     let mut rng = rand::thread_rng();
+    let ONE = BigUint::from(1u8);
+
+    // The subgroups we will sample from
+    let Z_two_torsion_order = BigUint::from(2u8).pow(
+        pub_params
+            .two_torsion_exp
+            .try_into()
+            .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+        );
+    let Z_three_torsion_order = BigUint::from(3u8).pow(
+        pub_params
+            .three_torsion_exp
+            .try_into()
+            .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+        );
+    let Z_five_torsion_order = BigUint::from(5u8).pow(
+        pub_params
+            .five_torsion_exp
+            .try_into()
+            .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+        );
 
     // Sample scalar used to generate new kernels for sender's parallel isogenies
-    // FIXME: implement proper sampling of this value
-    let mut r = [0u8; Fp2::ENCODED_LENGTH]; // FIXME: find exact bit size for elements in Z_(3^b)
-    rng.fill_bytes(&mut r);
+    let r = rng.gen_biguint_below(&Z_three_torsion_order); // FIXME: what happens if this is 0?
+    let r_bitsize =
+        r.bits().try_into().expect("Size in bits of the scalar r is too big to fit in a usize (we do not ever expect this to happen)");
+    let r = r.to_bytes_le();
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    // FIXME: implement proper sampling of this value (have no way of inverting it without passing back to a bigint)
-    let mut omega = [0u8; Fp2::ENCODED_LENGTH]; // FIXME: find exact bit size for elements in Z_(2^a), and make sure only invertible elements are allowed
-    rng.fill_bytes(&mut omega);
+    let mut omega = rng.gen_biguint_range(&ONE, &Z_two_torsion_order);
+    let mut omega_inv = omega.modinv(&Z_two_torsion_order);
+    while let None = omega_inv {
+        println!("omega = {} is not invertible, retrying", omega);
+        omega = rng.gen_biguint_range(&ONE, &Z_two_torsion_order);
+        omega_inv = omega.modinv(&Z_two_torsion_order);
+    }
+    println!();
+    let Some(omega_inv) = omega_inv else {
+        unreachable!();
+    };
+    let omega = omega.to_bytes_le();
+    let omega_inv = omega_inv.to_bytes_le();
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
     // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
-    let mut D = arr2(&[[[0u8; Fp2::ENCODED_LENGTH]; 2]; 2]); // FIXME: find exact bit size for elements in Z_(5^c), and make sure determinant is 1
-    rng.fill_bytes(&mut D[(0, 0)]);
-    rng.fill_bytes(&mut D[(0, 1)]);
-    rng.fill_bytes(&mut D[(1, 0)]);
-    rng.fill_bytes(&mut D[(1, 1)]);
+    let mut D = Array2::random_using(
+        (2, 2),
+        Uniform::new(BigUint::ZERO, &Z_five_torsion_order),
+        &mut rng,
+    );
+    let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
+        + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
+        % &Z_five_torsion_order;
+    while det != ONE {
+        println!("det(D) = {}, retrying", det);
+        D = Array2::random_using(
+            (2, 2),
+            Uniform::new(BigUint::ZERO, &Z_five_torsion_order),
+            &mut rng,
+        );
+        det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
+            + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
+            % &Z_five_torsion_order;
+    }
+    println!();
+    let D = D.map(|elem| elem.to_bytes_le());
 
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>) and psi' (<R_A + [r] S_A>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
         &r,
-        Fp2::ENCODED_LENGTH << 3,
+        r_bitsize,
     );
     let psi_prime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
         &r,
-        Fp2::ENCODED_LENGTH << 3,
+        r_bitsize,
     );
 
     unimplemented!()

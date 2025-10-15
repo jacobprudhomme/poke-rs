@@ -1,7 +1,14 @@
+#![allow(incomplete_features)]
+#![allow(non_snake_case)]
+#![feature(generic_const_exprs)]
+#![recursion_limit = "256"]
+
 use std::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{basis::BasisX, curve::Curve};
+use ndarray::arr2;
+use rand::RngCore as _;
 
 // POKE level I: p = 2^129 * 3^164 * 5^18 - 1
 const POKE_I_MODULUS: [u64; 7] = [
@@ -98,6 +105,38 @@ pub struct Ciphertext<'a, Fp2: Fp2Trait> {
     pushthrough_codomain_curve: Curve<Fp2>,
     masked_two_torsion_basis_pushthrough_img: BasisX<Fp2>,
     encrypted_message: &'a [u8],
+}
+
+pub fn encrypt<'a, Fp2: Fp2Trait>(
+    pub_params: &PublicParams<Fp2>,
+    pub_key: &PubKey<Fp2>,
+    message: &'a mut [u8],
+) -> Ciphertext<'a, Fp2>
+    where [(); Fp2::ENCODED_LENGTH]: Sized
+{
+    /* Sample scalars used for masking torsion points images or generating new kernels */
+
+    let mut rng = rand::thread_rng();
+
+    // Sample scalar used to generate new kernels for sender's parallel isogenies
+    // FIXME: implement proper sampling of this value
+    let mut r = [0u8; Fp2::ENCODED_LENGTH]; // FIXME: find exact bit size for elements in Z_(3^b)
+    rng.fill_bytes(&mut r);
+
+    // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
+    // FIXME: implement proper sampling of this value (have no way of inverting it without passing back to a bigint)
+    let mut omega = [0u8; Fp2::ENCODED_LENGTH]; // FIXME: find exact bit size for elements in Z_(2^a), and make sure only invertible elements are allowed
+    rng.fill_bytes(&mut omega);
+
+    // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
+    // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
+    let mut D = arr2(&[[[0u8; Fp2::ENCODED_LENGTH]; 2]; 2]); // FIXME: find exact bit size for elements in Z_(5^c), and make sure determinant is 1
+    rng.fill_bytes(&mut D[(0, 0)]);
+    rng.fill_bytes(&mut D[(0, 1)]);
+    rng.fill_bytes(&mut D[(1, 0)]);
+    rng.fill_bytes(&mut D[(1, 1)]);
+
+    unimplemented!()
 }
 
 #[cfg(test)]

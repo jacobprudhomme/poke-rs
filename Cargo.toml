@@ -15,4 +15,9 @@ rand_core = "0.9"
 sha3 = "0.10"
 
 [dev-dependencies]
+criterion = "0.7"
 sha2 = "0.10"
+
+[[bench]]
+name = "poke_i"
+harness = false

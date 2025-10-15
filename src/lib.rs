@@ -7,6 +7,7 @@ use isogeny::elliptic::{basis::BasisX, curve::Curve};
 use ndarray::Array2;
 use ndarray_rand::{RandomExt as _, rand::distributions::Uniform};
 use num_bigint::{BigUint, RandBigInt as _};
+use num_integer::gcd;
 
 // POKE level I: p = 2^129 * 3^164 * 5^18 - 1
 const POKE_I_MODULUS: [u64; 7] = [
@@ -100,8 +101,8 @@ pub struct Ciphertext<'a, Fp2: Fp2Trait> {
     codomain_curve: Curve<Fp2>,
     masked_two_torsion_basis_img: BasisX<Fp2>,
     masked_five_torsion_basis_img: BasisX<Fp2>,
-    pushthrough_codomain_curve: Curve<Fp2>,
-    masked_two_torsion_basis_pushthrough_img: BasisX<Fp2>,
+    shared_codomain_curve: Curve<Fp2>,
+    masked_two_torsion_basis_pushfwd_img: BasisX<Fp2>,
     encrypted_message: &'a [u8],
 }
 
@@ -153,6 +154,10 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let Some(omega_inv) = omega_inv else {
         unreachable!();
     };
+    let omega_bitsize =
+        omega.bits().try_into().expect("Size in bits of the scalar omega is too big to fit in a usize (we do not ever expect this to happen)");
+    let omega_inv_bitsize =
+        omega_inv.bits().try_into().expect("Size in bits of the scalar 1/omega is too big to fit in a usize (we do not ever expect this to happen)");
     let omega = omega.to_bytes_le();
     let omega_inv = omega_inv.to_bytes_le();
 
@@ -166,8 +171,9 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
         + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
         % &Z_five_torsion_order;
-    while det != ONE {
-        println!("det(D) = {}, retrying", det);
+    let mut det_gcd = gcd(det.clone(), Z_five_torsion_order.clone());
+    while det_gcd != ONE {
+        println!("det(D) = {}, gcd(det(D), 5^c) = {}, retrying", det, det_gcd);
         D = Array2::random_using(
             (2, 2),
             Uniform::new(BigUint::ZERO, &Z_five_torsion_order),
@@ -176,9 +182,16 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
             + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
             % &Z_five_torsion_order;
+        det_gcd = gcd(det.clone(), Z_five_torsion_order.clone());
     }
     println!();
+    let D_bitsize = D.map(|elem| {
+        TryInto::<usize>::try_into(elem.bits())
+            .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)")
+    });
     let D = D.map(|elem| elem.to_bytes_le());
+
+    /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>) and psi' (<R_A + [r] S_A>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
@@ -191,6 +204,105 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         &r,
         r_bitsize,
     );
+
+    // Apply sender's secret isogeny to 2^a-torsion basis to obtain their codomain curve E_B and basis image points (P_B, Q_B)
+    // FIXME: there must be a more straightforward way to operate on individual points in an x-only basis than to
+    // lift it to a standard basis -> obtain new P - Q point -> create new x-only basis from x-coordinates
+    let mut two_torsion_basis_img = pub_params.two_torsion_basis.to_array();
+    let (codomain_curve, _) = pub_params.starting_curve.three_isogeny_chain(
+        &psi_kernel,
+        pub_params.three_torsion_exp,
+        &mut two_torsion_basis_img,
+    );
+    let [P_img, Q_img, ..] = &two_torsion_basis_img;
+    let masked_P_img_x = codomain_curve.xmul(P_img, &omega, omega_bitsize);
+    let masked_Q_img_x = codomain_curve.xmul(Q_img, &omega_inv, omega_inv_bitsize);
+    let (masked_P_img, _) = codomain_curve.lift_pointx(&masked_P_img_x);
+    let (masked_Q_img, _) = codomain_curve.lift_pointx(&masked_Q_img_x);
+    let masked_PQ_img = codomain_curve.sub(&masked_P_img, &masked_Q_img);
+    let masked_two_torsion_basis_img =
+        BasisX::from_points(&masked_P_img_x, &masked_Q_img_x, &masked_PQ_img.to_pointx());
+
+    // Apply sender's secret isogeny to 5^c-torsion basis to obtain basis image points (X_B, Y_B)
+    // FIXME: there must be a more straightforward way to operate on individual points in an x-only basis than to
+    // lift it to a standard basis -> obtain new P - Q point -> create new x-only basis from x-coordinates
+    let mut five_torsion_basis_img = pub_params.five_torsion_basis.to_array();
+    let (codomain_curve_verif, _) = pub_params.starting_curve.three_isogeny_chain(
+        &psi_kernel,
+        pub_params.three_torsion_exp,
+        &mut five_torsion_basis_img,
+    );
+    let five_torsion_basis_img = BasisX::from_slice(&five_torsion_basis_img);
+    let masked_X_img_x = codomain_curve_verif.ladder_biscalar(
+        &five_torsion_basis_img,
+        &D[(0, 0)],
+        &D[(0, 1)],
+        D_bitsize[(0, 0)],
+        D_bitsize[(0, 1)],
+    );
+    let (masked_X_img, _) = codomain_curve_verif.lift_pointx(&masked_X_img_x);
+    let masked_Y_img_x = codomain_curve_verif.ladder_biscalar(
+        &five_torsion_basis_img,
+        &D[(1, 0)],
+        &D[(1, 1)],
+        D_bitsize[(1, 0)],
+        D_bitsize[(1, 1)],
+    );
+    let (masked_Y_img, _) = codomain_curve_verif.lift_pointx(&masked_Y_img_x);
+    let masked_XY_img = codomain_curve_verif.sub(&masked_X_img, &masked_Y_img);
+    let masked_five_torsion_basis_img =
+        BasisX::from_points(&masked_X_img_x, &masked_Y_img_x, &masked_XY_img.to_pointx());
+
+    // Apply sender's secret parallel isogeny to receiver's masked 2^a-torsion basis image points to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB)
+    // FIXME: there must be a more straightforward way to operate on individual points in an x-only basis than to
+    // lift it to a standard basis -> obtain new P - Q point -> create new x-only basis from x-coordinates
+    let mut two_torsion_basis_pushfwd_img =
+        pub_key.masked_two_torsion_basis_img.to_array();
+    let (shared_codomain_curve, _) = pub_key.codomain_curve.three_isogeny_chain(
+        &psi_prime_kernel,
+        pub_params.three_torsion_exp,
+        &mut two_torsion_basis_pushfwd_img,
+    );
+    let [P_AB, Q_AB, ..] = &two_torsion_basis_pushfwd_img;
+    let masked_P_AB_x = shared_codomain_curve.xmul(P_AB, &omega, omega_bitsize);
+    let masked_Q_AB_x = shared_codomain_curve.xmul(Q_AB, &omega_inv, omega_inv_bitsize);
+    let (masked_P_AB, _) = shared_codomain_curve.lift_pointx(&masked_P_AB_x);
+    let (masked_Q_AB, _) = shared_codomain_curve.lift_pointx(&masked_Q_AB_x);
+    let masked_PQ_AB = shared_codomain_curve.sub(&masked_P_AB, &masked_Q_AB);
+    let masked_two_torsion_basis_pushfwd_img =
+        BasisX::from_points(&masked_P_AB_x, &masked_Q_AB_x, &masked_PQ_AB.to_pointx());
+
+    // Apply sender's secret parallel isogeny to receiver's masked 5^c-torsion basis image points to obtain shared secret (X_AB, Y_AB)
+    // FIXME: there must be a more straightforward way to operate on individual points in an x-only basis than to
+    // lift it to a standard basis -> obtain new P - Q point -> create new x-only basis from x-coordinates
+    let mut five_torsion_basis_pushfwd_img =
+        pub_key.masked_five_torsion_basis_img.to_array();
+    let (shared_codomain_curve_verif, _) = pub_key.codomain_curve.three_isogeny_chain(
+        &psi_prime_kernel,
+        pub_params.three_torsion_exp,
+        &mut five_torsion_basis_pushfwd_img,
+    );
+    let shared_secret =
+        BasisX::from_slice(&five_torsion_basis_pushfwd_img);
+    let masked_X_AB_x = shared_codomain_curve_verif.ladder_biscalar(
+        &shared_secret,
+        &D[(0, 0)],
+        &D[(0, 1)],
+        D_bitsize[(0, 0)],
+        D_bitsize[(0, 1)],
+    );
+    let (masked_X_AB, _) = shared_codomain_curve_verif.lift_pointx(&masked_X_AB_x);
+    let masked_Y_AB_x = shared_codomain_curve_verif.ladder_biscalar(
+        &shared_secret,
+        &D[(1, 0)],
+        &D[(1, 1)],
+        D_bitsize[(1, 0)],
+        D_bitsize[(1, 1)],
+    );
+    let (masked_Y_AB, _) = shared_codomain_curve_verif.lift_pointx(&masked_Y_AB_x);
+    let masked_XY_AB = shared_codomain_curve_verif.sub(&masked_X_AB, &masked_Y_AB);
+    let shared_secret =
+        BasisX::from_points(&masked_X_AB_x, &masked_Y_AB_x, &masked_XY_AB.to_pointx());
 
     unimplemented!()
 }

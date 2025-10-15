@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 fp2 = "0.2.0"
+isogeny = { git = "https://github.com/GiacomoPope/isogeny_rs.git", rev = "4efbf0d" }
 rand_core = "0.6"
 
 [dev-dependencies]

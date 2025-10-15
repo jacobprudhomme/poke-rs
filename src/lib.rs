@@ -1,3 +1,7 @@
+use std::marker::PhantomData;
+
+use fp2::traits::Fp2 as Fp2Trait;
+use isogeny::elliptic::{basis::BasisX, curve::Curve};
 
 // POKE level I: p = 2^129 * 3^164 * 5^18 - 1
 const POKE_I_MODULUS: [u64; 7] = [
@@ -60,6 +64,41 @@ fp2::define_fp2_from_modulus!(
     base_typename = PokeFieldVBase,
     modulus = POKE_V_MODULUS,
 );
+
+pub struct PublicParams<Fp2: Fp2Trait> {
+    starting_curve: Curve<Fp2>,
+    two_torsion_exp: usize,
+    three_torsion_exp: usize,
+    five_torsion_exp: usize,
+    two_torsion_basis: BasisX<Fp2>,
+    three_torsion_basis: BasisX<Fp2>,
+    five_torsion_basis: BasisX<Fp2>,
+}
+
+pub struct PrvKey<'a, Fp2: Fp2Trait> {
+    q: usize,
+    alpha: &'a [u8],
+    beta: &'a [u8],
+    gamma: &'a [u8],
+    delta: &'a [u8],
+    _field: PhantomData<Fp2>,
+}
+
+pub struct PubKey<Fp2: Fp2Trait> {
+    codomain_curve: Curve<Fp2>,
+    masked_two_torsion_basis_img: BasisX<Fp2>,
+    masked_three_torsion_basis_img: BasisX<Fp2>,
+    masked_five_torsion_basis_img: BasisX<Fp2>,
+}
+
+pub struct Ciphertext<'a, Fp2: Fp2Trait> {
+    codomain_curve: Curve<Fp2>,
+    masked_two_torsion_basis_img: BasisX<Fp2>,
+    masked_five_torsion_basis_img: BasisX<Fp2>,
+    pushthrough_codomain_curve: Curve<Fp2>,
+    masked_two_torsion_basis_pushthrough_img: BasisX<Fp2>,
+    encrypted_message: &'a [u8],
+}
 
 #[cfg(test)]
 mod tests {

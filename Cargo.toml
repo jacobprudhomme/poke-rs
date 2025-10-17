@@ -21,3 +21,7 @@ sha2 = "0.10"
 [[bench]]
 name = "poke_i"
 harness = false
+
+[[bench]]
+name = "basis_reconstruction"
+harness = false

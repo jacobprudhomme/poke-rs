@@ -76,13 +76,13 @@ fp2::define_fp2_from_modulus!(
 );
 
 pub struct PublicParams<Fp2: Fp2Trait> {
-    starting_curve: Curve<Fp2>,
-    two_torsion_exp: usize,
-    three_torsion_exp: usize,
-    five_torsion_exp: usize,
-    two_torsion_basis: BasisX<Fp2>,
-    three_torsion_basis: BasisX<Fp2>,
-    five_torsion_basis: BasisX<Fp2>,
+    pub starting_curve: Curve<Fp2>,
+    pub two_torsion_exp: usize,
+    pub three_torsion_exp: usize,
+    pub five_torsion_exp: usize,
+    pub two_torsion_basis: BasisX<Fp2>,
+    pub three_torsion_basis: BasisX<Fp2>,
+    pub five_torsion_basis: BasisX<Fp2>,
 }
 
 pub struct PrvKey<'a, Fp2: Fp2Trait> {
@@ -351,11 +351,9 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let [P_img, Q_img, ..] = &two_torsion_basis_img;
     let masked_P_img_x = codomain_curve.xmul(P_img, &omega, omega_bitsize);
     let masked_Q_img_x = codomain_curve.xmul(Q_img, &omega_inv, omega_inv_bitsize);
-    let (masked_P_img, _) = codomain_curve.lift_pointx(&masked_P_img_x);
-    let (masked_Q_img, _) = codomain_curve.lift_pointx(&masked_Q_img_x);
-    let masked_PQ_img = codomain_curve.sub(&masked_P_img, &masked_Q_img);
+    let masked_PQ_img_x = codomain_curve.projective_difference(&masked_P_img_x, &masked_Q_img_x);
     let masked_two_torsion_basis_img =
-        BasisX::from_points(&masked_P_img_x, &masked_Q_img_x, &masked_PQ_img.to_pointx());
+        BasisX::from_points(&masked_P_img_x, &masked_Q_img_x, &masked_PQ_img_x);
 
     // Apply sender's secret isogeny to 5^c-torsion basis to obtain basis image points (X_B, Y_B)
     // FIXME: there must be a more straightforward way to operate on individual points in an x-only basis than to
@@ -374,7 +372,6 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         D_bitsize[(0, 0)],
         D_bitsize[(0, 1)],
     );
-    let (masked_X_img, _) = codomain_curve_verif.lift_pointx(&masked_X_img_x);
     let masked_Y_img_x = codomain_curve_verif.ladder_biscalar(
         &five_torsion_basis_img,
         &D[(1, 0)],
@@ -382,10 +379,10 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         D_bitsize[(1, 0)],
         D_bitsize[(1, 1)],
     );
-    let (masked_Y_img, _) = codomain_curve_verif.lift_pointx(&masked_Y_img_x);
-    let masked_XY_img = codomain_curve_verif.sub(&masked_X_img, &masked_Y_img);
+    let masked_XY_img_x =
+        codomain_curve_verif.projective_difference(&masked_X_img_x, &masked_Y_img_x);
     let masked_five_torsion_basis_img =
-        BasisX::from_points(&masked_X_img_x, &masked_Y_img_x, &masked_XY_img.to_pointx());
+        BasisX::from_points(&masked_X_img_x, &masked_Y_img_x, &masked_XY_img_x);
 
     println!("j-invariant for sender's codomain curve:");
     println!("{}", codomain_curve.j_invariant());
@@ -410,11 +407,10 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let [P_AB, Q_AB, ..] = &two_torsion_basis_pushfwd_img;
     let masked_P_AB_x = shared_codomain_curve.xmul(P_AB, &omega, omega_bitsize);
     let masked_Q_AB_x = shared_codomain_curve.xmul(Q_AB, &omega_inv, omega_inv_bitsize);
-    let (masked_P_AB, _) = shared_codomain_curve.lift_pointx(&masked_P_AB_x);
-    let (masked_Q_AB, _) = shared_codomain_curve.lift_pointx(&masked_Q_AB_x);
-    let masked_PQ_AB = shared_codomain_curve.sub(&masked_P_AB, &masked_Q_AB);
+    let masked_PQ_AB_x =
+        shared_codomain_curve.projective_difference(&masked_P_AB_x, &masked_Q_AB_x);
     let masked_two_torsion_basis_pushfwd_img =
-        BasisX::from_points(&masked_P_AB_x, &masked_Q_AB_x, &masked_PQ_AB.to_pointx());
+        BasisX::from_points(&masked_P_AB_x, &masked_Q_AB_x, &masked_PQ_AB_x);
 
     // Apply sender's secret parallel isogeny to receiver's masked 5^c-torsion basis image points to obtain shared secret (X_AB, Y_AB)
     // FIXME: there must be a more straightforward way to operate on individual points in an x-only basis than to
@@ -435,7 +431,6 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         D_bitsize[(0, 0)],
         D_bitsize[(0, 1)],
     );
-    let (masked_X_AB, _) = shared_codomain_curve_verif.lift_pointx(&masked_X_AB_x);
     let masked_Y_AB_x = shared_codomain_curve_verif.ladder_biscalar(
         &shared_secret,
         &D[(1, 0)],
@@ -443,10 +438,9 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         D_bitsize[(1, 0)],
         D_bitsize[(1, 1)],
     );
-    let (masked_Y_AB, _) = shared_codomain_curve_verif.lift_pointx(&masked_Y_AB_x);
-    let masked_XY_AB = shared_codomain_curve_verif.sub(&masked_X_AB, &masked_Y_AB);
-    let shared_secret =
-        BasisX::from_points(&masked_X_AB_x, &masked_Y_AB_x, &masked_XY_AB.to_pointx());
+    let masked_XY_AB_x =
+        shared_codomain_curve_verif.projective_difference(&masked_X_AB_x, &masked_Y_AB_x);
+    let shared_secret = BasisX::from_points(&masked_X_AB_x, &masked_Y_AB_x, &masked_XY_AB_x);
 
     println!("j-invariant for the shared end curve:");
     println!("{}", shared_codomain_curve.j_invariant());

@@ -3,9 +3,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::{BigUint, RandBigInt as _};
-use poke::poke_i::create_poke_i_params;
+use poke::{PokeFieldIBase, poke_i::create_poke_i_params};
 
-fn basis_reconstruction(c: &mut Criterion) {
+fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
     let params = create_poke_i_params();
 
     // Generate scalars by which to multiply basis points
@@ -33,39 +33,64 @@ fn basis_reconstruction(c: &mut Criterion) {
     let s = s.to_bytes_le();
     let s_inv = s_inv.to_bytes_le();
 
-    // Multiply points by these scalars
-    let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();
-    let P_x = params.starting_curve.xmul(&P_x, &s, s_bitsize);
-    let Q_x = params.starting_curve.xmul(&Q_x, &s_inv, s_inv_bitsize);
+    // Benchmark the different methods to reconstruct an x-only basis after multiplying the 2 points in it
+    let mut group = c.benchmark_group("POKÉ level I/Multiply then reconstruct basis");
+    group.bench_function(
+        "Lift x-only basis to P, Q -> Multiply P, Q by s, t -> Subtract [s]*P - [t]*Q -> Convert to PointX -> Create basis",
+        |b| {
+            b.iter(|| {
+                let (P, Q) = params.starting_curve.lift_basis(&params.two_torsion_basis);
 
-    // Precompute values and compare to make sure the different methods give the same answer, before proceeding
-    let (P, _) = params.starting_curve.lift_pointx(&P_x);
-    let (Q, _) = params.starting_curve.lift_pointx(&Q_x);
-    let PQ_method1 = params.starting_curve.sub(&P, &Q);
+                let P = params.starting_curve.mul(&P, &s, s_bitsize);
+                let Q = params.starting_curve.mul(&Q, &s_inv, s_inv_bitsize);
 
-    let PQ_x = params.starting_curve.projective_difference(&P_x, &Q_x);
-    let (PQ_method2, _) = params.starting_curve.lift_pointx(&PQ_x);
+                let PQ = params.starting_curve.sub(&P, &Q);
 
-    assert_eq!(PQ_method1.equals(&PQ_method2), 0xffffffff);
-
-    let mut group_poke_i = c.benchmark_group("POKÉ level I");
-    group_poke_i.bench_function(
-        "Lift x(P), x(Q) to full point -> Subtract P - Q -> Convert to PointX -> Create basis",
+                BasisX::from_points(&P.to_pointx(), &Q.to_pointx(), &PQ.to_pointx())
+            })
+        },
+    );
+    group.bench_function(
+        "x-only multiply P, Q by s, t -> Lift x([s]*P), x([t]*Q) to full point -> Subtract [s]*P - [t]*Q -> Convert to PointX -> Create basis",
         |b| b.iter(|| {
+            let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();
+
+            let P_x = params.starting_curve.xmul(&P_x, &s, s_bitsize);
+            let Q_x = params.starting_curve.xmul(&Q_x, &s_inv, s_inv_bitsize);
+
             let (P, _) = params.starting_curve.lift_pointx(&P_x);
             let (Q, _) = params.starting_curve.lift_pointx(&Q_x);
+
             let PQ = params.starting_curve.sub(&P, &Q);
+
             BasisX::from_points(&P_x, &Q_x, &PQ.to_pointx())
         }),
     );
-    group_poke_i.bench_function(
-        "Projective subtraction between P and Q -> Create basis",
-        |b| b.iter(|| {
-            let PQ_x = params.starting_curve.projective_difference(&P_x, &Q_x);
-            BasisX::from_points(&P_x, &Q_x, &PQ_x)
-        }),
+    group.bench_function(
+        "x-only multiply P, Q by s, t -> Compute x([s]*P - [t]*Q) using biscalar ladder -> Create basis",
+        |b| {
+            b.iter(|| {
+                let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();
+
+                let P_x = params.starting_curve.xmul(&P_x, &s, s_bitsize);
+                let Q_x = params.starting_curve.xmul(&Q_x, &s_inv, s_inv_bitsize);
+
+                let (s_inv, _) = PokeFieldIBase::decode(&s_inv);
+                let minus_s_inv = (PokeFieldIBase::MINUS_ONE * s_inv).encode();
+
+                let PQ_x = params.starting_curve.ladder_biscalar(
+                    &params.two_torsion_basis,
+                    &s,
+                    &minus_s_inv,
+                    s_bitsize,
+                    PokeFieldIBase::ENCODED_LENGTH,
+                );
+
+                BasisX::from_points(&P_x, &Q_x, &PQ_x)
+            })
+        },
     );
 }
 
-criterion_group!(benches, basis_reconstruction);
+criterion_group!(benches, scalar_multiplication_then_basis_reconstruction);
 criterion_main!(benches);

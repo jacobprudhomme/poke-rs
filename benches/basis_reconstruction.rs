@@ -3,7 +3,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::{BigUint, RandBigInt as _};
-use poke::{PokeFieldIBase, poke_i::create_poke_i_params};
+use poke::{fields::PokeFieldIBase, poke_i::create_poke_i_params};
 
 fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
     let params = create_poke_i_params();

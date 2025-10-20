@@ -2,7 +2,11 @@
 
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::{BigUint, RandBigInt as _};
-use poke::{PokeFieldI, PokeFieldIBase, PublicParams, poke_i::create_poke_i_params};
+use poke::{
+    PublicParams,
+    fields::{PokeFieldI, PokeFieldIBase},
+    poke_i::create_poke_i_params,
+};
 use rstest::{fixture, rstest};
 
 const SUCCESS_RETVAL: u32 = 0xffffffff;

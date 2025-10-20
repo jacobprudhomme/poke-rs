@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::{BigUint, RandBigInt as _};
 use poke::{PokeFieldIBase, poke_i::create_poke_i_params};
@@ -34,9 +34,9 @@ fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
     let s_inv = s_inv.to_bytes_le();
 
     // Benchmark the different methods to reconstruct an x-only basis after multiplying the 2 points in it
-    let mut group = c.benchmark_group("POKÉ level I/Multiply then reconstruct basis");
+    let mut group = c.benchmark_group("Multiply then reconstruct basis/POKÉ level I");
     group.bench_function(
-        "Lift x-only basis to P, Q -> Multiply P, Q by s, t -> Subtract [s]*P - [t]*Q -> Convert to PointX -> Create basis",
+        "Method 1: Lift x-only basis to P, Q -> Multiply P, Q by s, t -> Subtract [s]*P - [t]*Q -> Convert to PointX -> Create basis",
         |b| {
             b.iter(|| {
                 let (P, Q) = params.starting_curve.lift_basis(&params.two_torsion_basis);
@@ -51,7 +51,7 @@ fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
         },
     );
     group.bench_function(
-        "x-only multiply P, Q by s, t -> Lift x([s]*P), x([t]*Q) to full point -> Subtract [s]*P - [t]*Q -> Convert to PointX -> Create basis",
+        "Method 2: x-only multiply P, Q by s, t -> Lift x([s]*P), x([t]*Q) to full point -> Subtract [s]*P - [t]*Q -> Convert to PointX -> Create basis",
         |b| b.iter(|| {
             let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();
 
@@ -67,7 +67,7 @@ fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
         }),
     );
     group.bench_function(
-        "x-only multiply P, Q by s, t -> Compute x([s]*P - [t]*Q) using biscalar ladder -> Create basis",
+        "Method 3: x-only multiply P, Q by s, t -> Compute x([s]*P - [t]*Q) using biscalar ladder -> Create basis",
         |b| {
             b.iter(|| {
                 let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();

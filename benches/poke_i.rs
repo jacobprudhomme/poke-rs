@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
-use poke::{encrypt, poke_i::create_poke_i_params, PokeFieldI, PubKey};
+use poke::{PokeFieldI, PubKey, encrypt, poke_i::create_poke_i_params};
 use rand::RngCore;
 
 fn poke_i(c: &mut Criterion) {
@@ -150,7 +150,8 @@ fn poke_i(c: &mut Criterion) {
     let mut message = [0; 128];
     rng.fill_bytes(&mut message);
 
-    c.bench_function("POKÉ level I", |b| {
+    let mut group = c.benchmark_group("Encryption");
+    group.bench_function("POKÉ level I", |b| {
         b.iter(|| {
             encrypt(&params, &pub_key, &mut message);
         })

@@ -528,8 +528,9 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     );
 
     let mut kdf = Shake256::default();
-    kdf.update(shared_secret.P.to_string().as_bytes());
-    kdf.update(shared_secret.Q.to_string().as_bytes());
+    let (X_AB, Y_AB) = shared_end_curve.lift_basis(&shared_secret);
+    kdf.update(X_AB.to_string().as_bytes());
+    kdf.update(Y_AB.to_string().as_bytes());
     let mut one_time_pad = kdf.finalize_xof();
     let mut buffer = vec![0u8; message.len()];
     let Ok(_) = one_time_pad.read(&mut buffer) else {

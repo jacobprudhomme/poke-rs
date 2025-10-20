@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
-use poke::{encrypt, poke_i::create_poke_i_params, PokeFieldI, PubKey};
+use poke::{PokeFieldI, PubKey, encrypt, poke_i::create_poke_i_params};
 
 fn main() {
     let params = create_poke_i_params();
@@ -146,7 +146,8 @@ fn main() {
 
     let mut message = String::from("Hello, world!");
     let message = unsafe { message.as_bytes_mut() };
-    let ct = encrypt(&params, &pub_key, message);
+    let (ct, ok) = encrypt(&params, &pub_key, message);
 
+    assert_eq!(ok, 0xffffffff, "Encryption finished with errors");
     println!("Encrypted message: {:?}", ct.encrypted_message);
 }

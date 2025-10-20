@@ -241,9 +241,11 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     pub_key: &PubKey<Fp2>,
     message: &'a mut [u8],
-) -> Ciphertext<'a, Fp2> {
+) -> (Ciphertext<'a, Fp2>, u32) {
     // FIXME: where can I use vartime functions (i.e. operations on BigUint, gcd)? Where must things be constant-time?
     // TODO: add actual error handling
+
+    let mut retcode = 0xffffffff;
 
     /* Sample scalars used for masking torsion points images or generating new kernels */
 
@@ -341,18 +343,33 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
 
     // Apply sender's secret isogeny to 2^a-torsion basis to obtain their codomain curve E_B and basis image points (P_B, Q_B)
     let mut two_torsion_basis_EB = pub_params.two_torsion_basis.to_array();
-    let (codomain_curve, _) = pub_params.starting_curve.three_isogeny_chain(
+    let (codomain_curve, kernel_has_right_order) = pub_params.starting_curve.three_isogeny_chain(
         &psi_kernel,
         pub_params.three_torsion_exp,
         &mut two_torsion_basis_EB,
     );
     let [P_B, Q_B, ..] = &two_torsion_basis_EB;
+    retcode &= kernel_has_right_order;
+    println!(
+        "Successful execution after applying psi to 2^a-torsion: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_xP_B = codomain_curve.xmul(P_B, &omega, omega_bitsize);
     let masked_xQ_B = codomain_curve.xmul(Q_B, &omega_inv, omega_inv_bitsize);
 
-    let (masked_P_B, _) = codomain_curve.lift_pointx(&masked_xP_B);
-    let (masked_Q_B, _) = codomain_curve.lift_pointx(&masked_xQ_B);
+    let (masked_P_B, ok) = codomain_curve.lift_pointx(&masked_xP_B);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x([omega]*P_B) to [omega]*P_B: {}",
+        retcode == 0xffffffff,
+    );
+    let (masked_Q_B, ok) = codomain_curve.lift_pointx(&masked_xQ_B);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x([1/omega]*Q_B) to [1/omega]*Q_B: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
 
@@ -361,12 +378,18 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
 
     // Apply sender's secret isogeny to 5^c-torsion basis to obtain basis image points (X_B, Y_B)
     let mut five_torsion_basis_EB = pub_params.five_torsion_basis.to_array();
-    let (codomain_curve_verif, _) = pub_params.starting_curve.three_isogeny_chain(
-        &psi_kernel,
-        pub_params.three_torsion_exp,
-        &mut five_torsion_basis_EB,
-    );
+    let (codomain_curve_verif, kernel_has_right_order) =
+        pub_params.starting_curve.three_isogeny_chain(
+            &psi_kernel,
+            pub_params.three_torsion_exp,
+            &mut five_torsion_basis_EB,
+        );
     let five_torsion_basis_EB = BasisX::from_slice(&five_torsion_basis_EB);
+    retcode &= kernel_has_right_order;
+    println!(
+        "Successful execution after applying psi to 5^c-torsion: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_xX_B = codomain_curve_verif.ladder_biscalar(
         &five_torsion_basis_EB,
@@ -383,8 +406,18 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         D_bitsize[(1, 1)],
     );
 
-    let (masked_X_B, _) = codomain_curve_verif.lift_pointx(&masked_xX_B);
-    let (masked_Y_B, _) = codomain_curve_verif.lift_pointx(&masked_xY_B);
+    let (masked_X_B, ok) = codomain_curve_verif.lift_pointx(&masked_xX_B);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x(D*X_B) to D*X_B: {}",
+        retcode == 0xffffffff,
+    );
+    let (masked_Y_B, ok) = codomain_curve_verif.lift_pointx(&masked_xY_B);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x(D*Y_B) to D*Y_B: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_XY_B = codomain_curve_verif.sub(&masked_X_B, &masked_Y_B);
 
@@ -398,23 +431,38 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         codomain_curve
             .j_invariant()
             .equals(&codomain_curve_verif.j_invariant()),
-        0xffffffff
+        0xffffffff,
     );
 
     // Apply sender's secret parallel isogeny to receiver's masked 2^a-torsion basis image points to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB)
     let mut two_torsion_basis_EAB = pub_key.masked_two_torsion_basis_img.to_array();
-    let (shared_end_curve, _) = pub_key.codomain_curve.three_isogeny_chain(
+    let (shared_end_curve, kernel_has_right_order) = pub_key.codomain_curve.three_isogeny_chain(
         &psi_prime_kernel,
         pub_params.three_torsion_exp,
         &mut two_torsion_basis_EAB,
     );
     let [xP_AB, xQ_AB, ..] = &two_torsion_basis_EAB;
+    retcode &= kernel_has_right_order;
+    println!(
+        "Successful execution after applying psi' to 2^a-torsion: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_xP_AB = shared_end_curve.xmul(xP_AB, &omega, omega_bitsize);
     let masked_xQ_AB = shared_end_curve.xmul(xQ_AB, &omega_inv, omega_inv_bitsize);
 
-    let (masked_P_AB, _) = shared_end_curve.lift_pointx(&masked_xP_AB);
-    let (masked_Q_AB, _) = shared_end_curve.lift_pointx(&masked_xQ_AB);
+    let (masked_P_AB, ok) = shared_end_curve.lift_pointx(&masked_xP_AB);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x([omega]*P_AB) to [omega]*P_AB: {}",
+        retcode == 0xffffffff,
+    );
+    let (masked_Q_AB, ok) = shared_end_curve.lift_pointx(&masked_xQ_AB);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x([1/omega]*Q_AB) to [1/omega]*Q_AB: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
 
@@ -423,12 +471,18 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
 
     // Apply sender's secret parallel isogeny to receiver's masked 5^c-torsion basis image points to obtain shared secret (X_AB, Y_AB)
     let mut five_torsion_basis_EAB = pub_key.masked_five_torsion_basis_img.to_array();
-    let (shared_end_curve_verif, _) = pub_key.codomain_curve.three_isogeny_chain(
-        &psi_prime_kernel,
-        pub_params.three_torsion_exp,
-        &mut five_torsion_basis_EAB,
-    );
+    let (shared_end_curve_verif, kernel_has_right_order) =
+        pub_key.codomain_curve.three_isogeny_chain(
+            &psi_prime_kernel,
+            pub_params.three_torsion_exp,
+            &mut five_torsion_basis_EAB,
+        );
     let shared_secret = BasisX::from_slice(&five_torsion_basis_EAB);
+    retcode &= kernel_has_right_order;
+    println!(
+        "Successful execution after applying psi' to 5^c-torsion: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_xX_AB = shared_end_curve_verif.ladder_biscalar(
         &shared_secret,
@@ -445,8 +499,18 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         D_bitsize[(1, 1)],
     );
 
-    let (masked_X_AB, _) = shared_end_curve_verif.lift_pointx(&masked_xX_AB);
-    let (masked_Y_AB, _) = shared_end_curve_verif.lift_pointx(&masked_xY_AB);
+    let (masked_X_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xX_AB);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x(D*X_AB) to D*X_AB: {}",
+        retcode == 0xffffffff,
+    );
+    let (masked_Y_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xY_AB);
+    retcode &= ok;
+    println!(
+        "Successful execution after applying lifting x(D*Y_AB) to D*Y_AB: {}",
+        retcode == 0xffffffff,
+    );
 
     let masked_XY_AB = shared_end_curve_verif.sub(&masked_X_AB, &masked_Y_AB);
 
@@ -460,7 +524,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         shared_end_curve
             .j_invariant()
             .equals(&shared_end_curve_verif.j_invariant()),
-        0xffffffff
+        0xffffffff,
     );
 
     let mut kdf = Shake256::default();
@@ -475,14 +539,17 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         *message_byte ^= one_time_pad_byte;
     }
 
-    Ciphertext {
-        codomain_curve,
-        masked_two_torsion_basis_EB,
-        masked_five_torsion_basis_EB,
-        shared_end_curve,
-        masked_two_torsion_basis_EAB,
-        encrypted_message: message,
-    }
+    (
+        Ciphertext {
+            codomain_curve,
+            masked_two_torsion_basis_EB,
+            masked_five_torsion_basis_EB,
+            shared_end_curve,
+            masked_two_torsion_basis_EAB,
+            encrypted_message: message,
+        },
+        retcode,
+    )
 }
 
 #[cfg(test)]

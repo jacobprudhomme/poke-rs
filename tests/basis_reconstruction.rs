@@ -5,7 +5,7 @@ use num_bigint::{BigUint, RandBigInt as _};
 use poke::{
     PublicParams,
     fields::{PokeFieldI, PokeFieldIBase},
-    poke_i::create_poke_i_params,
+    params::poke_i::create_poke_i_params,
 };
 use rstest::{fixture, rstest};
 

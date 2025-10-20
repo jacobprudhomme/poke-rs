@@ -2,7 +2,7 @@
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
-use poke::{PubKey, encrypt, fields::PokeFieldI, poke_i::create_poke_i_params};
+use poke::{PubKey, encrypt, fields::PokeFieldI, params::poke_i::create_poke_i_params};
 use rand::RngCore;
 
 fn poke_i(c: &mut Criterion) {

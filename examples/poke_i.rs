@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
-use poke::{PubKey, encrypt, fields::PokeFieldI, poke_i::create_poke_i_params};
+use poke::{PubKey, encrypt, fields::PokeFieldI, params::poke_i::create_poke_i_params};
 
 fn main() {
     let params = create_poke_i_params();

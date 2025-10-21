@@ -15,7 +15,7 @@ fp2::define_fp2_from_modulus!(
     modulus = POKE_I_MODULUS,
 );
 
-// POKE level II: p = 2^192 * 3^243 * 5^28 * 49 - 1
+// POKE level III: p = 2^192 * 3^243 * 5^28 * 49 - 1
 const POKE_III_MODULUS: [u64; 11] = [
     0xffffffffffffffff,
     0xffffffffffffffff,
@@ -36,7 +36,7 @@ fp2::define_fp2_from_modulus!(
     modulus = POKE_III_MODULUS,
 );
 
-// POKE level III: p = 2^256 * 3^324 * 5^36 * 547 - 1
+// POKE level V: p = 2^256 * 3^324 * 5^36 * 547 - 1
 const POKE_V_MODULUS: [u64; 14] = [
     0xffffffffffffffff,
     0xffffffffffffffff,

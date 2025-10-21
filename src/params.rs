@@ -118,7 +118,7 @@ pub mod poke_i {
         );
 
         PublicParams {
-            starting_curve: Curve::new(&PokeFieldI::from_i32(6)),
+            starting_curve: Curve::new(&PokeFieldI::from_i32(0)),
             two_torsion_exp: 129,
             three_torsion_exp: 164,
             five_torsion_exp: 18,
@@ -292,7 +292,7 @@ pub mod poke_iii {
         );
 
         PublicParams {
-            starting_curve: Curve::new(&PokeFieldIII::from_i32(6)),
+            starting_curve: Curve::new(&PokeFieldIII::from_i32(0)),
             two_torsion_exp: 192,
             three_torsion_exp: 243,
             five_torsion_exp: 28,
@@ -484,7 +484,7 @@ pub mod poke_v {
         );
 
         PublicParams {
-            starting_curve: Curve::new(&PokeFieldV::from_i32(6)),
+            starting_curve: Curve::new(&PokeFieldV::from_i32(0)),
             two_torsion_exp: 256,
             three_torsion_exp: 324,
             five_torsion_exp: 36,

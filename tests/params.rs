@@ -5,10 +5,7 @@ use num_bigint::BigUint;
 use poke::{
     PublicParams,
     fields::{PokeFieldI, PokeFieldIII, PokeFieldV},
-    params::{
-        poke_i::create_poke_i_params, poke_iii::create_poke_iii_params,
-        poke_v::create_poke_v_params,
-    },
+    params::{poke_i, poke_iii, poke_v},
 };
 use rstest::{fixture, rstest};
 
@@ -16,17 +13,17 @@ const SUCCESS_RETVAL: u32 = 0xffffffff;
 
 #[fixture]
 fn params_poke_i() -> PublicParams<PokeFieldI> {
-    create_poke_i_params()
+    poke_i::get_params()
 }
 
 #[fixture]
 fn params_poke_iii() -> PublicParams<PokeFieldIII> {
-    create_poke_iii_params()
+    poke_iii::get_params()
 }
 
 #[fixture]
 fn params_poke_v() -> PublicParams<PokeFieldV> {
-    create_poke_v_params()
+    poke_v::get_params()
 }
 
 #[rstest]

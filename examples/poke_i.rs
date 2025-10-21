@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
-use poke::{PubKey, encrypt, fields::PokeFieldI, params::poke_i::create_poke_i_params};
+use poke::{PubKey, encrypt, fields::PokeFieldI, params::poke_i};
 
 fn main() {
-    let params = create_poke_i_params();
+    let params = poke_i::get_params();
 
     // Construct parameter for codomain curve (obtained by using POKE keygen from INKE project)
     let A_re = [

@@ -5,7 +5,7 @@ use num_bigint::{BigUint, RandBigInt as _};
 use poke::{
     PublicParams,
     fields::{PokeFieldI, PokeFieldIBase},
-    params::poke_i::create_poke_i_params,
+    params::poke_i,
 };
 use rstest::{fixture, rstest};
 
@@ -13,7 +13,7 @@ const SUCCESS_RETVAL: u32 = 0xffffffff;
 
 #[fixture]
 fn params() -> PublicParams<PokeFieldI> {
-    create_poke_i_params()
+    poke_i::get_params()
 }
 
 #[fixture]

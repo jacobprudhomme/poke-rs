@@ -3,10 +3,10 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::{BigUint, RandBigInt as _};
-use poke::{fields::PokeFieldIBase, params::poke_i::create_poke_i_params};
+use poke::{fields::PokeFieldIBase, params::poke_i};
 
 fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
-    let params = create_poke_i_params();
+    let params = poke_i::get_params();
 
     // Generate scalars by which to multiply basis points
     let mut rng = rand::thread_rng();

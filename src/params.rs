@@ -100,7 +100,7 @@ pub mod poke_i {
     const Y_X: PokeFieldI = PokeFieldI::const_decode_no_check(&Y_X_RE, &Y_X_IM);
     const XY_X: PokeFieldI = PokeFieldI::const_decode_no_check(&XY_X_RE, &XY_X_IM);
 
-    pub fn create_poke_i_params() -> PublicParams<PokeFieldI> {
+    pub fn get_params() -> PublicParams<PokeFieldI> {
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
@@ -274,7 +274,7 @@ pub mod poke_iii {
     const Y_X: PokeFieldIII = PokeFieldIII::const_decode_no_check(&Y_X_RE, &Y_X_IM);
     const XY_X: PokeFieldIII = PokeFieldIII::const_decode_no_check(&XY_X_RE, &XY_X_IM);
 
-    pub fn create_poke_iii_params() -> PublicParams<PokeFieldIII> {
+    pub fn get_params() -> PublicParams<PokeFieldIII> {
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
@@ -466,7 +466,7 @@ pub mod poke_v {
     const Y_X: PokeFieldV = PokeFieldV::const_decode_no_check(&Y_X_RE, &Y_X_IM);
     const XY_X: PokeFieldV = PokeFieldV::const_decode_no_check(&XY_X_RE, &XY_X_IM);
 
-    pub fn create_poke_v_params() -> PublicParams<PokeFieldV> {
+    pub fn get_params() -> PublicParams<PokeFieldV> {
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),

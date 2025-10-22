@@ -49,14 +49,12 @@ fn scalars(params: PublicParams<PokeFieldI>) -> ((Vec<u8>, usize), (Vec<u8>, usi
 
 fn method1(
     params: &PublicParams<PokeFieldI>,
-    scalars: &((Vec<u8>, usize), (Vec<u8>, usize)),
+    ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((&[u8], usize), (&[u8], usize)),
 ) -> BasisX<PokeFieldI> {
-    let ((s, s_bitsize), (s_inv, s_inv_bitsize)) = scalars;
-
     let (P, Q) = params.starting_curve.lift_basis(&params.two_torsion_basis);
 
-    let P = params.starting_curve.mul(&P, s, *s_bitsize);
-    let Q = params.starting_curve.mul(&Q, s_inv, *s_inv_bitsize);
+    let P = params.starting_curve.mul(&P, s, s_bitsize);
+    let Q = params.starting_curve.mul(&Q, s_inv, s_inv_bitsize);
 
     let PQ = params.starting_curve.sub(&P, &Q);
 
@@ -65,14 +63,12 @@ fn method1(
 
 fn method2(
     params: &PublicParams<PokeFieldI>,
-    scalars: &((Vec<u8>, usize), (Vec<u8>, usize)),
+    ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((&[u8], usize), (&[u8], usize)),
 ) -> BasisX<PokeFieldI> {
-    let ((s, s_bitsize), (s_inv, s_inv_bitsize)) = scalars;
-
     let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();
 
-    let P_x = params.starting_curve.xmul(&P_x, s, *s_bitsize);
-    let Q_x = params.starting_curve.xmul(&Q_x, s_inv, *s_inv_bitsize);
+    let P_x = params.starting_curve.xmul(&P_x, s, s_bitsize);
+    let Q_x = params.starting_curve.xmul(&Q_x, s_inv, s_inv_bitsize);
 
     let (P, _) = params.starting_curve.lift_pointx(&P_x);
     let (Q, _) = params.starting_curve.lift_pointx(&Q_x);
@@ -84,14 +80,12 @@ fn method2(
 
 fn method3(
     params: &PublicParams<PokeFieldI>,
-    scalars: &((Vec<u8>, usize), (Vec<u8>, usize)),
+    ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((&[u8], usize), (&[u8], usize)),
 ) -> BasisX<PokeFieldI> {
-    let ((s, s_bitsize), (s_inv, s_inv_bitsize)) = scalars;
-
     let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();
 
-    let P_x = params.starting_curve.xmul(&P_x, s, *s_bitsize);
-    let Q_x = params.starting_curve.xmul(&Q_x, s_inv, *s_inv_bitsize);
+    let P_x = params.starting_curve.xmul(&P_x, s, s_bitsize);
+    let Q_x = params.starting_curve.xmul(&Q_x, s_inv, s_inv_bitsize);
 
     let (s_inv, _) = PokeFieldIBase::decode(&s_inv);
     let minus_s_inv = (PokeFieldIBase::MINUS_ONE * s_inv).encode();
@@ -100,7 +94,7 @@ fn method3(
         &params.two_torsion_basis,
         s,
         &minus_s_inv,
-        *s_bitsize,
+        s_bitsize,
         PokeFieldIBase::ENCODED_LENGTH,
     );
 
@@ -109,14 +103,12 @@ fn method3(
 
 fn projective_difference_method(
     params: &PublicParams<PokeFieldI>,
-    scalars: &((Vec<u8>, usize), (Vec<u8>, usize)),
+    ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((&[u8], usize), (&[u8], usize)),
 ) -> BasisX<PokeFieldI> {
-    let ((s, s_bitsize), (s_inv, s_inv_bitsize)) = scalars;
-
     let [P_x, Q_x, ..] = params.two_torsion_basis.to_array();
 
-    let P_x = params.starting_curve.xmul(&P_x, s, *s_bitsize);
-    let Q_x = params.starting_curve.xmul(&Q_x, s_inv, *s_inv_bitsize);
+    let P_x = params.starting_curve.xmul(&P_x, s, s_bitsize);
+    let Q_x = params.starting_curve.xmul(&Q_x, s_inv, s_inv_bitsize);
 
     let PQ_x = params.starting_curve.projective_difference(&P_x, &Q_x);
 
@@ -126,9 +118,9 @@ fn projective_difference_method(
 #[rstest]
 fn method1_produces_points_on_curve(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis = method1(&params, &scalars);
+    let basis = method1(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         params.starting_curve.is_on_curve(&basis.P.x()),
@@ -150,9 +142,9 @@ fn method1_produces_points_on_curve(
 #[rstest]
 fn method2_produces_points_on_curve(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis = method2(&params, &scalars);
+    let basis = method2(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         params.starting_curve.is_on_curve(&basis.P.x()),
@@ -174,9 +166,9 @@ fn method2_produces_points_on_curve(
 #[rstest]
 fn method3_produces_points_on_curve(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis = method3(&params, &scalars);
+    let basis = method3(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         params.starting_curve.is_on_curve(&basis.P.x()),
@@ -198,9 +190,9 @@ fn method3_produces_points_on_curve(
 #[rstest]
 fn projective_difference_method_produces_points_on_curve(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis = projective_difference_method(&params, &scalars);
+    let basis = projective_difference_method(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         params.starting_curve.is_on_curve(&basis.P.x()),
@@ -222,10 +214,10 @@ fn projective_difference_method_produces_points_on_curve(
 #[rstest]
 fn method1_equals_method2(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis_method1 = method1(&params, &scalars);
-    let basis_method2 = method2(&params, &scalars);
+    let basis_method1 = method1(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
+    let basis_method2 = method2(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         basis_method1.P.equals(&basis_method2.P),
@@ -253,10 +245,10 @@ fn method1_equals_method2(
 #[rstest]
 fn method1_equals_method3(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis_method1 = method1(&params, &scalars);
-    let basis_method3 = method3(&params, &scalars);
+    let basis_method1 = method1(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
+    let basis_method3 = method3(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         basis_method1.P.equals(&basis_method3.P),
@@ -284,10 +276,11 @@ fn method1_equals_method3(
 #[rstest]
 fn method1_equals_projective_diff(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis_method1 = method1(&params, &scalars);
-    let basis_projective_difference_method = projective_difference_method(&params, &scalars);
+    let basis_method1 = method1(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
+    let basis_projective_difference_method =
+        projective_difference_method(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         basis_method1
@@ -321,10 +314,10 @@ fn method1_equals_projective_diff(
 #[rstest]
 fn method2_equals_method3(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis_method2 = method2(&params, &scalars);
-    let basis_method3 = method3(&params, &scalars);
+    let basis_method2 = method2(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
+    let basis_method3 = method3(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         basis_method2.P.equals(&basis_method3.P),
@@ -352,10 +345,11 @@ fn method2_equals_method3(
 #[rstest]
 fn method2_equals_projective_diff(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis_method2 = method2(&params, &scalars);
-    let basis_projective_difference_method = projective_difference_method(&params, &scalars);
+    let basis_method2 = method2(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
+    let basis_projective_difference_method =
+        projective_difference_method(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         basis_method2
@@ -389,10 +383,11 @@ fn method2_equals_projective_diff(
 #[rstest]
 fn method3_equals_projective_diff(
     params: PublicParams<PokeFieldI>,
-    scalars: ((Vec<u8>, usize), (Vec<u8>, usize)),
+    #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
 ) {
-    let basis_method3 = method3(&params, &scalars);
-    let basis_projective_difference_method = projective_difference_method(&params, &scalars);
+    let basis_method3 = method3(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
+    let basis_projective_difference_method =
+        projective_difference_method(&params, ((&s, s_bitsize), (&s_inv, s_inv_bitsize)));
 
     assert_eq!(
         basis_method3

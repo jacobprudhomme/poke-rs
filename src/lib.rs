@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::{io::Read as _, marker::PhantomData};
+use std::{io::Read as _, marker::PhantomData, u32};
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{basis::BasisX, curve::Curve};
@@ -15,6 +15,8 @@ use sha3::{
 
 pub mod fields;
 pub mod params;
+
+pub const SUCCESS_RETVAL: u32 = u32::MAX;
 
 pub struct PublicParams<Fp2: Fp2Trait> {
     pub starting_curve: Curve<Fp2>,
@@ -59,7 +61,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     // FIXME: where can I use vartime functions (i.e. operations on BigUint, gcd)? Where must things be constant-time?
     // TODO: add actual error handling
 
-    let mut retcode = 0xffffffff;
+    let mut retval = SUCCESS_RETVAL;
 
     /* Sample scalars used for masking torsion points images or generating new kernels */
 
@@ -163,26 +165,26 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         &mut two_torsion_basis_EB,
     );
     let [P_B, Q_B, ..] = &two_torsion_basis_EB;
-    retcode &= kernel_has_right_order;
+    retval &= kernel_has_right_order;
     println!(
         "Successful execution after applying psi to 2^a-torsion: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_xP_B = codomain_curve.xmul(P_B, &omega, omega_bitsize);
     let masked_xQ_B = codomain_curve.xmul(Q_B, &omega_inv, omega_inv_bitsize);
 
     let (masked_P_B, ok) = codomain_curve.lift_pointx(&masked_xP_B);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x([omega]*P_B) to [omega]*P_B: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
     let (masked_Q_B, ok) = codomain_curve.lift_pointx(&masked_xQ_B);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x([1/omega]*Q_B) to [1/omega]*Q_B: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
@@ -199,10 +201,10 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
             &mut five_torsion_basis_EB,
         );
     let five_torsion_basis_EB = BasisX::from_slice(&five_torsion_basis_EB);
-    retcode &= kernel_has_right_order;
+    retval &= kernel_has_right_order;
     println!(
         "Successful execution after applying psi to 5^c-torsion: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_xX_B = codomain_curve_verif.ladder_biscalar(
@@ -221,16 +223,16 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     );
 
     let (masked_X_B, ok) = codomain_curve_verif.lift_pointx(&masked_xX_B);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x(D*X_B) to D*X_B: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
     let (masked_Y_B, ok) = codomain_curve_verif.lift_pointx(&masked_xY_B);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x(D*Y_B) to D*Y_B: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_XY_B = codomain_curve_verif.sub(&masked_X_B, &masked_Y_B);
@@ -245,7 +247,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         codomain_curve
             .j_invariant()
             .equals(&codomain_curve_verif.j_invariant()),
-        0xffffffff,
+        SUCCESS_RETVAL,
     );
 
     // Apply sender's secret parallel isogeny to receiver's masked 2^a-torsion basis image points to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB)
@@ -256,26 +258,26 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         &mut two_torsion_basis_EAB,
     );
     let [xP_AB, xQ_AB, ..] = &two_torsion_basis_EAB;
-    retcode &= kernel_has_right_order;
+    retval &= kernel_has_right_order;
     println!(
         "Successful execution after applying psi' to 2^a-torsion: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_xP_AB = shared_end_curve.xmul(xP_AB, &omega, omega_bitsize);
     let masked_xQ_AB = shared_end_curve.xmul(xQ_AB, &omega_inv, omega_inv_bitsize);
 
     let (masked_P_AB, ok) = shared_end_curve.lift_pointx(&masked_xP_AB);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x([omega]*P_AB) to [omega]*P_AB: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
     let (masked_Q_AB, ok) = shared_end_curve.lift_pointx(&masked_xQ_AB);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x([1/omega]*Q_AB) to [1/omega]*Q_AB: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
@@ -292,10 +294,10 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
             &mut five_torsion_basis_EAB,
         );
     let shared_secret = BasisX::from_slice(&five_torsion_basis_EAB);
-    retcode &= kernel_has_right_order;
+    retval &= kernel_has_right_order;
     println!(
         "Successful execution after applying psi' to 5^c-torsion: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_xX_AB = shared_end_curve_verif.ladder_biscalar(
@@ -314,16 +316,16 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     );
 
     let (masked_X_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xX_AB);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x(D*X_AB) to D*X_AB: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
     let (masked_Y_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xY_AB);
-    retcode &= ok;
+    retval &= ok;
     println!(
         "Successful execution after applying lifting x(D*Y_AB) to D*Y_AB: {}",
-        retcode == 0xffffffff,
+        retval == SUCCESS_RETVAL,
     );
 
     let masked_XY_AB = shared_end_curve_verif.sub(&masked_X_AB, &masked_Y_AB);
@@ -338,7 +340,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         shared_end_curve
             .j_invariant()
             .equals(&shared_end_curve_verif.j_invariant()),
-        0xffffffff,
+        SUCCESS_RETVAL,
     );
 
     let mut kdf = Shake256::default();
@@ -363,6 +365,6 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
             masked_two_torsion_basis_EAB,
             encrypted_message: message,
         },
-        retcode,
+        retval,
     )
 }

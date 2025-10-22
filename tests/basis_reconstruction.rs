@@ -3,13 +3,11 @@
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::{BigUint, RandBigInt as _};
 use poke::{
-    PublicParams,
+    PublicParams, SUCCESS_RETVAL,
     fields::{PokeFieldI, PokeFieldIBase},
     params::poke_i,
 };
 use rstest::{fixture, rstest};
-
-const SUCCESS_RETVAL: u32 = 0xffffffff;
 
 #[fixture]
 fn params() -> PublicParams<PokeFieldI> {

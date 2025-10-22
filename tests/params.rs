@@ -3,12 +3,10 @@
 use fp2::traits::Fp2 as FpTrait;
 use num_bigint::BigUint;
 use poke::{
-    PublicParams,
+    PublicParams, SUCCESS_RETVAL,
     params::{poke_i, poke_iii, poke_v},
 };
 use rstest::rstest;
-
-const SUCCESS_RETVAL: u32 = 0xffffffff;
 
 #[rstest]
 #[case::poke_level_i(poke_i::get_params())]

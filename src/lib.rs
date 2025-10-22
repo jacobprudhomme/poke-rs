@@ -69,19 +69,19 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let ONE = BigUint::from(1u8);
 
     // The subgroups we will sample from
-    let Z_two_torsion_order = BigUint::from(2u8).pow(
+    let two_torsion_order = BigUint::from(2u8).pow(
         pub_params
             .two_torsion_exp
             .try_into()
             .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
         );
-    let Z_three_torsion_order = BigUint::from(3u8).pow(
+    let three_torsion_order = BigUint::from(3u8).pow(
         pub_params
             .three_torsion_exp
             .try_into()
             .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
         );
-    let Z_five_torsion_order = BigUint::from(5u8).pow(
+    let five_torsion_order = BigUint::from(5u8).pow(
         pub_params
             .five_torsion_exp
             .try_into()
@@ -89,18 +89,18 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         );
 
     // Sample scalar used to generate new kernels for sender's parallel isogenies
-    let r = rng.gen_biguint_below(&Z_three_torsion_order); // FIXME: what happens if this is 0?
+    let r = rng.gen_biguint_below(&three_torsion_order); // FIXME: what happens if this is 0?
     let r_bitsize =
         r.bits().try_into().expect("Size in bits of the scalar r is too big to fit in a usize (we do not ever expect this to happen)");
     let r = r.to_bytes_le();
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let mut omega = rng.gen_biguint_range(&ONE, &Z_two_torsion_order);
-    let mut omega_inv = omega.modinv(&Z_two_torsion_order);
+    let mut omega = rng.gen_biguint_range(&ONE, &two_torsion_order);
+    let mut omega_inv = omega.modinv(&two_torsion_order);
     while let None = omega_inv {
         println!("omega = {} is not invertible, retrying", omega);
-        omega = rng.gen_biguint_range(&ONE, &Z_two_torsion_order);
-        omega_inv = omega.modinv(&Z_two_torsion_order);
+        omega = rng.gen_biguint_range(&ONE, &two_torsion_order);
+        omega_inv = omega.modinv(&two_torsion_order);
     }
     println!();
     let Some(omega_inv) = omega_inv else {
@@ -117,24 +117,24 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
     let mut D = Array2::random_using(
         (2, 2),
-        Uniform::new(BigUint::ZERO, &Z_five_torsion_order),
+        Uniform::new(BigUint::ZERO, &five_torsion_order),
         &mut rng,
     );
-    let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
-        + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
-        % &Z_five_torsion_order;
-    let mut det_gcd = gcd(det.clone(), Z_five_torsion_order.clone()); // TODO: look into a borrowing GCD function
+    let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &five_torsion_order)
+        + (&five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &five_torsion_order)))
+        % &five_torsion_order;
+    let mut det_gcd = gcd(det.clone(), five_torsion_order.clone()); // TODO: look into a borrowing GCD function
     while det_gcd != ONE {
         println!("det(D) = {}, gcd(det(D), 5^c) = {}, retrying", det, det_gcd);
         D = Array2::random_using(
             (2, 2),
-            Uniform::new(BigUint::ZERO, &Z_five_torsion_order),
+            Uniform::new(BigUint::ZERO, &five_torsion_order),
             &mut rng,
         );
-        det = (((&D[(0, 0)] * &D[(1, 1)]) % &Z_five_torsion_order)
-            + (&Z_five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &Z_five_torsion_order)))
-            % &Z_five_torsion_order;
-        det_gcd = gcd(det.clone(), Z_five_torsion_order.clone()); // TODO: look into a borrowing GCD function
+        det = (((&D[(0, 0)] * &D[(1, 1)]) % &five_torsion_order)
+            + (&five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &five_torsion_order)))
+            % &five_torsion_order;
+        det_gcd = gcd(det.clone(), five_torsion_order.clone()); // TODO: look into a borrowing GCD function
     }
     println!();
     let D_bitsize = D.map(|elem| {

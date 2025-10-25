@@ -177,13 +177,13 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let (masked_P_B, ok) = codomain_curve.lift_pointx(&masked_xP_B);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x([omega]*P_B) to [omega]*P_B: {}",
+        "Successful execution after lifting x([omega]*P_B) to [omega]*P_B: {}",
         retval == SUCCESS_RETVAL,
     );
     let (masked_Q_B, ok) = codomain_curve.lift_pointx(&masked_xQ_B);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x([1/omega]*Q_B) to [1/omega]*Q_B: {}",
+        "Successful execution after lifting x([1/omega]*Q_B) to [1/omega]*Q_B: {}",
         retval == SUCCESS_RETVAL,
     );
 
@@ -225,13 +225,13 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let (masked_X_B, ok) = codomain_curve_verif.lift_pointx(&masked_xX_B);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x(D*X_B) to D*X_B: {}",
+        "Successful execution after lifting x(D*X_B) to D*X_B: {}",
         retval == SUCCESS_RETVAL,
     );
     let (masked_Y_B, ok) = codomain_curve_verif.lift_pointx(&masked_xY_B);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x(D*Y_B) to D*Y_B: {}",
+        "Successful execution after lifting x(D*Y_B) to D*Y_B: {}",
         retval == SUCCESS_RETVAL,
     );
 
@@ -270,13 +270,13 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let (masked_P_AB, ok) = shared_end_curve.lift_pointx(&masked_xP_AB);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x([omega]*P_AB) to [omega]*P_AB: {}",
+        "Successful execution after lifting x([omega]*P_AB) to [omega]*P_AB: {}",
         retval == SUCCESS_RETVAL,
     );
     let (masked_Q_AB, ok) = shared_end_curve.lift_pointx(&masked_xQ_AB);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x([1/omega]*Q_AB) to [1/omega]*Q_AB: {}",
+        "Successful execution after lifting x([1/omega]*Q_AB) to [1/omega]*Q_AB: {}",
         retval == SUCCESS_RETVAL,
     );
 
@@ -318,13 +318,13 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let (masked_X_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xX_AB);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x(D*X_AB) to D*X_AB: {}",
+        "Successful execution after lifting x(D*X_AB) to D*X_AB: {}",
         retval == SUCCESS_RETVAL,
     );
     let (masked_Y_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xY_AB);
     retval &= ok;
     println!(
-        "Successful execution after applying lifting x(D*Y_AB) to D*Y_AB: {}",
+        "Successful execution after lifting x(D*Y_AB) to D*Y_AB: {}",
         retval == SUCCESS_RETVAL,
     );
 

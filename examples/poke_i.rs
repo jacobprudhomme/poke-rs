@@ -18,6 +18,9 @@ fn main() {
         171, 54, 24, 144, 16, 55, 113, 57, 6, 211, 158, 156, 169, 70, 94,
     ];
     let A = PokeFieldI::const_decode_no_check(&A_re, &A_im);
+    let E_A = Curve::new(&A);
+
+    println!("j-invariant of E_A: {}", E_A.j_invariant());
 
     // Construct masked images of 2^a-torsion basis on E_0 (obtained by using POKE keygen from INKE project)
     let P_X_re = [
@@ -53,6 +56,17 @@ fn main() {
     let P_X = PokeFieldI::const_decode_no_check(&P_X_re, &P_X_im);
     let Q_X = PokeFieldI::const_decode_no_check(&Q_X_re, &Q_X_im);
     let PQ_X = PokeFieldI::const_decode_no_check(&PQ_X_re, &PQ_X_im);
+    let xP = PointX::from_x_coord(&P_X);
+    let xQ = PointX::from_x_coord(&Q_X);
+    let xPQ = PointX::from_x_coord(&PQ_X);
+
+    assert_eq!(E_A.is_on_curve(&xP.x()), SUCCESS_RETVAL, "P is not on E_A");
+    assert_eq!(E_A.is_on_curve(&xQ.x()), SUCCESS_RETVAL, "Q is not on E_A");
+    assert_eq!(
+        E_A.is_on_curve(&xPQ.x()),
+        SUCCESS_RETVAL,
+        "P - Q is not on E_A"
+    );
 
     // Construct masked images of 3^b-torsion basis on E_0 (obtained by using POKE keygen from INKE project)
     let R_X_re = [
@@ -88,6 +102,17 @@ fn main() {
     let R_X = PokeFieldI::const_decode_no_check(&R_X_re, &R_X_im);
     let S_X = PokeFieldI::const_decode_no_check(&S_X_re, &S_X_im);
     let RS_X = PokeFieldI::const_decode_no_check(&RS_X_re, &RS_X_im);
+    let xR = PointX::from_x_coord(&R_X);
+    let xS = PointX::from_x_coord(&S_X);
+    let xRS = PointX::from_x_coord(&RS_X);
+
+    assert_eq!(E_A.is_on_curve(&xR.x()), SUCCESS_RETVAL, "R is not on E_A");
+    assert_eq!(E_A.is_on_curve(&xS.x()), SUCCESS_RETVAL, "S is not on E_A");
+    assert_eq!(
+        E_A.is_on_curve(&xRS.x()),
+        SUCCESS_RETVAL,
+        "R - S is not on E_A"
+    );
 
     // Construct masked images of 5^c-torsion basis on E_0 (obtained by using POKE keygen from INKE project)
     let X_X_re = [
@@ -123,25 +148,24 @@ fn main() {
     let X_X = PokeFieldI::const_decode_no_check(&X_X_re, &X_X_im);
     let Y_X = PokeFieldI::const_decode_no_check(&Y_X_re, &Y_X_im);
     let XY_X = PokeFieldI::const_decode_no_check(&XY_X_re, &XY_X_im);
+    let xX = PointX::from_x_coord(&X_X);
+    let xY = PointX::from_x_coord(&Y_X);
+    let xXY = PointX::from_x_coord(&XY_X);
+
+    assert_eq!(E_A.is_on_curve(&xX.x()), SUCCESS_RETVAL, "X is not on E_A");
+    assert_eq!(E_A.is_on_curve(&xY.x()), SUCCESS_RETVAL, "Y is not on E_A");
+    assert_eq!(
+        E_A.is_on_curve(&xXY.x()),
+        SUCCESS_RETVAL,
+        "X - Y is not on E_A"
+    );
 
     // Construct public key from above values (E_A, (P_A, Q_A), (R_A, S_A), (X_A, Y_A))
     let pub_key = PubKey {
-        codomain_curve: Curve::new(&A),
-        masked_two_torsion_basis_img: BasisX::from_points(
-            &PointX::from_x_coord(&P_X),
-            &PointX::from_x_coord(&Q_X),
-            &PointX::from_x_coord(&PQ_X),
-        ),
-        masked_three_torsion_basis_img: BasisX::from_points(
-            &PointX::from_x_coord(&R_X),
-            &PointX::from_x_coord(&S_X),
-            &PointX::from_x_coord(&RS_X),
-        ),
-        masked_five_torsion_basis_img: BasisX::from_points(
-            &PointX::from_x_coord(&X_X),
-            &PointX::from_x_coord(&Y_X),
-            &PointX::from_x_coord(&XY_X),
-        ),
+        codomain_curve: E_A,
+        masked_two_torsion_basis_img: BasisX::from_points(&xP, &xQ, &xPQ),
+        masked_three_torsion_basis_img: BasisX::from_points(&xR, &xS, &xRS),
+        masked_five_torsion_basis_img: BasisX::from_points(&xX, &xY, &xXY),
     };
 
     let mut message = String::from("Hello, world!");

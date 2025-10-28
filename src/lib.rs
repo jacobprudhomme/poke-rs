@@ -390,7 +390,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
     let Some(alpha_inv) = alpha_inv else {
         unreachable!();
     };
-    let alpha_inv_bitsize: usize =
+    let alpha_inv_bitsize =
         alpha_inv.bits().try_into().expect("Size in bits of the scalar 1/alpha is too big to fit in a usize (we do not ever expect this to happen)");
     let alpha_inv = alpha_inv.to_bytes_le();
 
@@ -398,9 +398,20 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
     let Some(beta_inv) = beta_inv else {
         unreachable!();
     };
-    let beta_inv_bitsize: usize =
+    let beta_inv_bitsize =
         beta_inv.bits().try_into().expect("Size in bits of the scalar 1/beta is too big to fit in a usize (we do not ever expect this to happen)");
     let beta_inv = beta_inv.to_bytes_le();
+
+    // Neutralize action of our own secret scalars on the masked 2^a-torsion basis for E_AB
+    let (P_AB, Q_AB) = ciphertext
+        .shared_end_curve
+        .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
+    let unmasked_P_AB = ciphertext
+        .shared_end_curve
+        .mul(&P_AB, &alpha_inv, alpha_inv_bitsize);
+    let unmasked_Q_AB = ciphertext
+        .shared_end_curve
+        .mul(&Q_AB, &beta_inv, beta_inv_bitsize);
 
     unimplemented!()
 }

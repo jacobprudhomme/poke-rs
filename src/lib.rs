@@ -4,8 +4,8 @@ use std::{io::Read as _, marker::PhantomData};
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve},
-    theta::elliptic_product::ProductPoint,
+    elliptic::{basis::BasisX, curve::Curve, projective_point::Point},
+    theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 use ndarray::Array2;
 use ndarray_rand::{RandomExt as _, rand::distributions::Uniform};
@@ -416,7 +416,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         .shared_end_curve
         .mul(&Q_AB, &beta_inv, beta_inv_bitsize);
 
-    // Compute kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
+    // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let minus_q = &two_torsion_order - &prv_key.q;
     let minus_q_bitsize = minus_q.bits().try_into().expect("Size in bits of the scalar -q is too big to fit in a usize (we do not ever expect this to happen)");
     let minus_q = minus_q.to_bytes_le();
@@ -433,6 +433,28 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
 
     let kernel_generator_point1 = ProductPoint::new(&generator_point1_B, &unmasked_P_AB);
     let kernel_generator_point2 = ProductPoint::new(&generator_point2_B, &unmasked_Q_AB);
+
+    // Compute Phi' on the masked 5^c-torsion for E_B
+    // FIXME: requires points of order 2^(a+2)
+    let domain = EllipticProduct::new(&ciphertext.codomain_curve, &ciphertext.shared_end_curve);
+    let (X_B, Y_B) = ciphertext
+        .codomain_curve
+        .lift_basis(&ciphertext.masked_five_torsion_basis_EB);
+    let (intermediate_curves, five_torsion_basis_intermediate_curves, ok) = domain
+        .elliptic_product_isogeny(
+            &kernel_generator_point1,
+            &kernel_generator_point2,
+            pub_params.two_torsion_exp,
+            &[
+                ProductPoint::new(&X_B, &Point::INFINITY),
+                ProductPoint::new(&Y_B, &Point::INFINITY),
+            ],
+        );
+    retval &= ok;
+    println!(
+        "Successful execution after applying Phi' to 5^c-torsion on E_B: {}",
+        retval == SUCCESS_RETVAL,
+    );
 
     unimplemented!()
 }

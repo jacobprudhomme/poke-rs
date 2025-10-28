@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::{io::Read as _, marker::PhantomData, u32};
+use std::{io::Read as _, marker::PhantomData};
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{basis::BasisX, curve::Curve};
@@ -28,12 +28,13 @@ pub struct PublicParams<Fp2: Fp2Trait> {
     pub five_torsion_basis: BasisX<Fp2>,
 }
 
-pub struct PrvKey<'a, Fp2: Fp2Trait> {
+// FIXME: represent scalars as their LE byte arrays and bitsize. Removes external dependency on num-bigint
+pub struct PrvKey<Fp2: Fp2Trait> {
     q: usize,
-    alpha: &'a [u8],
-    beta: &'a [u8],
-    gamma: &'a [u8],
-    delta: &'a [u8],
+    alpha: BigUint,
+    beta: BigUint,
+    gamma: BigUint,
+    delta: BigUint,
     _field: PhantomData<Fp2>,
 }
 
@@ -68,7 +69,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let mut rng = rand::thread_rng();
     let ONE = BigUint::from(1u8);
 
-    // The subgroups we will sample from
+    // The groups we will sample masking scalars from
     let two_torsion_order = BigUint::from(2u8).pow(
         pub_params
             .two_torsion_exp
@@ -367,4 +368,39 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
         },
         retval,
     )
+}
+
+pub fn decrypt<'a, Fp2: Fp2Trait>(
+    pub_params: &PublicParams<Fp2>,
+    prv_key: &PrvKey<Fp2>,
+    ciphertext: &Ciphertext<'a, Fp2>,
+) -> (&'a [u8], u32) {
+    let mut retval = SUCCESS_RETVAL;
+
+    // The rings to work in to manipulate the scalars
+    let two_torsion_order = BigUint::from(2u8).pow(
+        pub_params
+            .two_torsion_exp
+            .try_into()
+            .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+        );
+
+    // Invert secret scalars, to neutralize their action on masked points we receive
+    let alpha_inv = prv_key.alpha.modinv(&two_torsion_order);
+    let Some(alpha_inv) = alpha_inv else {
+        unreachable!();
+    };
+    let alpha_inv_bitsize: usize =
+        alpha_inv.bits().try_into().expect("Size in bits of the scalar 1/alpha is too big to fit in a usize (we do not ever expect this to happen)");
+    let alpha_inv = alpha_inv.to_bytes_le();
+
+    let beta_inv = prv_key.beta.modinv(&two_torsion_order);
+    let Some(beta_inv) = beta_inv else {
+        unreachable!();
+    };
+    let beta_inv_bitsize: usize =
+        beta_inv.bits().try_into().expect("Size in bits of the scalar 1/beta is too big to fit in a usize (we do not ever expect this to happen)");
+    let beta_inv = beta_inv.to_bytes_le();
+
+    unimplemented!()
 }

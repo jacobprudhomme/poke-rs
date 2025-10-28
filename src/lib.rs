@@ -380,12 +380,28 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
 ) -> (&'a [u8], u32) {
     let mut retval = SUCCESS_RETVAL;
 
+    let mut rng = rand::thread_rng();
+    let ONE = BigUint::from(1u8);
+    let FIVE = BigUint::from(5u8);
+
     // The rings to work in to manipulate the scalars
     let two_torsion_order = BigUint::from(2u8).pow(
         pub_params
             .two_torsion_exp
             .try_into()
             .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+        );
+    let three_torsion_order = BigUint::from(3u8).pow(
+        pub_params
+            .three_torsion_exp
+            .try_into()
+            .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+        );
+    let five_torsion_order = BigUint::from(5u8).pow(
+        pub_params
+            .five_torsion_exp
+            .try_into()
+            .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
         );
 
     // Invert secret scalars, to neutralize their action on masked points we receive
@@ -455,6 +471,117 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         "Successful execution after applying Phi' to 5^c-torsion on E_B: {}",
         retval == SUCCESS_RETVAL,
     );
+
+    // Generate random basis of the 5^c-torsion on E_AB
+    let cofactor = &two_torsion_order * &three_torsion_order; // FIXME: this is not necessarily all the cofactors... consider the small cofactor f
+    let cofactor_bitsize = cofactor.bits();
+    let cofactor = cofactor.to_bytes_le();
+
+    let five_torsion_order_minus_one = &five_torsion_order - ONE;
+    let five_torsion_order_minus_one_bitsize = five_torsion_order_minus_one.bits();
+    let five_torsion_order_minus_one = five_torsion_order_minus_one.to_bytes_le();
+
+    // FIXME: should I break the loop condition only at the very end, all conditions being tested at once?
+    // Or is this not even necessary, because exiting early only leaks information we know?
+    // TODO: check how long it takes for these loops to terminate on average, as we are not generating deterministically as in the Sage implementation
+    let U = loop {
+        let U = ciphertext.shared_end_curve.rand_point(&mut rng);
+        let U_in_five_torsion = ciphertext.shared_end_curve.mul(
+            &U,
+            &cofactor,
+            cofactor_bitsize
+                .try_into()
+                .expect("Size in bits of the cofactor (p + 1)/5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+
+        // We don't want a point in the ((p + 1)/5^c)-torsion
+        if U_in_five_torsion.is_zero() == SUCCESS_RETVAL {
+            println!(
+                "Generated basis point U is in the torsion subgroup of the other cofactors. Trying a new point"
+            );
+            continue;
+        }
+
+        let U_in_five_torsion_mult = ciphertext.shared_end_curve.mul(
+            &U_in_five_torsion,
+            &five_torsion_order_minus_one,
+            five_torsion_order_minus_one_bitsize
+                .try_into()
+                .expect("Size in bits of the 5^c - 1 is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+
+        if U_in_five_torsion_mult.is_zero() == SUCCESS_RETVAL {
+            println!("Generated basis point U has order < 5^c. Trying a new point");
+            continue;
+        }
+
+        break U_in_five_torsion;
+    };
+    let V = loop {
+        let V = ciphertext.shared_end_curve.rand_point(&mut rng);
+        let V_in_five_torsion = ciphertext.shared_end_curve.mul(
+            &V,
+            &cofactor,
+            cofactor_bitsize
+                .try_into()
+                .expect("Size in bits of the cofactor (p + 1)/5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+
+        if V_in_five_torsion.is_zero() == SUCCESS_RETVAL {
+            println!(
+                "Generated basis point V is in the torsion subgroup of the other cofactors. Trying a new point"
+            );
+            continue;
+        }
+
+        let V_in_five_torsion_mult = ciphertext.shared_end_curve.mul(
+            &V_in_five_torsion,
+            &five_torsion_order_minus_one,
+            five_torsion_order_minus_one_bitsize
+                .try_into()
+                .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+
+        if V_in_five_torsion_mult.is_zero() == SUCCESS_RETVAL {
+            println!("Generated basis point V has order < 5^c. Trying a new point");
+            continue;
+        }
+
+        let UV = ciphertext.shared_end_curve.sub(&U, &V);
+
+        let eUV = ciphertext.shared_end_curve.weil_pairing(
+            &U.to_pointx().x(),
+            &V.to_pointx().x(),
+            &UV.to_pointx().x(),
+            &five_torsion_order.to_bytes_le(),
+            five_torsion_order
+                .bits()
+                .try_into()
+                .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+
+        let eUV_exp_1 = eUV.pow_ext(
+            &five_torsion_order_minus_one,
+            0,
+            five_torsion_order_minus_one_bitsize
+                .try_into()
+                .expect("Size in bits of 5^c - 1 is too big to fit in a usize (we do not ever expect this to happen)")
+        );
+
+        if eUV_exp_1.equals(&Fp2::ONE) == SUCCESS_RETVAL {
+            println!("e(U, V) does not have full multiplicative order");
+            continue;
+        }
+
+        let eUV_exp_2 = eUV_exp_1 * eUV;
+
+        if eUV_exp_2.equals(&Fp2::ONE) == FAILURE_RETVAL {
+            println!("e(U, V) does has multiplicative order > 5^c");
+            continue;
+        }
+
+        break V_in_five_torsion;
+    };
 
     unimplemented!()
 }

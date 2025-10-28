@@ -3,7 +3,10 @@
 use std::{io::Read as _, marker::PhantomData};
 
 use fp2::traits::Fp2 as Fp2Trait;
-use isogeny::elliptic::{basis::BasisX, curve::Curve};
+use isogeny::{
+    elliptic::{basis::BasisX, curve::Curve},
+    theta::elliptic_product::ProductPoint,
+};
 use ndarray::Array2;
 use ndarray_rand::{RandomExt as _, rand::distributions::Uniform};
 use num_bigint::{BigUint, RandBigInt as _};
@@ -30,7 +33,7 @@ pub struct PublicParams<Fp2: Fp2Trait> {
 
 // FIXME: represent scalars as their LE byte arrays and bitsize. Removes external dependency on num-bigint
 pub struct PrvKey<Fp2: Fp2Trait> {
-    q: usize,
+    q: BigUint,
     alpha: BigUint,
     beta: BigUint,
     gamma: BigUint,
@@ -412,6 +415,24 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
     let unmasked_Q_AB = ciphertext
         .shared_end_curve
         .mul(&Q_AB, &beta_inv, beta_inv_bitsize);
+
+    // Compute kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
+    let minus_q = &two_torsion_order - &prv_key.q;
+    let minus_q_bitsize = minus_q.bits().try_into().expect("Size in bits of the scalar -q is too big to fit in a usize (we do not ever expect this to happen)");
+    let minus_q = minus_q.to_bytes_le();
+
+    let (P_B, Q_B) = ciphertext
+        .codomain_curve
+        .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
+    let generator_point1_B = ciphertext
+        .codomain_curve
+        .mul(&P_B, &minus_q, minus_q_bitsize);
+    let generator_point2_B = ciphertext
+        .codomain_curve
+        .mul(&Q_B, &minus_q, minus_q_bitsize);
+
+    let kernel_generator_point1 = ProductPoint::new(&generator_point1_B, &unmasked_P_AB);
+    let kernel_generator_point2 = ProductPoint::new(&generator_point2_B, &unmasked_Q_AB);
 
     unimplemented!()
 }

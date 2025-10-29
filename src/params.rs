@@ -1,5 +1,6 @@
 use fp2::traits::Fp as _;
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
+use num_bigint::BigUint;
 
 use crate::PublicParams;
 
@@ -100,17 +101,38 @@ pub mod poke_i {
     const Y_X: PokeFieldI = PokeFieldI::const_decode_no_check(&Y_X_RE, &Y_X_IM);
     const XY_X: PokeFieldI = PokeFieldI::const_decode_no_check(&XY_X_RE, &XY_X_IM);
 
+    const TWO_TORSION_EXP: usize = 129;
+    const THREE_TORSION_EXP: usize = 164;
+    const FIVE_TORSION_EXP: usize = 18;
+
     pub fn get_params() -> PublicParams<PokeFieldI> {
+        let two_torsion_order = BigUint::from(2u8).pow(
+            TWO_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
+
+        let three_torsion_order = BigUint::from(3u8).pow(
+            THREE_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
         );
+
+        let five_torsion_order = BigUint::from(5u8).pow(
+            FIVE_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -119,9 +141,12 @@ pub mod poke_i {
 
         PublicParams {
             starting_curve: Curve::new(&PokeFieldI::from_i32(0)),
-            two_torsion_exp: 129,
-            three_torsion_exp: 164,
-            five_torsion_exp: 18,
+            two_torsion_exp: TWO_TORSION_EXP,
+            two_torsion_order,
+            three_torsion_exp: THREE_TORSION_EXP,
+            three_torsion_order,
+            five_torsion_exp: FIVE_TORSION_EXP,
+            five_torsion_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
@@ -274,17 +299,38 @@ pub mod poke_iii {
     const Y_X: PokeFieldIII = PokeFieldIII::const_decode_no_check(&Y_X_RE, &Y_X_IM);
     const XY_X: PokeFieldIII = PokeFieldIII::const_decode_no_check(&XY_X_RE, &XY_X_IM);
 
+    const TWO_TORSION_EXP: usize = 192;
+    const THREE_TORSION_EXP: usize = 243;
+    const FIVE_TORSION_EXP: usize = 28;
+
     pub fn get_params() -> PublicParams<PokeFieldIII> {
+        let two_torsion_order = BigUint::from(2u8).pow(
+            TWO_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
+
+        let three_torsion_order = BigUint::from(3u8).pow(
+            THREE_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
         );
+
+        let five_torsion_order = BigUint::from(5u8).pow(
+            FIVE_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -293,9 +339,12 @@ pub mod poke_iii {
 
         PublicParams {
             starting_curve: Curve::new(&PokeFieldIII::from_i32(0)),
-            two_torsion_exp: 192,
-            three_torsion_exp: 243,
-            five_torsion_exp: 28,
+            two_torsion_exp: TWO_TORSION_EXP,
+            two_torsion_order,
+            three_torsion_exp: THREE_TORSION_EXP,
+            three_torsion_order,
+            five_torsion_exp: FIVE_TORSION_EXP,
+            five_torsion_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
@@ -466,17 +515,38 @@ pub mod poke_v {
     const Y_X: PokeFieldV = PokeFieldV::const_decode_no_check(&Y_X_RE, &Y_X_IM);
     const XY_X: PokeFieldV = PokeFieldV::const_decode_no_check(&XY_X_RE, &XY_X_IM);
 
+    const TWO_TORSION_EXP: usize = 256;
+    const THREE_TORSION_EXP: usize = 324;
+    const FIVE_TORSION_EXP: usize = 36;
+
     pub fn get_params() -> PublicParams<PokeFieldV> {
+        let two_torsion_order = BigUint::from(2u8).pow(
+            TWO_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
+
+        let three_torsion_order = BigUint::from(3u8).pow(
+            THREE_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
         );
+
+        let five_torsion_order = BigUint::from(5u8).pow(
+            FIVE_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -485,9 +555,12 @@ pub mod poke_v {
 
         PublicParams {
             starting_curve: Curve::new(&PokeFieldV::from_i32(0)),
-            two_torsion_exp: 256,
-            three_torsion_exp: 324,
-            five_torsion_exp: 36,
+            two_torsion_exp: TWO_TORSION_EXP,
+            two_torsion_order,
+            three_torsion_exp: THREE_TORSION_EXP,
+            three_torsion_order,
+            five_torsion_exp: FIVE_TORSION_EXP,
+            five_torsion_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,

@@ -17,20 +17,13 @@ fn params() -> PublicParams<PokeFieldI> {
 #[fixture]
 fn scalars(params: PublicParams<PokeFieldI>) -> ((Vec<u8>, usize), (Vec<u8>, usize)) {
     let mut rng = ndarray_rand::rand::thread_rng();
-
     let ONE = BigUint::from(1u8);
-    let two_torsion_order = BigUint::from(2u8).pow(
-        params
-            .two_torsion_exp
-            .try_into()
-            .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
-        );
 
-    let mut s = rng.gen_biguint_range(&ONE, &two_torsion_order);
-    let mut s_inv = s.modinv(&two_torsion_order);
+    let mut s = rng.gen_biguint_range(&ONE, &params.two_torsion_order);
+    let mut s_inv = s.modinv(&params.two_torsion_order);
     while let None = s_inv {
-        s = rng.gen_biguint_range(&ONE, &two_torsion_order);
-        s_inv = s.modinv(&two_torsion_order);
+        s = rng.gen_biguint_range(&ONE, &params.two_torsion_order);
+        s_inv = s.modinv(&params.two_torsion_order);
     }
     let Some(s_inv) = s_inv else {
         unreachable!();

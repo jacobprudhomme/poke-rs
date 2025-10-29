@@ -23,8 +23,11 @@ pub const SUCCESS_RETVAL: u32 = u32::MAX;
 
 pub struct PublicParams<Fp2: Fp2Trait> {
     pub starting_curve: Curve<Fp2>,
+    pub two_torsion_order: BigUint,
     pub two_torsion_exp: usize,
+    pub three_torsion_order: BigUint,
     pub three_torsion_exp: usize,
+    pub five_torsion_order: BigUint,
     pub five_torsion_exp: usize,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
@@ -72,39 +75,19 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     let mut rng = ndarray_rand::rand::thread_rng();
     let ONE = BigUint::from(1u8);
 
-    // The groups we will sample masking scalars from
-    let two_torsion_order = BigUint::from(2u8).pow(
-        pub_params
-            .two_torsion_exp
-            .try_into()
-            .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
-        );
-    let three_torsion_order = BigUint::from(3u8).pow(
-        pub_params
-            .three_torsion_exp
-            .try_into()
-            .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
-        );
-    let five_torsion_order = BigUint::from(5u8).pow(
-        pub_params
-            .five_torsion_exp
-            .try_into()
-            .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
-        );
-
     // Sample scalar used to generate new kernels for sender's parallel isogenies
-    let r = rng.gen_biguint_below(&three_torsion_order); // FIXME: what happens if this is 0?
+    let r = rng.gen_biguint_below(&pub_params.three_torsion_order); // FIXME: what happens if this is 0?
     let r_bitsize =
         r.bits().try_into().expect("Size in bits of the scalar r is too big to fit in a usize (we do not ever expect this to happen)");
     let r = r.to_bytes_le();
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let mut omega = rng.gen_biguint_range(&ONE, &two_torsion_order);
-    let mut omega_inv = omega.modinv(&two_torsion_order);
+    let mut omega = rng.gen_biguint_range(&ONE, &pub_params.two_torsion_order);
+    let mut omega_inv = omega.modinv(&pub_params.two_torsion_order);
     while let None = omega_inv {
         println!("omega = {} is not invertible, retrying", omega);
-        omega = rng.gen_biguint_range(&ONE, &two_torsion_order);
-        omega_inv = omega.modinv(&two_torsion_order);
+        omega = rng.gen_biguint_range(&ONE, &pub_params.two_torsion_order);
+        omega_inv = omega.modinv(&pub_params.two_torsion_order);
     }
     println!();
     let Some(omega_inv) = omega_inv else {
@@ -121,24 +104,26 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
     // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
     let mut D = Array2::random_using(
         (2, 2),
-        Uniform::new(BigUint::ZERO, &five_torsion_order),
+        Uniform::new(BigUint::ZERO, &pub_params.five_torsion_order),
         &mut rng,
     );
-    let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &five_torsion_order)
-        + (&five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &five_torsion_order)))
-        % &five_torsion_order;
-    let mut det_gcd = gcd(det.clone(), five_torsion_order.clone()); // TODO: look into a borrowing GCD function
+    let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &pub_params.five_torsion_order)
+        + (&pub_params.five_torsion_order
+            - ((&D[(0, 1)] * &D[(1, 0)]) % &pub_params.five_torsion_order)))
+        % &pub_params.five_torsion_order;
+    let mut det_gcd = gcd(det.clone(), pub_params.five_torsion_order.clone()); // TODO: look into a borrowing GCD function
     while det_gcd != ONE {
         println!("det(D) = {}, gcd(det(D), 5^c) = {}, retrying", det, det_gcd);
         D = Array2::random_using(
             (2, 2),
-            Uniform::new(BigUint::ZERO, &five_torsion_order),
+            Uniform::new(BigUint::ZERO, &pub_params.five_torsion_order),
             &mut rng,
         );
-        det = (((&D[(0, 0)] * &D[(1, 1)]) % &five_torsion_order)
-            + (&five_torsion_order - ((&D[(0, 1)] * &D[(1, 0)]) % &five_torsion_order)))
-            % &five_torsion_order;
-        det_gcd = gcd(det.clone(), five_torsion_order.clone()); // TODO: look into a borrowing GCD function
+        det = (((&D[(0, 0)] * &D[(1, 1)]) % &pub_params.five_torsion_order)
+            + (&pub_params.five_torsion_order
+                - ((&D[(0, 1)] * &D[(1, 0)]) % &pub_params.five_torsion_order)))
+            % &pub_params.five_torsion_order;
+        det_gcd = gcd(det.clone(), pub_params.five_torsion_order.clone()); // TODO: look into a borrowing GCD function
     }
     println!();
     let D_bitsize = D.map(|elem| {
@@ -382,30 +367,9 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
 
     let mut rng = rand::rng();
     let ONE = BigUint::from(1u8);
-    let FIVE = BigUint::from(5u8);
-
-    // The rings to work in to manipulate the scalars
-    let two_torsion_order = BigUint::from(2u8).pow(
-        pub_params
-            .two_torsion_exp
-            .try_into()
-            .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
-        );
-    let three_torsion_order = BigUint::from(3u8).pow(
-        pub_params
-            .three_torsion_exp
-            .try_into()
-            .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
-        );
-    let five_torsion_order = BigUint::from(5u8).pow(
-        pub_params
-            .five_torsion_exp
-            .try_into()
-            .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
-        );
 
     // Invert secret scalars, to neutralize their action on masked points we receive
-    let alpha_inv = prv_key.alpha.modinv(&two_torsion_order);
+    let alpha_inv = prv_key.alpha.modinv(&pub_params.two_torsion_order);
     let Some(alpha_inv) = alpha_inv else {
         unreachable!();
     };
@@ -413,7 +377,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         alpha_inv.bits().try_into().expect("Size in bits of the scalar 1/alpha is too big to fit in a usize (we do not ever expect this to happen)");
     let alpha_inv = alpha_inv.to_bytes_le();
 
-    let beta_inv = prv_key.beta.modinv(&two_torsion_order);
+    let beta_inv = prv_key.beta.modinv(&pub_params.two_torsion_order);
     let Some(beta_inv) = beta_inv else {
         unreachable!();
     };
@@ -433,7 +397,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         .mul(&Q_AB, &beta_inv, beta_inv_bitsize);
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
-    let minus_q = &two_torsion_order - &prv_key.q;
+    let minus_q = &pub_params.two_torsion_order - &prv_key.q;
     let minus_q_bitsize = minus_q.bits().try_into().expect("Size in bits of the scalar -q is too big to fit in a usize (we do not ever expect this to happen)");
     let minus_q = minus_q.to_bytes_le();
 
@@ -473,11 +437,11 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
     );
 
     // Generate random basis of the 5^c-torsion on E_AB
-    let cofactor = &two_torsion_order * &three_torsion_order; // FIXME: this is not necessarily all the cofactors... consider the small cofactor f
+    let cofactor = &pub_params.two_torsion_order * &pub_params.three_torsion_order; // FIXME: this is not necessarily all the cofactors... consider the small cofactor f
     let cofactor_bitsize = cofactor.bits();
     let cofactor = cofactor.to_bytes_le();
 
-    let five_torsion_order_minus_one = &five_torsion_order - ONE;
+    let five_torsion_order_minus_one = &pub_params.five_torsion_order - ONE;
     let five_torsion_order_minus_one_bitsize = five_torsion_order_minus_one.bits();
     let five_torsion_order_minus_one = five_torsion_order_minus_one.to_bytes_le();
 
@@ -553,8 +517,8 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
             &U.to_pointx().x(),
             &V.to_pointx().x(),
             &UV.to_pointx().x(),
-            &five_torsion_order.to_bytes_le(),
-            five_torsion_order
+            &pub_params.five_torsion_order.to_bytes_le(),
+            pub_params.five_torsion_order
                 .bits()
                 .try_into()
                 .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),

@@ -146,7 +146,7 @@ fn poke_i(c: &mut Criterion) {
         ),
     };
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut message = [0; 128];
     rng.fill_bytes(&mut message);
 

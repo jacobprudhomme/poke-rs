@@ -69,7 +69,7 @@ pub fn encrypt<'a, Fp2: Fp2Trait>(
 
     /* Sample scalars used for masking torsion points images or generating new kernels */
 
-    let mut rng = rand::thread_rng();
+    let mut rng = ndarray_rand::rand::thread_rng();
     let ONE = BigUint::from(1u8);
 
     // The groups we will sample masking scalars from
@@ -380,7 +380,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
 ) -> (&'a [u8], u32) {
     let mut retval = SUCCESS_RETVAL;
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let ONE = BigUint::from(1u8);
     let FIVE = BigUint::from(5u8);
 

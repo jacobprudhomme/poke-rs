@@ -16,7 +16,7 @@ fn params() -> PublicParams<PokeFieldI> {
 
 #[fixture]
 fn scalars(params: PublicParams<PokeFieldI>) -> ((Vec<u8>, usize), (Vec<u8>, usize)) {
-    let mut rng = rand::thread_rng();
+    let mut rng = ndarray_rand::rand::thread_rng();
 
     let ONE = BigUint::from(1u8);
     let two_torsion_order = BigUint::from(2u8).pow(

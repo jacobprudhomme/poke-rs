@@ -207,3 +207,85 @@ fn torsion_basis_points_are_on_curve<Fp2: FpTrait>(#[case] params: PublicParams<
         "X - Y is not on the curve E_0",
     );
 }
+
+#[rstest]
+#[case::poke_level_i(poke_i::get_params())]
+#[case::poke_level_iii(poke_iii::get_params())]
+#[case::poke_level_v(poke_v::get_params())]
+fn torsion_basis_points_are_linearly_independent<Fp2: FpTrait>(#[case] params: PublicParams<Fp2>) {
+    let ONE = BigUint::from(1u8);
+
+    // Check (P, Q, P - Q), a basis of the 2^a-torsion
+    let pair = params.starting_curve.weil_pairing_2exp(
+        &params.two_torsion_basis.P.x(),
+        &params.two_torsion_basis.Q.x(),
+        &params.two_torsion_basis.PQ.x(),
+        params.two_torsion_exp,
+    );
+    assert_eq!(
+        pair.pow(
+            &(&params.two_torsion_order - &ONE).to_bytes_le(),
+            (&params.two_torsion_order - &ONE).bits() as usize
+        )
+        .equals(&Fp2::ONE),
+        FAILURE_RETVAL,
+    );
+    assert_eq!(
+        pair.pow(
+            &params.two_torsion_order.to_bytes_le(),
+            params.two_torsion_order.bits() as usize
+        )
+        .equals(&Fp2::ONE),
+        SUCCESS_RETVAL,
+    );
+
+    // Check (R, S, R - S), a basis of the 3^b-torsion
+    let pair = params.starting_curve.weil_pairing(
+        &params.three_torsion_basis.P.x(),
+        &params.three_torsion_basis.Q.x(),
+        &params.three_torsion_basis.PQ.x(),
+        &params.three_torsion_order.to_bytes_le(),
+        params.three_torsion_order.bits() as usize,
+    );
+    assert_eq!(
+        pair.pow(
+            &(&params.three_torsion_order - &ONE).to_bytes_le(),
+            (&params.three_torsion_order - &ONE).bits() as usize
+        )
+        .equals(&Fp2::ONE),
+        FAILURE_RETVAL,
+    );
+    assert_eq!(
+        pair.pow(
+            &params.three_torsion_order.to_bytes_le(),
+            params.three_torsion_order.bits() as usize
+        )
+        .equals(&Fp2::ONE),
+        SUCCESS_RETVAL,
+    );
+
+    // Check (X, Y, X - Y), a basis of the 5^c-torsion
+    let pair = params.starting_curve.weil_pairing(
+        &params.five_torsion_basis.P.x(),
+        &params.five_torsion_basis.Q.x(),
+        &params.five_torsion_basis.PQ.x(),
+        &params.five_torsion_order.to_bytes_le(),
+        params.five_torsion_order.bits() as usize,
+    );
+    assert_eq!(
+        pair.pow(
+            &(&params.five_torsion_order - &ONE).to_bytes_le(),
+            (&params.five_torsion_order - &ONE).bits() as usize
+        )
+        .equals(&Fp2::ONE),
+        FAILURE_RETVAL,
+    );
+    assert_eq!(
+        pair.pow(
+            &params.five_torsion_order.to_bytes_le(),
+            params.five_torsion_order.bits() as usize
+        )
+        .equals(&Fp2::ONE),
+        SUCCESS_RETVAL,
+    );
+}

@@ -13,7 +13,7 @@ fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
     let ONE = BigUint::from(1u8);
     let Z_two_torsion_order = BigUint::from(2u8).pow(
         params
-            .two_torsion_exp
+            .full_two_torsion_exp
             .try_into()
             .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
         );

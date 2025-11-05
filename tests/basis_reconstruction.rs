@@ -19,11 +19,11 @@ fn scalars(params: PublicParams<PokeFieldI>) -> ((Vec<u8>, usize), (Vec<u8>, usi
     let mut rng = ndarray_rand::rand::thread_rng();
     let ONE = BigUint::from(1u8);
 
-    let mut s = rng.gen_biguint_range(&ONE, &params.two_torsion_order);
-    let mut s_inv = s.modinv(&params.two_torsion_order);
+    let mut s = rng.gen_biguint_range(&ONE, &params.full_two_torsion_order);
+    let mut s_inv = s.modinv(&params.full_two_torsion_order);
     while let None = s_inv {
-        s = rng.gen_biguint_range(&ONE, &params.two_torsion_order);
-        s_inv = s.modinv(&params.two_torsion_order);
+        s = rng.gen_biguint_range(&ONE, &params.full_two_torsion_order);
+        s_inv = s.modinv(&params.full_two_torsion_order);
     }
     let Some(s_inv) = s_inv else {
         unreachable!();

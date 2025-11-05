@@ -25,8 +25,10 @@ pub const SUCCESS_RETVAL: u32 = u32::MAX;
 
 pub struct PublicParams<Fp2: Fp2Trait> {
     pub starting_curve: Curve<Fp2>,
-    pub two_torsion_order: BigUint,
-    pub two_torsion_exp: usize,
+    pub full_two_torsion_order: BigUint,
+    pub full_two_torsion_exp: usize,
+    pub effective_two_torsion_order: BigUint,
+    pub effective_two_torsion_exp: usize,
     pub three_torsion_order: BigUint,
     pub three_torsion_exp: usize,
     pub five_torsion_order: BigUint,
@@ -87,12 +89,12 @@ where
     let r = r.to_bytes_le();
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let mut omega = rng.gen_biguint_range(&ONE, &pub_params.two_torsion_order);
-    let mut omega_inv = omega.modinv(&pub_params.two_torsion_order);
+    let mut omega = rng.gen_biguint_range(&ONE, &pub_params.effective_two_torsion_order);
+    let mut omega_inv = omega.modinv(&pub_params.effective_two_torsion_order);
     while let None = omega_inv {
         println!("omega = {} is not invertible, retrying", omega);
-        omega = rng.gen_biguint_range(&ONE, &pub_params.two_torsion_order);
-        omega_inv = omega.modinv(&pub_params.two_torsion_order);
+        omega = rng.gen_biguint_range(&ONE, &pub_params.effective_two_torsion_order);
+        omega_inv = omega.modinv(&pub_params.effective_two_torsion_order);
     }
     println!();
     let Some(omega_inv) = omega_inv else {
@@ -324,7 +326,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
     let ONE = BigUint::from(1u8);
 
     // Invert secret scalars, to neutralize their action on masked points we receive
-    let alpha_inv = prv_key.alpha.modinv(&pub_params.two_torsion_order);
+    let alpha_inv = prv_key.alpha.modinv(&pub_params.full_two_torsion_order);
     let Some(alpha_inv) = alpha_inv else {
         unreachable!();
     };
@@ -332,7 +334,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         alpha_inv.bits().try_into().expect("Size in bits of the scalar 1/alpha is too big to fit in a usize (we do not ever expect this to happen)");
     let alpha_inv = alpha_inv.to_bytes_le();
 
-    let beta_inv = prv_key.beta.modinv(&pub_params.two_torsion_order);
+    let beta_inv = prv_key.beta.modinv(&pub_params.full_two_torsion_order);
     let Some(beta_inv) = beta_inv else {
         unreachable!();
     };
@@ -379,7 +381,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         .elliptic_product_isogeny(
             &kernel_generator_point1,
             &kernel_generator_point2,
-            pub_params.two_torsion_exp,
+            pub_params.effective_two_torsion_exp,
             &[
                 ProductPoint::new(&X_B, &Point::INFINITY),
                 ProductPoint::new(&Y_B, &Point::INFINITY),

@@ -33,7 +33,7 @@ fn torsion_basis_points_have_correct_order<Fp2: FpTrait>(#[case] params: PublicP
     // Ensure [2^a] * (P, Q, P - Q) = O, and [2^a - 1] * (P, Q, P - Q) != O
     let two_torsion_basis_times_one_less_than_order = params
         .starting_curve
-        .basis_double_iter(&params.two_torsion_basis, params.two_torsion_exp - 1);
+        .basis_double_iter(&params.two_torsion_basis, params.full_two_torsion_exp - 1);
     assert_eq!(
         two_torsion_basis_times_one_less_than_order.P.is_zero(),
         FAILURE_RETVAL
@@ -49,7 +49,7 @@ fn torsion_basis_points_have_correct_order<Fp2: FpTrait>(#[case] params: PublicP
 
     let two_torsion_basis_times_order = params
         .starting_curve
-        .basis_double_iter(&params.two_torsion_basis, params.two_torsion_exp);
+        .basis_double_iter(&params.two_torsion_basis, params.full_two_torsion_exp);
     assert_eq!(two_torsion_basis_times_order.P.is_zero(), SUCCESS_RETVAL);
     assert_eq!(two_torsion_basis_times_order.Q.is_zero(), SUCCESS_RETVAL);
     assert_eq!(two_torsion_basis_times_order.PQ.is_zero(), SUCCESS_RETVAL);
@@ -220,20 +220,20 @@ fn torsion_basis_points_are_linearly_independent<Fp2: FpTrait>(#[case] params: P
         &params.two_torsion_basis.P.x(),
         &params.two_torsion_basis.Q.x(),
         &params.two_torsion_basis.PQ.x(),
-        params.two_torsion_exp,
+        params.full_two_torsion_exp,
     );
     assert_eq!(
         pair.pow(
-            &(&params.two_torsion_order - &ONE).to_bytes_le(),
-            (&params.two_torsion_order - &ONE).bits() as usize
+            &(&params.full_two_torsion_order - &ONE).to_bytes_le(),
+            (&params.full_two_torsion_order - &ONE).bits() as usize
         )
         .equals(&Fp2::ONE),
         FAILURE_RETVAL,
     );
     assert_eq!(
         pair.pow(
-            &params.two_torsion_order.to_bytes_le(),
-            params.two_torsion_order.bits() as usize
+            &params.full_two_torsion_order.to_bytes_le(),
+            params.full_two_torsion_order.bits() as usize
         )
         .equals(&Fp2::ONE),
         SUCCESS_RETVAL,

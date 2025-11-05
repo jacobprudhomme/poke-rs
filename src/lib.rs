@@ -355,19 +355,29 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         .mul(&Q_AB, &beta_inv, beta_inv_bitsize);
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
-    let minus_q = &pub_params.two_torsion_order - &prv_key.q;
-    let minus_q_bitsize = minus_q.bits().try_into().expect("Size in bits of the scalar -q is too big to fit in a usize (we do not ever expect this to happen)");
-    let minus_q = minus_q.to_bytes_le();
-
     let (P_B, Q_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
     let generator_point1_B = ciphertext
         .codomain_curve
-        .mul(&P_B, &minus_q, minus_q_bitsize);
+        .mul(
+            &P_B,
+            &prv_key.q.to_bytes_le(),
+            prv_key.q
+                .bits()
+                .try_into()
+                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
     let generator_point2_B = ciphertext
         .codomain_curve
-        .mul(&Q_B, &minus_q, minus_q_bitsize);
+        .mul(
+            &Q_B,
+            &prv_key.q.to_bytes_le(),
+            prv_key.q
+                .bits()
+                .try_into()
+                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
 
     let kernel_generator_point1 = ProductPoint::new(&generator_point1_B, &unmasked_P_AB);
     let kernel_generator_point2 = ProductPoint::new(&generator_point2_B, &unmasked_Q_AB);

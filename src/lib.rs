@@ -488,9 +488,8 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
                 .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
         );
 
-        let eUV_exp_1 = eUV.pow_ext(
+        let eUV_exp_1 = eUV.pow(
             &five_torsion_order_minus_one,
-            0,
             five_torsion_order_minus_one_bitsize
                 .try_into()
                 .expect("Size in bits of 5^c - 1 is too big to fit in a usize (we do not ever expect this to happen)")
@@ -504,7 +503,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         let eUV_exp_2 = eUV_exp_1 * eUV;
 
         if eUV_exp_2.equals(&Fp2::ONE) == FAILURE_RETVAL {
-            println!("e(U, V) does has multiplicative order > 5^c");
+            println!("e(U, V) has multiplicative order > 5^c");
             continue;
         }
 

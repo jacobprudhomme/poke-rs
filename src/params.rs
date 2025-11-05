@@ -135,6 +135,7 @@ pub mod poke_i {
                 .try_into()
                 .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
             );
+        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -151,6 +152,7 @@ pub mod poke_i {
             three_torsion_order,
             five_torsion_exp: FIVE_TORSION_EXP,
             five_torsion_order,
+            five_torsion_cofactor,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
@@ -337,6 +339,8 @@ pub mod poke_iii {
                 .try_into()
                 .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
             );
+        let five_torsion_cofactor =
+            BigUint::from(49u8) * &full_two_torsion_order * &three_torsion_order;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -353,6 +357,7 @@ pub mod poke_iii {
             three_torsion_order,
             five_torsion_exp: FIVE_TORSION_EXP,
             five_torsion_order,
+            five_torsion_cofactor,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
@@ -557,6 +562,8 @@ pub mod poke_v {
                 .try_into()
                 .expect("Exponent of the 5-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
             );
+        let five_torsion_cofactor =
+            BigUint::from(547u16) * &full_two_torsion_order * &three_torsion_order;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -573,6 +580,7 @@ pub mod poke_v {
             three_torsion_order,
             five_torsion_exp: FIVE_TORSION_EXP,
             five_torsion_order,
+            five_torsion_cofactor,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,

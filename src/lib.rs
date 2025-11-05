@@ -33,6 +33,7 @@ pub struct PublicParams<Fp2: Fp2Trait> {
     pub three_torsion_exp: usize,
     pub five_torsion_order: BigUint,
     pub five_torsion_exp: usize,
+    pub five_torsion_cofactor: BigUint,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
     pub five_torsion_basis: BasisX<Fp2>,
@@ -394,11 +395,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
     );
 
     // Generate random basis of the 5^c-torsion on E_AB
-    let cofactor = &pub_params.two_torsion_order * &pub_params.three_torsion_order; // FIXME: this is not necessarily all the cofactors... consider the small cofactor f
-    let cofactor_bitsize = cofactor.bits();
-    let cofactor = cofactor.to_bytes_le();
-
-    let five_torsion_order_minus_one = &pub_params.five_torsion_order - ONE;
+    let five_torsion_order_minus_one = &pub_params.five_torsion_order - &ONE;
     let five_torsion_order_minus_one_bitsize = five_torsion_order_minus_one.bits();
     let five_torsion_order_minus_one = five_torsion_order_minus_one.to_bytes_le();
 
@@ -409,8 +406,8 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         let U = ciphertext.shared_end_curve.rand_point(&mut rng);
         let U_in_five_torsion = ciphertext.shared_end_curve.mul(
             &U,
-            &cofactor,
-            cofactor_bitsize
+            &pub_params.five_torsion_cofactor.to_bytes_le(),
+            pub_params.five_torsion_cofactor.bits()
                 .try_into()
                 .expect("Size in bits of the cofactor (p + 1)/5^c is too big to fit in a usize (we do not ever expect this to happen)"),
         );
@@ -442,8 +439,8 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         let V = ciphertext.shared_end_curve.rand_point(&mut rng);
         let V_in_five_torsion = ciphertext.shared_end_curve.mul(
             &V,
-            &cofactor,
-            cofactor_bitsize
+            &pub_params.five_torsion_cofactor.to_bytes_le(),
+            pub_params.five_torsion_cofactor.bits()
                 .try_into()
                 .expect("Size in bits of the cofactor (p + 1)/5^c is too big to fit in a usize (we do not ever expect this to happen)"),
         );

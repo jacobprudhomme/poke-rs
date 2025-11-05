@@ -425,7 +425,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         // We don't want a point in the ((p + 1)/5^c)-torsion
         if U_in_five_torsion.is_zero() == SUCCESS_RETVAL {
             println!(
-                "Generated basis point U is in the torsion subgroup of the other cofactors. Trying a new point"
+                "Generated point U is in the torsion subgroup of the other cofactors of p + 1. Trying a new point"
             );
             continue;
         }
@@ -439,7 +439,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         );
 
         if U_in_five_torsion_mult.is_zero() == SUCCESS_RETVAL {
-            println!("Generated basis point U has order < 5^c. Trying a new point");
+            println!("Generated point U has order < 5^c. Trying a new point");
             continue;
         }
 
@@ -457,7 +457,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
 
         if V_in_five_torsion.is_zero() == SUCCESS_RETVAL {
             println!(
-                "Generated basis point V is in the torsion subgroup of the other cofactors. Trying a new point"
+                "Generated point V is in the torsion subgroup of the other cofactors. Trying a new point"
             );
             continue;
         }
@@ -471,10 +471,11 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         );
 
         if V_in_five_torsion_mult.is_zero() == SUCCESS_RETVAL {
-            println!("Generated basis point V has order < 5^c. Trying a new point");
+            println!("Generated point V has order < 5^c. Trying a new point");
             continue;
         }
 
+        let V = V_in_five_torsion;
         let UV = ciphertext.shared_end_curve.sub(&U, &V);
 
         let eUV = ciphertext.shared_end_curve.weil_pairing(

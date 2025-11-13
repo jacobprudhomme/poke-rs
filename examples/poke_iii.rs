@@ -3,8 +3,8 @@
 use poke::{SUCCESS_RETVAL, encrypt, example_keypairs, params};
 
 fn main() {
-    let params = params::poke_i::get_params();
-    let pub_key = example_keypairs::poke_i::get_pub_key();
+    let params = params::poke_iii::get_params();
+    let pub_key = example_keypairs::poke_iii::get_pub_key();
 
     let mut message = String::from("Hello, world!");
     let message = unsafe { message.as_bytes_mut() };

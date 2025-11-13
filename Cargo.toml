@@ -17,6 +17,7 @@ sha3 = "0.10"
 [dev-dependencies]
 criterion = "0.7"
 rstest = "0.26"
+rstest_reuse = "0.7.0"
 sha2 = "0.10"
 
 [[bench]]

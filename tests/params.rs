@@ -54,21 +54,21 @@ fn torsion_basis_points_have_correct_order<Fp2: FpTrait>(#[case] params: PublicP
     assert_eq!(two_torsion_basis_times_order.Q.is_zero(), SUCCESS_RETVAL);
     assert_eq!(two_torsion_basis_times_order.PQ.is_zero(), SUCCESS_RETVAL);
 
-    // Ensure [3^b] * (R, S, R - S) - O, and [3^b - 1] * (R, S, R - S) != O
+    // Ensure [3^b] * (R, S, R - S) = O, and [3^b - 1] * (R, S, R - S) != O
     let xR_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.P,
         &(&params.three_torsion_order - &ONE).to_bytes_le(),
-        params.three_torsion_order.bits() as usize,
+        (&params.three_torsion_order - &ONE).bits() as usize,
     );
     let xS_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.Q,
         &(&params.three_torsion_order - &ONE).to_bytes_le(),
-        params.three_torsion_order.bits() as usize,
+        (&params.three_torsion_order - &ONE).bits() as usize,
     );
     let xRS_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.PQ,
         &(&params.three_torsion_order - &ONE).to_bytes_le(),
-        params.three_torsion_order.bits() as usize,
+        (&params.three_torsion_order - &ONE).bits() as usize,
     );
     assert_eq!(xR_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
     assert_eq!(xS_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -97,17 +97,17 @@ fn torsion_basis_points_have_correct_order<Fp2: FpTrait>(#[case] params: PublicP
     let xX_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.P,
         &(&params.five_torsion_order - &ONE).to_bytes_le(),
-        params.five_torsion_order.bits() as usize,
+        (&params.five_torsion_order - &ONE).bits() as usize,
     );
     let xY_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.Q,
         &(&params.five_torsion_order - &ONE).to_bytes_le(),
-        params.five_torsion_order.bits() as usize,
+        (&params.five_torsion_order - &ONE).bits() as usize,
     );
     let xXY_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.PQ,
         &(&params.five_torsion_order - &ONE).to_bytes_le(),
-        params.five_torsion_order.bits() as usize,
+        (&params.five_torsion_order - &ONE).bits() as usize,
     );
     assert_eq!(xX_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
     assert_eq!(xY_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -174,7 +174,7 @@ fn torsion_basis_points_are_on_curve<Fp2: FpTrait>(#[case] params: PublicParams<
             .starting_curve
             .is_on_curve(&params.three_torsion_basis.Q.x()),
         SUCCESS_RETVAL,
-        "R is not on the curve E_0",
+        "S is not on the curve E_0",
     );
     assert_eq!(
         params

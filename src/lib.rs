@@ -18,10 +18,12 @@ use sha3::{
     digest::{ExtendableOutput as _, Update as _},
 };
 
+pub mod example_keypairs;
 pub mod fields;
 pub mod params;
 
 pub const SUCCESS_RETVAL: u32 = u32::MAX;
+pub const FAILURE_RETVAL: u32 = u32::MIN;
 
 pub struct PublicParams<Fp2: Fp2Trait> {
     pub starting_curve: Curve<Fp2>,
@@ -41,12 +43,11 @@ pub struct PublicParams<Fp2: Fp2Trait> {
 
 // FIXME: represent scalars as their LE byte arrays and bitsize. Removes external dependency on num-bigint
 pub struct PrvKey<Fp2: Fp2Trait> {
-    q: BigUint,
-    alpha: BigUint,
-    beta: BigUint,
-    gamma: BigUint,
-    delta: BigUint,
-    _field: PhantomData<Fp2>,
+    pub q: BigUint,
+    pub alpha: BigUint,
+    pub beta: BigUint,
+    pub delta: BigUint,
+    pub _field: PhantomData<Fp2>,
 }
 
 pub struct PubKey<Fp2: Fp2Trait> {
@@ -57,11 +58,11 @@ pub struct PubKey<Fp2: Fp2Trait> {
 }
 
 pub struct Ciphertext<'a, Fp2: Fp2Trait> {
-    codomain_curve: Curve<Fp2>,
-    masked_two_torsion_basis_EB: BasisX<Fp2>,
-    masked_five_torsion_basis_EB: BasisX<Fp2>,
-    shared_end_curve: Curve<Fp2>,
-    masked_two_torsion_basis_EAB: BasisX<Fp2>,
+    pub codomain_curve: Curve<Fp2>,
+    pub masked_two_torsion_basis_EB: BasisX<Fp2>,
+    pub masked_five_torsion_basis_EB: BasisX<Fp2>,
+    pub shared_end_curve: Curve<Fp2>,
+    pub masked_two_torsion_basis_EAB: BasisX<Fp2>,
     pub encrypted_message: &'a [u8],
 }
 

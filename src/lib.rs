@@ -544,7 +544,7 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
     let (X_B, Y_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_five_torsion_basis_EB);
-    let (intermediate_curves, five_torsion_basis_intermediate_curves, ok) = domain
+    let (intermediate_curves, five_torsion_basis_intermediate_curves_left, ok) = domain
         .elliptic_product_isogeny(
             &kernel_generator_point1,
             &kernel_generator_point2,
@@ -666,6 +666,121 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
 
         break V_in_five_torsion;
     };
+
+    let (intermediate_curves_verif, five_torsion_basis_intermediate_curve_right, ok) = domain
+        .elliptic_product_isogeny(
+            &kernel_generator_point1,
+            &kernel_generator_point2,
+            pub_params.effective_two_torsion_exp,
+            &[
+                ProductPoint::new(&Point::INFINITY, &U),
+                ProductPoint::new(&Point::INFINITY, &V),
+            ],
+        );
+    retval &= ok;
+
+    /* Find change-of-basis matrix */
+
+    // Compute pairs of point subtractions for later computing the pairings between them
+    let mut X_intermediate_curve = five_torsion_basis_intermediate_curves_left[0].points().0;
+    let mut Y_intermediate_curve = five_torsion_basis_intermediate_curves_left[1].points().0;
+
+    let mut U_intermediate_curve = five_torsion_basis_intermediate_curve_right[0].points().0;
+    let mut V_intermediate_curve = five_torsion_basis_intermediate_curve_right[1].points().0;
+    let UV_intermediate_curve = intermediate_curves_verif
+        .curves()
+        .0
+        .sub(&U_intermediate_curve, &V_intermediate_curve);
+
+    let XV_intermediate_curve = intermediate_curves
+        .curves()
+        .0
+        .sub(&X_intermediate_curve, &V_intermediate_curve);
+    let XmU_intermediate_curve = intermediate_curves
+        .curves()
+        .0
+        .add(&X_intermediate_curve, &U_intermediate_curve);
+
+    let YV_intermediate_curve = intermediate_curves
+        .curves()
+        .0
+        .sub(&Y_intermediate_curve, &V_intermediate_curve);
+    let YmU_intermediate_curve = intermediate_curves
+        .curves()
+        .0
+        .add(&Y_intermediate_curve, &U_intermediate_curve);
+
+    // Compute the pairings e(U, V), e(X, V) = e(U, V)^x and e(X, -U) = e(U, V)^y,
+    // e(Y, V) = e(U, V)^w and e(Y, -U) = e(U, V)^z
+    let eUV = intermediate_curves_verif.curves().0.weil_pairing(
+        &U_intermediate_curve.to_pointx().x(),
+        &V_intermediate_curve.to_pointx().x(),
+        &UV_intermediate_curve.to_pointx().x(),
+        &pub_params.five_torsion_order.to_bytes_le(),
+        pub_params.five_torsion_order
+            .bits()
+            .try_into()
+            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+    );
+
+    let eXV = intermediate_curves_verif.curves().0.weil_pairing(
+        &X_intermediate_curve.to_pointx().x(),
+        &V_intermediate_curve.to_pointx().x(),
+        &XV_intermediate_curve.to_pointx().x(),
+        &pub_params.five_torsion_order.to_bytes_le(),
+        pub_params.five_torsion_order
+            .bits()
+            .try_into()
+            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+    );
+
+    let mU_intermediate_curve = -U_intermediate_curve;
+    let eXmU = intermediate_curves_verif.curves().0.weil_pairing(
+        &X_intermediate_curve.to_pointx().x(),
+        &mU_intermediate_curve.to_pointx().x(),
+        &XmU_intermediate_curve.to_pointx().x(),
+        &pub_params.five_torsion_order.to_bytes_le(),
+        pub_params.five_torsion_order
+            .bits()
+            .try_into()
+            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+    );
+
+    let eYV = intermediate_curves_verif.curves().0.weil_pairing(
+        &Y_intermediate_curve.to_pointx().x(),
+        &V_intermediate_curve.to_pointx().x(),
+        &YV_intermediate_curve.to_pointx().x(),
+        &pub_params.five_torsion_order.to_bytes_le(),
+        pub_params.five_torsion_order
+            .bits()
+            .try_into()
+            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+    );
+
+    let eYmU = intermediate_curves_verif.curves().0.weil_pairing(
+        &Y_intermediate_curve.to_pointx().x(),
+        &mU_intermediate_curve.to_pointx().x(),
+        &YmU_intermediate_curve.to_pointx().x(),
+        &pub_params.five_torsion_order.to_bytes_le(),
+        pub_params.five_torsion_order
+            .bits()
+            .try_into()
+            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+    );
+
+    // Solve discrete logarithm between pairings to obtain expression of X' in terms of <U',V'>
+    let ((x, x_bitlen), ok) =
+        solve_dlp_small_prime_power_order(&eUV, &eXV, 5, pub_params.five_torsion_exp);
+    retval &= ok;
+    let ((y, y_bitlen), ok) =
+        solve_dlp_small_prime_power_order(&eUV, &eXmU, 5, pub_params.five_torsion_exp);
+    retval &= ok;
+    let ((w, w_bitlen), ok) =
+        solve_dlp_small_prime_power_order(&eUV, &eYV, 5, pub_params.five_torsion_exp);
+    retval &= ok;
+    let ((z, z_bitlen), ok) =
+        solve_dlp_small_prime_power_order(&eUV, &eYmU, 5, pub_params.five_torsion_exp);
+    retval &= ok;
 
     unimplemented!()
 }

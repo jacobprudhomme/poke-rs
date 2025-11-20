@@ -782,5 +782,72 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
         solve_dlp_small_prime_power_order(&eUV, &eYmU, 5, pub_params.five_torsion_exp);
     retval &= ok;
 
+    /* Decrypt message using one-time pad derived from shared secret */
+
+    // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
+    let undoing_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
+
+    ciphertext
+        .shared_end_curve
+        .mul_into(&mut X_intermediate_curve, &U, &x, x_bitlen);
+    ciphertext
+        .shared_end_curve
+        .mul_into(&mut Y_intermediate_curve, &V, &y, y_bitlen);
+    ciphertext.shared_end_curve.add_into(
+        &mut U_intermediate_curve,
+        &X_intermediate_curve,
+        &Y_intermediate_curve,
+    );
+    ciphertext.shared_end_curve.mul_into(
+        &mut V_intermediate_curve,
+        &U_intermediate_curve,
+        &undoing_factor.to_bytes_le(),
+        undoing_factor
+            .bits()
+            .try_into()
+            .expect("Size in bits of (2^a - q) is too big to fit in a usize (we do not ever expect this to happen)"),
+    );
+    let X_AB = ciphertext
+        .shared_end_curve
+        .mul(
+            &V_intermediate_curve,
+            &prv_key.delta.to_bytes_le(),
+            prv_key.delta
+                .bits()
+                .try_into()
+                .expect("Size in bits of delta is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+
+    ciphertext
+        .shared_end_curve
+        .mul_into(&mut X_intermediate_curve, &U, &w, w_bitlen);
+    ciphertext
+        .shared_end_curve
+        .mul_into(&mut Y_intermediate_curve, &V, &z, z_bitlen);
+    ciphertext.shared_end_curve.add_into(
+        &mut U_intermediate_curve,
+        &X_intermediate_curve,
+        &Y_intermediate_curve,
+    );
+    ciphertext.shared_end_curve.mul_into(
+        &mut V_intermediate_curve,
+        &U_intermediate_curve,
+        &undoing_factor.to_bytes_le(),
+        undoing_factor
+            .bits()
+            .try_into()
+            .expect("Size in bits of (2^a - q) is too big to fit in a usize (we do not ever expect this to happen)"),
+    );
+    let Y_AB = ciphertext
+        .shared_end_curve
+        .mul(
+            &V_intermediate_curve,
+            &prv_key.delta.to_bytes_le(),
+            prv_key.delta
+                .bits()
+                .try_into()
+                .expect("Size in bits of delta is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+
     unimplemented!()
 }

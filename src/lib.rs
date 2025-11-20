@@ -8,6 +8,9 @@ use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
     elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
+    utilities::bn::{
+        add_bn_vartime, bn_bit_length_vartime, mul_bn_by_u64_vartime, prime_power_to_bn_vartime,
+    },
 };
 use ndarray::Array2;
 use ndarray_rand::{RandomExt as _, rand::distributions::Uniform};
@@ -64,6 +67,158 @@ pub struct Ciphertext<'a, Fp2: Fp2Trait> {
     pub shared_end_curve: Curve<Fp2>,
     pub masked_two_torsion_basis_EAB: BasisX<Fp2>,
     pub encrypted_message: &'a [u8],
+}
+
+pub fn byte_bn_to_word_bn(bytes: &[u8]) -> Vec<u64> {
+    bytes
+        .chunks(8)
+        .map(|word_bytes| {
+            let mut word_bytes = word_bytes.to_vec();
+            word_bytes.resize(8, 0);
+            u64::from_le_bytes(word_bytes.try_into().unwrap())
+        })
+        .collect()
+}
+
+// WARN: Assumes represented bignum is non-zero
+pub fn word_bn_to_byte_bn(words: &[u64]) -> Vec<u8> {
+    let mut bytes = words
+        .iter()
+        .flat_map(|word| word.to_le_bytes())
+        .collect::<Vec<_>>();
+    while let Some(&last_byte) = bytes.last()
+        && last_byte == 0
+    {
+        bytes.pop();
+    }
+    bytes
+}
+
+pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
+    generator: &Fp2,
+    value: &Fp2,
+    order: usize,
+) -> (usize, u32) {
+    let mut retval = FAILURE_RETVAL;
+
+    println!("\nSolving in subgroup of order {}", order);
+    println!("({}) = ({})^x", value, generator);
+
+    let order_bn = &prime_power_to_bn_vartime(order, 1);
+    let order_bitlen = bn_bit_length_vartime(&order_bn);
+    let order_bn = word_bn_to_byte_bn(&order_bn);
+    assert_eq!(
+        generator.pow(&order_bn, order_bitlen).equals(&Fp2::ONE),
+        SUCCESS_RETVAL,
+        "Generator does not have order {}",
+        order,
+    );
+
+    let mut element = Fp2::ONE;
+    let mut result = 0;
+    for i in 0..order {
+        let found_log = value.equals(&element);
+        println!(
+            "i = {}, {}",
+            i,
+            if found_log == SUCCESS_RETVAL {
+                "FOUND"
+            } else {
+                "NOT FOUND"
+            }
+        );
+        result |= i & (((found_log as usize) << 32) | found_log as usize);
+        retval |= found_log;
+
+        element *= *generator;
+    }
+
+    println!("Result: {}", result);
+
+    (result, retval)
+}
+
+// WARN: Vartime with respect to public parameters (the order of the 5^c-torsion subgroup)
+pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
+    generator: &Fp2,
+    value: &Fp2,
+    p: usize,
+    e: usize,
+) -> ((Vec<u8>, usize), u32) {
+    let mut retval = SUCCESS_RETVAL;
+
+    println!("\nSolving in subgroup of order {}^{}", p, e);
+    println!("({}) = ({})^x", value, generator);
+
+    let p_to_the_e_basis = (0..=e)
+        .map(|exp| {
+            let bn_le_words = prime_power_to_bn_vartime(p, exp);
+            (
+                word_bn_to_byte_bn(&bn_le_words),
+                bn_bit_length_vartime(&bn_le_words),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let prime_order_subgroup_generator =
+        generator.pow(&p_to_the_e_basis[e - 1].0, p_to_the_e_basis[e - 1].1);
+    assert_eq!(
+        generator
+            .pow(&p_to_the_e_basis[e].0, p_to_the_e_basis[e].1)
+            .equals(&Fp2::ONE),
+        SUCCESS_RETVAL,
+        "g does not have order {}^{}",
+        p,
+        e,
+    );
+    assert_eq!(
+        prime_order_subgroup_generator
+            .pow(&p_to_the_e_basis[1].0, p_to_the_e_basis[1].1)
+            .equals(&Fp2::ONE),
+        SUCCESS_RETVAL,
+        "g^{} does not have order {}",
+        e - 1,
+        p,
+    );
+
+    let mut partial_solutions = Vec::with_capacity(e);
+    let mut partial_sum = vec![0];
+    for i in 0..e {
+        let r = *value
+            * generator
+                .pow(
+                    &word_bn_to_byte_bn(&partial_sum),
+                    bn_bit_length_vartime(&partial_sum),
+                )
+                .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
+        let u = r.pow(
+            &p_to_the_e_basis[e - i - 1].0,
+            p_to_the_e_basis[e - i - 1].1,
+        );
+
+        let (x, ok) = solve_dlp_small_prime_order(&prime_order_subgroup_generator, &u, p);
+        partial_solutions.push(x);
+        partial_sum = add_bn_vartime(
+            &partial_sum,
+            &mul_bn_by_u64_vartime(&byte_bn_to_word_bn(&p_to_the_e_basis[i].0), x as u64),
+        );
+        retval &= ok;
+    }
+
+    println!(
+        "x = {} in ({}) = ({})^x",
+        BigUint::from_bytes_le(&word_bn_to_byte_bn(&partial_sum)),
+        value,
+        generator,
+    );
+
+    (
+        (
+            word_bn_to_byte_bn(&partial_sum),
+            bn_bit_length_vartime(&partial_sum),
+        ),
+        retval,
+    )
 }
 
 pub fn encrypt<'a, Fp2: Fp2Trait>(

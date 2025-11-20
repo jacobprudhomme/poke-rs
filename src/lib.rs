@@ -66,7 +66,7 @@ pub struct Ciphertext<'a, Fp2: Fp2Trait> {
     pub masked_five_torsion_basis_EB: BasisX<Fp2>,
     pub shared_end_curve: Curve<Fp2>,
     pub masked_two_torsion_basis_EAB: BasisX<Fp2>,
-    pub encrypted_message: &'a [u8],
+    pub encrypted_message: &'a mut [u8],
 }
 
 pub fn byte_bn_to_word_bn(bytes: &[u8]) -> Vec<u64> {
@@ -475,8 +475,11 @@ where
 pub fn decrypt<'a, Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     prv_key: &PrvKey<Fp2>,
-    ciphertext: &Ciphertext<'a, Fp2>,
-) -> (&'a [u8], u32) {
+    ciphertext: &'a mut Ciphertext<'a, Fp2>,
+) -> (&'a [u8], u32)
+where
+    [(); Fp2::ENCODED_LENGTH]: Sized,
+{
     let mut retval = SUCCESS_RETVAL;
 
     let mut rng = rand::rng();
@@ -849,5 +852,20 @@ pub fn decrypt<'a, Fp2: Fp2Trait>(
                 .expect("Size in bits of delta is too big to fit in a usize (we do not ever expect this to happen)"),
         );
 
-    unimplemented!()
+    // Undo one-time pad of message
+    let mut kdf = Shake256::default();
+    kdf.update(&X_AB.to_pointx().x().encode());
+    kdf.update(&Y_AB.to_pointx().x().encode());
+    let mut one_time_pad = kdf.finalize_xof();
+    let mut buffer = vec![0u8; ciphertext.encrypted_message.len()];
+    let Ok(_) = one_time_pad.read(&mut buffer) else {
+        panic!("Could not read bytes from KDF");
+    };
+    for (encrypted_message_byte, one_time_pad_byte) in
+        ciphertext.encrypted_message.iter_mut().zip(buffer)
+    {
+        *encrypted_message_byte ^= one_time_pad_byte;
+    }
+
+    (ciphertext.encrypted_message, retval)
 }

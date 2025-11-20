@@ -6,21 +6,11 @@ use rstest::rstest;
 fn word_bn_is_inverse_of_byte_bn() {
     let mut rng = rand::rng();
     let mut bn_bytes = vec![0u8; 43];
-    rng.fill_bytes(&mut bn_bytes);
-    let last_byte = bn_bytes[42];
-    let mut i = 0;
-    let trailing_zero_bits = loop {
-        if i >= 8 {
-            break 0;
-        }
-        if last_byte & (1 << (8 - i - 1)) > 0 {
-            break i;
-        }
-        i += 1;
-    };
+    rng.fill_bytes(&mut bn_bytes[..42]);
+    bn_bytes[42] = 1;
     let bn = BigNum {
         repr: bn_bytes,
-        bitlen: 43 * 8,
+        bitlen: 42 * 8 + 1,
     };
 
     let bn_words = byte_bn_to_word_bn(&bn);

@@ -60,13 +60,13 @@ pub struct PubKey<Fp2: Fp2Trait> {
     pub masked_five_torsion_basis_img: BasisX<Fp2>,
 }
 
-pub struct Ciphertext<'a, Fp2: Fp2Trait> {
+pub struct Ciphertext<Fp2: Fp2Trait> {
     pub codomain_curve: Curve<Fp2>,
     pub masked_two_torsion_basis_EB: BasisX<Fp2>,
     pub masked_five_torsion_basis_EB: BasisX<Fp2>,
     pub shared_end_curve: Curve<Fp2>,
     pub masked_two_torsion_basis_EAB: BasisX<Fp2>,
-    pub encrypted_message: &'a mut [u8],
+    pub encrypted_message: Vec<u8>,
 }
 
 pub fn byte_bn_to_word_bn(bytes: &[u8]) -> Vec<u64> {
@@ -224,8 +224,8 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
 pub fn encrypt<'a, Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     pub_key: &PubKey<Fp2>,
-    message: &'a mut [u8],
-) -> (Ciphertext<'a, Fp2>, u32)
+    message: &[u8],
+) -> (Ciphertext<Fp2>, u32)
 where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
@@ -451,32 +451,31 @@ where
     kdf.update(&masked_X_AB.to_pointx().x().encode());
     kdf.update(&masked_Y_AB.to_pointx().x().encode());
     let mut one_time_pad = kdf.finalize_xof();
-    let mut buffer = vec![0u8; message.len()];
-    let Ok(_) = one_time_pad.read(&mut buffer) else {
-        panic!("Could not read bytes from KDF");
+    let mut encrypted_message = vec![0u8; message.len()];
+    let Ok(_) = one_time_pad.read(&mut encrypted_message) else {
+        panic!("Could not read enough bytes from KDF");
     };
-    for (message_byte, one_time_pad_byte) in message.iter_mut().zip(buffer) {
-        *message_byte ^= one_time_pad_byte;
+    for (encrypted_message_byte, message_byte) in encrypted_message.iter_mut().zip(message) {
+        *encrypted_message_byte ^= message_byte;
     }
 
-    (
-        Ciphertext {
-            codomain_curve,
-            masked_two_torsion_basis_EB,
-            masked_five_torsion_basis_EB,
-            shared_end_curve,
-            masked_two_torsion_basis_EAB,
-            encrypted_message: message,
-        },
-        retval,
-    )
+    let ct = Ciphertext {
+        codomain_curve,
+        masked_two_torsion_basis_EB,
+        masked_five_torsion_basis_EB,
+        shared_end_curve,
+        masked_two_torsion_basis_EAB,
+        encrypted_message,
+    };
+
+    (ct, retval)
 }
 
 pub fn decrypt<'a, Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     prv_key: &PrvKey<Fp2>,
-    ciphertext: &'a mut Ciphertext<'a, Fp2>,
-) -> (&'a [u8], u32)
+    ciphertext: &Ciphertext<Fp2>,
+) -> (Vec<u8>, u32)
 where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
@@ -857,15 +856,15 @@ where
     kdf.update(&X_AB.to_pointx().x().encode());
     kdf.update(&Y_AB.to_pointx().x().encode());
     let mut one_time_pad = kdf.finalize_xof();
-    let mut buffer = vec![0u8; ciphertext.encrypted_message.len()];
-    let Ok(_) = one_time_pad.read(&mut buffer) else {
-        panic!("Could not read bytes from KDF");
+    let mut message = vec![0u8; ciphertext.encrypted_message.len()];
+    let Ok(_) = one_time_pad.read(&mut message) else {
+        panic!("Could not read enough bytes from KDF");
     };
-    for (encrypted_message_byte, one_time_pad_byte) in
-        ciphertext.encrypted_message.iter_mut().zip(buffer)
+    for (message_byte, encrypted_message_byte) in
+        message.iter_mut().zip(&ciphertext.encrypted_message)
     {
-        *encrypted_message_byte ^= one_time_pad_byte;
+        *message_byte ^= encrypted_message_byte;
     }
 
-    (ciphertext.encrypted_message, retval)
+    (message, retval)
 }

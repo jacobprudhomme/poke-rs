@@ -771,17 +771,13 @@ where
     );
 
     // Solve discrete logarithm between pairings to obtain expression of X' in terms of <U',V'>
-    let ((x, x_bitlen), ok) =
-        solve_dlp_small_prime_power_order(&eUV, &eXV, 5, pub_params.five_torsion_exp);
+    let (x, ok) = solve_dlp_small_prime_power_order(&eUV, &eXV, 5, pub_params.five_torsion_exp);
     retval &= ok;
-    let ((y, y_bitlen), ok) =
-        solve_dlp_small_prime_power_order(&eUV, &eXmU, 5, pub_params.five_torsion_exp);
+    let (y, ok) = solve_dlp_small_prime_power_order(&eUV, &eXmU, 5, pub_params.five_torsion_exp);
     retval &= ok;
-    let ((w, w_bitlen), ok) =
-        solve_dlp_small_prime_power_order(&eUV, &eYV, 5, pub_params.five_torsion_exp);
+    let (w, ok) = solve_dlp_small_prime_power_order(&eUV, &eYV, 5, pub_params.five_torsion_exp);
     retval &= ok;
-    let ((z, z_bitlen), ok) =
-        solve_dlp_small_prime_power_order(&eUV, &eYmU, 5, pub_params.five_torsion_exp);
+    let (z, ok) = solve_dlp_small_prime_power_order(&eUV, &eYmU, 5, pub_params.five_torsion_exp);
     retval &= ok;
 
     /* Decrypt message using one-time pad derived from shared secret */
@@ -791,10 +787,10 @@ where
 
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_intermediate_curve, &U, &x, x_bitlen);
+        .mul_into(&mut X_intermediate_curve, &U, &x.repr, x.bitlen);
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_intermediate_curve, &V, &y, y_bitlen);
+        .mul_into(&mut Y_intermediate_curve, &V, &y.repr, y.bitlen);
     ciphertext.shared_end_curve.add_into(
         &mut U_intermediate_curve,
         &X_intermediate_curve,
@@ -822,10 +818,10 @@ where
 
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_intermediate_curve, &U, &w, w_bitlen);
+        .mul_into(&mut X_intermediate_curve, &U, &w.repr, w.bitlen);
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_intermediate_curve, &V, &z, z_bitlen);
+        .mul_into(&mut Y_intermediate_curve, &V, &z.repr, z.bitlen);
     ciphertext.shared_end_curve.add_into(
         &mut U_intermediate_curve,
         &X_intermediate_curve,

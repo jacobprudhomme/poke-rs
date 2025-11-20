@@ -26,11 +26,11 @@ fn test_simple_dlp() {
         "Generator doesn't have order 5^3"
     );
 
-    let ((x, x_bitlen), ok) = solve_dlp_small_prime_power_order(&generator, &value, 5, 3);
+    let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 5, 3);
 
     assert_eq!(ok, SUCCESS_RETVAL);
-    assert_eq!(x, &[7]);
-    assert_eq!(x_bitlen, 3);
+    assert_eq!(&x.repr, &[7]);
+    assert_eq!(x.bitlen, 3);
 }
 #[rstest]
 fn test_complex_dlp() {
@@ -51,9 +51,9 @@ fn test_complex_dlp() {
         "Generator doesn't have order 7^4"
     );
 
-    let ((x, x_bitlen), ok) = solve_dlp_small_prime_power_order(&generator, &value, 7, 4);
+    let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 7, 4);
 
     assert_eq!(ok, SUCCESS_RETVAL);
-    assert_eq!(x, &[255, 1]);
-    assert_eq!(x_bitlen, 9);
+    assert_eq!(&x.repr, &[255, 1]);
+    assert_eq!(x.bitlen, 9);
 }

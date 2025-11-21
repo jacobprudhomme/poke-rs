@@ -334,7 +334,6 @@ dependencies = [
 [[package]]
 name = "isogeny"
 version = "0.1.0"
-source = "git+https://github.com/GiacomoPope/isogeny_rs.git?rev=c1681a0#c1681a074c0f7052687ed909a76bf01c94522e50"
 dependencies = [
  "fp2",
  "rand 0.9.2",

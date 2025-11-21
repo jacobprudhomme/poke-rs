@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 fp2 = "0.3"
-isogeny = { git = "https://github.com/GiacomoPope/isogeny_rs.git", rev = "c1681a0" }
+isogeny = { path = "isogeny_rs" }
 ndarray = "0.16"
 ndarray-rand = "0.15"
 num-bigint = { version = "0.4", features = ["rand"] }

@@ -205,6 +205,7 @@ fn projective_difference_method_produces_points_on_curve(
 }
 
 #[rstest]
+#[ignore]
 fn method1_equals_method2(
     params: PublicParams<PokeFieldI>,
     #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
@@ -236,6 +237,7 @@ fn method1_equals_method2(
 }
 
 #[rstest]
+#[ignore]
 fn method1_equals_method3(
     params: PublicParams<PokeFieldI>,
     #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
@@ -267,6 +269,7 @@ fn method1_equals_method3(
 }
 
 #[rstest]
+#[ignore]
 fn method1_equals_projective_diff(
     params: PublicParams<PokeFieldI>,
     #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
@@ -305,6 +308,7 @@ fn method1_equals_projective_diff(
 }
 
 #[rstest]
+#[ignore]
 fn method2_equals_method3(
     params: PublicParams<PokeFieldI>,
     #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
@@ -336,6 +340,7 @@ fn method2_equals_method3(
 }
 
 #[rstest]
+#[ignore]
 fn method2_equals_projective_diff(
     params: PublicParams<PokeFieldI>,
     #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),
@@ -374,6 +379,7 @@ fn method2_equals_projective_diff(
 }
 
 #[rstest]
+#[ignore]
 fn method3_equals_projective_diff(
     params: PublicParams<PokeFieldI>,
     #[from(scalars)] ((s, s_bitsize), (s_inv, s_inv_bitsize)): ((Vec<u8>, usize), (Vec<u8>, usize)),

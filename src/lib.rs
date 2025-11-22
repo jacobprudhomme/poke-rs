@@ -213,7 +213,7 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
 
     println!(
         "x = {} in ({}) = ({})^x",
-        BigUint::from_bytes_le(&word_bn_to_byte_bn(&partial_sum)),
+        BigUint::from_bytes_le(&word_bn_to_byte_bn(&partial_sum).repr),
         value,
         generator,
     );

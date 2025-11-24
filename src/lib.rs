@@ -221,6 +221,132 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     (word_bn_to_byte_bn(&partial_sum), retval)
 }
 
+// Randomly find a basis of the given torsion subgroup on the given curve
+pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
+    curve: &Curve<Fp2>,
+    torsion_subgroup_order: &BigUint,
+    order_cofactor: &BigUint,
+) -> (Point<Fp2>, Point<Fp2>, Fp2) {
+    let mut rng = rand::rng();
+
+    let FIVE = BigUint::from(5u8);
+
+    let reduced_torsion_subgroup_order = torsion_subgroup_order / &FIVE;
+    let reduced_torsion_subgroup_order_bitsize = reduced_torsion_subgroup_order
+        .bits()
+        .try_into()
+        .expect("Size in bits of the (torsion subgroup order / 5) is too big to fit in a usize (we do not ever expect this to happen)");
+    let reduced_torsion_subgroup_order = reduced_torsion_subgroup_order.to_bytes_le();
+    let torsion_subgroup_order_bitsize = torsion_subgroup_order
+        .bits()
+        .try_into()
+        .expect("Size in bits of the torsion subgroup order is too big to fit in a usize (we do not ever expect this to happen)");
+    let torsion_subgroup_order = torsion_subgroup_order.to_bytes_le();
+    let order_cofactor_bitsize = order_cofactor
+        .bits()
+        .try_into()
+        .expect("Size in bits of the cofactor (p + 1)/(pi)^(ei) is too big to fit in a usize (we do not ever expect this to happen)");
+    let order_cofactor = order_cofactor.to_bytes_le();
+
+    // Generate a point of the desired order
+    // FIXME: should I break the loop condition only at the very end, all conditions being tested at once?
+    // Or is this not even necessary, because exiting early only leaks information we know?
+    // TODO: check how long it takes for these loops to terminate on average, as we are not generating deterministically as in the Sage implementation
+    let U = loop {
+        let U = curve.rand_point(&mut rng);
+
+        /* Check point is in the torsion subgroup */
+
+        let U_in_torsion_subgroup = curve.mul(&U, &order_cofactor, order_cofactor_bitsize);
+        // We don't want a point in the ((p + 1)/(pi)^(ei))-torsion
+        if U_in_torsion_subgroup.is_zero() == SUCCESS_RETVAL {
+            println!(
+                "Generated point U is in the torsion subgroup of the other cofactors of p + 1. Trying a new point"
+            );
+            continue;
+        }
+
+        let U_saturated = curve.mul(
+            &U_in_torsion_subgroup,
+            &reduced_torsion_subgroup_order,
+            reduced_torsion_subgroup_order_bitsize,
+        );
+        if U_saturated.is_zero() == SUCCESS_RETVAL {
+            println!("Generated point U has order < (pi)^(ei). Trying a new point");
+            continue;
+        }
+
+        break U_in_torsion_subgroup;
+    };
+
+    // Generate another point of the desired order, linearly independent to the first
+    // Includes Weil pairing between both points
+    let (V, eUV) = loop {
+        let V = curve.rand_point(&mut rng);
+
+        /* Check point is in the torsion subgroup */
+
+        let V_in_torsion_subgroup = curve.mul(&V, &order_cofactor, order_cofactor_bitsize);
+        // We don't want a point in the ((p + 1)/(pi)^(ei))-torsion
+        if V_in_torsion_subgroup.is_zero() == SUCCESS_RETVAL {
+            println!(
+                "Generated point V is in the torsion subgroup of the other cofactors. Trying a new point"
+            );
+            continue;
+        }
+
+        let V_saturated = curve.mul(
+            &V_in_torsion_subgroup,
+            &reduced_torsion_subgroup_order,
+            reduced_torsion_subgroup_order_bitsize,
+        );
+        if V_saturated.is_zero() == SUCCESS_RETVAL {
+            println!("Generated point V has order < (pi)^(ei). Trying a new point");
+            continue;
+        }
+
+        let V = V_in_torsion_subgroup;
+        let UV = curve.sub(&U, &V);
+
+        /* Check point is linearly independent to U */
+
+        let eUV = curve.weil_pairing(
+            &U.to_pointx().x(),
+            &V.to_pointx().x(),
+            &UV.to_pointx().x(),
+            &torsion_subgroup_order,
+            torsion_subgroup_order_bitsize,
+        );
+
+        let eUV_saturated = eUV.pow(
+            &reduced_torsion_subgroup_order,
+            reduced_torsion_subgroup_order_bitsize,
+        );
+        if eUV_saturated.equals(&Fp2::ONE) == SUCCESS_RETVAL {
+            println!("e(U, V) does not have full multiplicative order");
+            continue;
+        }
+        // TODO: is this check necessary? Because of the fact that the group might have order m*n
+        if eUV_saturated
+            .pow(
+                &FIVE.to_bytes_le(),
+                FIVE.bits()
+                    .try_into()
+                    .expect("Size in bits of constant 5 is too big to fit in a usize (we do not ever expect this to happen)"),
+            )
+            .equals(&Fp2::ONE)
+            == FAILURE_RETVAL
+        {
+            println!("e(U, V) has multiplicative order > (pi)^(ei)");
+            continue;
+        }
+
+        break (V, eUV);
+    };
+
+    (U, V, eUV)
+}
+
 pub fn encrypt<'a, Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     pub_key: &PubKey<Fp2>,
@@ -481,8 +607,6 @@ where
 {
     let mut retval = SUCCESS_RETVAL;
 
-    let mut rng = rand::rng();
-    let ONE = BigUint::from(1u8);
 
     // Invert secret scalars, to neutralize their action on masked points we receive
     let alpha_inv = prv_key.alpha.modinv(&pub_params.full_two_torsion_order);
@@ -563,111 +687,11 @@ where
     );
 
     // Generate random basis of the 5^c-torsion on E_AB
-    let five_torsion_order_minus_one = &pub_params.five_torsion_order - &ONE;
-    let five_torsion_order_minus_one_bitsize = five_torsion_order_minus_one.bits();
-    let five_torsion_order_minus_one = five_torsion_order_minus_one.to_bytes_le();
-
-    // FIXME: should I break the loop condition only at the very end, all conditions being tested at once?
-    // Or is this not even necessary, because exiting early only leaks information we know?
-    // TODO: check how long it takes for these loops to terminate on average, as we are not generating deterministically as in the Sage implementation
-    let U = loop {
-        let U = ciphertext.shared_end_curve.rand_point(&mut rng);
-        let U_in_five_torsion = ciphertext.shared_end_curve.mul(
-            &U,
-            &pub_params.five_torsion_cofactor.to_bytes_le(),
-            pub_params.five_torsion_cofactor.bits()
-                .try_into()
-                .expect("Size in bits of the cofactor (p + 1)/5^c is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
-
-        // We don't want a point in the ((p + 1)/5^c)-torsion
-        if U_in_five_torsion.is_zero() == SUCCESS_RETVAL {
-            println!(
-                "Generated point U is in the torsion subgroup of the other cofactors of p + 1. Trying a new point"
-            );
-            continue;
-        }
-
-        let U_in_five_torsion_mult = ciphertext.shared_end_curve.mul(
-            &U_in_five_torsion,
-            &five_torsion_order_minus_one,
-            five_torsion_order_minus_one_bitsize
-                .try_into()
-                .expect("Size in bits of the 5^c - 1 is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
-
-        if U_in_five_torsion_mult.is_zero() == SUCCESS_RETVAL {
-            println!("Generated point U has order < 5^c. Trying a new point");
-            continue;
-        }
-
-        break U_in_five_torsion;
-    };
-    let V = loop {
-        let V = ciphertext.shared_end_curve.rand_point(&mut rng);
-        let V_in_five_torsion = ciphertext.shared_end_curve.mul(
-            &V,
-            &pub_params.five_torsion_cofactor.to_bytes_le(),
-            pub_params.five_torsion_cofactor.bits()
-                .try_into()
-                .expect("Size in bits of the cofactor (p + 1)/5^c is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
-
-        if V_in_five_torsion.is_zero() == SUCCESS_RETVAL {
-            println!(
-                "Generated point V is in the torsion subgroup of the other cofactors. Trying a new point"
-            );
-            continue;
-        }
-
-        let V_in_five_torsion_mult = ciphertext.shared_end_curve.mul(
-            &V_in_five_torsion,
-            &five_torsion_order_minus_one,
-            five_torsion_order_minus_one_bitsize
-                .try_into()
-                .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
-
-        if V_in_five_torsion_mult.is_zero() == SUCCESS_RETVAL {
-            println!("Generated point V has order < 5^c. Trying a new point");
-            continue;
-        }
-
-        let V = V_in_five_torsion;
-        let UV = ciphertext.shared_end_curve.sub(&U, &V);
-
-        let eUV = ciphertext.shared_end_curve.weil_pairing(
-            &U.to_pointx().x(),
-            &V.to_pointx().x(),
-            &UV.to_pointx().x(),
-            &pub_params.five_torsion_order.to_bytes_le(),
-            pub_params.five_torsion_order
-                .bits()
-                .try_into()
-                .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
-
-        let eUV_exp_1 = eUV.pow(
-            &five_torsion_order_minus_one,
-            five_torsion_order_minus_one_bitsize
-                .try_into()
-                .expect("Size in bits of 5^c - 1 is too big to fit in a usize (we do not ever expect this to happen)")
-        );
-
-        if eUV_exp_1.equals(&Fp2::ONE) == SUCCESS_RETVAL {
-            println!("e(U, V) does not have full multiplicative order");
-            continue;
-        }
-
-        let eUV_exp_2 = eUV_exp_1 * eUV;
-
-        if eUV_exp_2.equals(&Fp2::ONE) == FAILURE_RETVAL {
-            println!("e(U, V) has multiplicative order > 5^c");
-            continue;
-        }
-
-        break V_in_five_torsion;
-    };
+    let (U, V, _) = sample_random_torsion_basis(
+        &ciphertext.shared_end_curve,
+        &pub_params.five_torsion_order,
+        &pub_params.five_torsion_cofactor,
+    );
 
     let (intermediate_curves_verif, five_torsion_basis_intermediate_curve_right, ok) = domain
         .elliptic_product_isogeny(

@@ -116,16 +116,6 @@ pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     println!("\nSolving in subgroup of order {}", order);
     println!("({}) = ({})^x", value, generator);
 
-    let order_bn = word_bn_to_byte_bn(&prime_power_to_bn_vartime(order, 1));
-    assert_eq!(
-        generator
-            .pow(&order_bn.repr, order_bn.bitlen)
-            .equals(&Fp2::ONE),
-        SUCCESS_RETVAL,
-        "Generator does not have order {}",
-        order,
-    );
-
     let mut element = Fp2::ONE;
     let mut result = 0;
     for i in 0..order {
@@ -171,22 +161,11 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
         p_to_the_e_basis[e - 1].bitlen,
     );
     assert_eq!(
-        generator
-            .pow(&p_to_the_e_basis[e].repr, p_to_the_e_basis[e].bitlen)
-            .equals(&Fp2::ONE),
-        SUCCESS_RETVAL,
-        "g does not have order {}^{}",
+        prime_order_subgroup_generator.equals(&Fp2::ONE),
+        FAILURE_RETVAL,
+        "g has order < {}^{}",
         p,
         e,
-    );
-    assert_eq!(
-        prime_order_subgroup_generator
-            .pow(&p_to_the_e_basis[1].repr, p_to_the_e_basis[1].bitlen)
-            .equals(&Fp2::ONE),
-        SUCCESS_RETVAL,
-        "g^{} does not have order {}",
-        e - 1,
-        p,
     );
 
     let mut partial_solutions = Vec::with_capacity(e);

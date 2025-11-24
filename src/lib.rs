@@ -87,14 +87,14 @@ pub fn byte_bn_to_word_bn(bytes: &BigNum) -> Vec<u64> {
         .collect()
 }
 
-// WARN: Assumes represented bignum is non-zero
 pub fn word_bn_to_byte_bn(words: &[u64]) -> BigNum {
     let bitlen = bn_bit_length_vartime(words);
     let mut bytes = words
         .iter()
         .flat_map(|word| word.to_le_bytes())
         .collect::<Vec<_>>();
-    while let Some(&last_byte) = bytes.last()
+    while bytes.len() > 1
+        && let Some(&last_byte) = bytes.last()
         && last_byte == 0
     {
         bytes.pop();

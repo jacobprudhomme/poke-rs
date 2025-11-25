@@ -649,6 +649,7 @@ where
     let (X_B, Y_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_five_torsion_basis_EB);
+    let XY_B = ciphertext.codomain_curve.sub(&X_B, &Y_B);
     let (intermediate_curves, five_torsion_basis_intermediate_curves_left, ok) = domain
         .elliptic_product_isogeny(
             &kernel_generator_point1,
@@ -657,6 +658,7 @@ where
             &[
                 ProductPoint::new(&X_B, &Point::INFINITY),
                 ProductPoint::new(&Y_B, &Point::INFINITY),
+                ProductPoint::new(&XY_B, &Point::INFINITY),
             ],
         );
     retval &= ok;
@@ -671,6 +673,7 @@ where
         &pub_params.five_torsion_order,
         &pub_params.five_torsion_cofactor,
     );
+    let UV = ciphertext.shared_end_curve.sub(&U, &V);
 
     let (intermediate_curves_verif, five_torsion_basis_intermediate_curve_right, ok) = domain
         .elliptic_product_isogeny(
@@ -680,6 +683,7 @@ where
             &[
                 ProductPoint::new(&Point::INFINITY, &U),
                 ProductPoint::new(&Point::INFINITY, &V),
+                ProductPoint::new(&Point::INFINITY, &UV),
             ],
         );
     retval &= ok;
@@ -689,13 +693,27 @@ where
     // Compute pairs of point subtractions for later computing the pairings between them
     let mut X_intermediate_curve = five_torsion_basis_intermediate_curves_left[0].points().0;
     let mut Y_intermediate_curve = five_torsion_basis_intermediate_curves_left[1].points().0;
+    let XY_intermediate_curve = five_torsion_basis_intermediate_curves_left[2].points().0;
+    Y_intermediate_curve.set_condneg(
+        !intermediate_curves
+            .curves()
+            .0
+            .sub(&X_intermediate_curve, &Y_intermediate_curve)
+            .to_pointx()
+            .equals(&XY_intermediate_curve.to_pointx()),
+    );
 
     let mut U_intermediate_curve = five_torsion_basis_intermediate_curve_right[0].points().0;
     let mut V_intermediate_curve = five_torsion_basis_intermediate_curve_right[1].points().0;
-    let UV_intermediate_curve = intermediate_curves_verif
-        .curves()
-        .0
-        .sub(&U_intermediate_curve, &V_intermediate_curve);
+    let UV_intermediate_curve = five_torsion_basis_intermediate_curve_right[2].points().0;
+    V_intermediate_curve.set_condneg(
+        !intermediate_curves_verif
+            .curves()
+            .0
+            .sub(&U_intermediate_curve, &V_intermediate_curve)
+            .to_pointx()
+            .equals(&UV_intermediate_curve.to_pointx()),
+    );
 
     let XV_intermediate_curve = intermediate_curves
         .curves()

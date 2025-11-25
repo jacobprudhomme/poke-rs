@@ -619,7 +619,7 @@ where
     let (P_B, Q_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
-    let generator_point1_B = ciphertext
+    let deg_P_B = ciphertext
         .codomain_curve
         .mul(
             &P_B,
@@ -629,7 +629,7 @@ where
                 .try_into()
                 .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
         );
-    let generator_point2_B = ciphertext
+    let deg_Q_B = ciphertext
         .codomain_curve
         .mul(
             &Q_B,
@@ -640,8 +640,8 @@ where
                 .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
         );
 
-    let kernel_generator_point1 = ProductPoint::new(&generator_point1_B, &unmasked_P_AB);
-    let kernel_generator_point2 = ProductPoint::new(&generator_point2_B, &unmasked_Q_AB);
+    let P1P2 = ProductPoint::new(&deg_P_B, &unmasked_P_AB);
+    let Q1Q2 = ProductPoint::new(&deg_Q_B, &unmasked_Q_AB);
 
     // Compute Phi' on the masked 5^c-torsion for E_B
     // FIXME: requires points of order 2^(a+2)
@@ -650,17 +650,16 @@ where
         .codomain_curve
         .lift_basis(&ciphertext.masked_five_torsion_basis_EB);
     let XY_B = ciphertext.codomain_curve.sub(&X_B, &Y_B);
-    let (intermediate_curves, five_torsion_basis_intermediate_curves_left, ok) = domain
-        .elliptic_product_isogeny(
-            &kernel_generator_point1,
-            &kernel_generator_point2,
-            pub_params.effective_two_torsion_exp,
-            &[
-                ProductPoint::new(&X_B, &Point::INFINITY),
-                ProductPoint::new(&Y_B, &Point::INFINITY),
-                ProductPoint::new(&XY_B, &Point::INFINITY),
-            ],
-        );
+    let (aux_curves, five_torsion_basis_EB_on_aux_curve, ok) = domain.elliptic_product_isogeny(
+        &P1P2,
+        &Q1Q2,
+        pub_params.effective_two_torsion_exp,
+        &[
+            ProductPoint::new(&X_B, &Point::INFINITY),
+            ProductPoint::new(&Y_B, &Point::INFINITY),
+            ProductPoint::new(&XY_B, &Point::INFINITY),
+        ],
+    );
     retval &= ok;
     println!(
         "Successful execution after applying Phi' to 5^c-torsion on E_B: {}",
@@ -675,10 +674,10 @@ where
     );
     let UV = ciphertext.shared_end_curve.sub(&U, &V);
 
-    let (intermediate_curves_verif, five_torsion_basis_intermediate_curve_right, ok) = domain
+    let (aux_curves_verif, five_torsion_basis_EAB_on_aux_curve, ok) = domain
         .elliptic_product_isogeny(
-            &kernel_generator_point1,
-            &kernel_generator_point2,
+            &P1P2,
+            &Q1Q2,
             pub_params.effective_two_torsion_exp,
             &[
                 ProductPoint::new(&Point::INFINITY, &U),
@@ -691,11 +690,11 @@ where
     /* Find change-of-basis matrix */
 
     // Compute pairs of point subtractions for later computing the pairings between them
-    let mut X_intermediate_curve = five_torsion_basis_intermediate_curves_left[0].points().0;
-    let mut Y_intermediate_curve = five_torsion_basis_intermediate_curves_left[1].points().0;
-    let XY_intermediate_curve = five_torsion_basis_intermediate_curves_left[2].points().0;
+    let mut X_intermediate_curve = five_torsion_basis_EB_on_aux_curve[0].points().0;
+    let mut Y_intermediate_curve = five_torsion_basis_EB_on_aux_curve[1].points().0;
+    let XY_intermediate_curve = five_torsion_basis_EB_on_aux_curve[2].points().0;
     Y_intermediate_curve.set_condneg(
-        !intermediate_curves
+        !aux_curves
             .curves()
             .0
             .sub(&X_intermediate_curve, &Y_intermediate_curve)
@@ -703,11 +702,11 @@ where
             .equals(&XY_intermediate_curve.to_pointx()),
     );
 
-    let mut U_intermediate_curve = five_torsion_basis_intermediate_curve_right[0].points().0;
-    let mut V_intermediate_curve = five_torsion_basis_intermediate_curve_right[1].points().0;
-    let UV_intermediate_curve = five_torsion_basis_intermediate_curve_right[2].points().0;
+    let mut U_intermediate_curve = five_torsion_basis_EAB_on_aux_curve[0].points().0;
+    let mut V_intermediate_curve = five_torsion_basis_EAB_on_aux_curve[1].points().0;
+    let UV_intermediate_curve = five_torsion_basis_EAB_on_aux_curve[2].points().0;
     V_intermediate_curve.set_condneg(
-        !intermediate_curves_verif
+        !aux_curves_verif
             .curves()
             .0
             .sub(&U_intermediate_curve, &V_intermediate_curve)
@@ -715,27 +714,27 @@ where
             .equals(&UV_intermediate_curve.to_pointx()),
     );
 
-    let XV_intermediate_curve = intermediate_curves
+    let XV_intermediate_curve = aux_curves
         .curves()
         .0
         .sub(&X_intermediate_curve, &V_intermediate_curve);
-    let XmU_intermediate_curve = intermediate_curves
+    let XmU_intermediate_curve = aux_curves
         .curves()
         .0
         .add(&X_intermediate_curve, &U_intermediate_curve);
 
-    let YV_intermediate_curve = intermediate_curves
+    let YV_intermediate_curve = aux_curves
         .curves()
         .0
         .sub(&Y_intermediate_curve, &V_intermediate_curve);
-    let YmU_intermediate_curve = intermediate_curves
+    let YmU_intermediate_curve = aux_curves
         .curves()
         .0
         .add(&Y_intermediate_curve, &U_intermediate_curve);
 
     // Compute the pairings e(U, V), e(X, V) = e(U, V)^x and e(X, -U) = e(U, V)^y,
     // e(Y, V) = e(U, V)^w and e(Y, -U) = e(U, V)^z
-    let eUV = intermediate_curves_verif.curves().0.weil_pairing(
+    let eUV = aux_curves_verif.curves().0.weil_pairing(
         &U_intermediate_curve.to_pointx().x(),
         &V_intermediate_curve.to_pointx().x(),
         &UV_intermediate_curve.to_pointx().x(),
@@ -746,7 +745,7 @@ where
             .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     );
 
-    let eXV = intermediate_curves_verif.curves().0.weil_pairing(
+    let eXV = aux_curves_verif.curves().0.weil_pairing(
         &X_intermediate_curve.to_pointx().x(),
         &V_intermediate_curve.to_pointx().x(),
         &XV_intermediate_curve.to_pointx().x(),
@@ -758,7 +757,7 @@ where
     );
 
     let mU_intermediate_curve = -U_intermediate_curve;
-    let eXmU = intermediate_curves_verif.curves().0.weil_pairing(
+    let eXmU = aux_curves_verif.curves().0.weil_pairing(
         &X_intermediate_curve.to_pointx().x(),
         &mU_intermediate_curve.to_pointx().x(),
         &XmU_intermediate_curve.to_pointx().x(),
@@ -769,7 +768,7 @@ where
             .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     );
 
-    let eYV = intermediate_curves_verif.curves().0.weil_pairing(
+    let eYV = aux_curves_verif.curves().0.weil_pairing(
         &Y_intermediate_curve.to_pointx().x(),
         &V_intermediate_curve.to_pointx().x(),
         &YV_intermediate_curve.to_pointx().x(),
@@ -780,7 +779,7 @@ where
             .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     );
 
-    let eYmU = intermediate_curves_verif.curves().0.weil_pairing(
+    let eYmU = aux_curves_verif.curves().0.weil_pairing(
         &Y_intermediate_curve.to_pointx().x(),
         &mU_intermediate_curve.to_pointx().x(),
         &YmU_intermediate_curve.to_pointx().x(),
@@ -804,7 +803,7 @@ where
     /* Decrypt message using one-time pad derived from shared secret */
 
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
-    let undoing_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
+    let dual_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
 
     ciphertext
         .shared_end_curve
@@ -820,8 +819,8 @@ where
     ciphertext.shared_end_curve.mul_into(
         &mut V_intermediate_curve,
         &U_intermediate_curve,
-        &undoing_factor.to_bytes_le(),
-        undoing_factor
+        &dual_factor.to_bytes_le(),
+        dual_factor
             .bits()
             .try_into()
             .expect("Size in bits of (2^a - q) is too big to fit in a usize (we do not ever expect this to happen)"),
@@ -851,8 +850,8 @@ where
     ciphertext.shared_end_curve.mul_into(
         &mut V_intermediate_curve,
         &U_intermediate_curve,
-        &undoing_factor.to_bytes_le(),
-        undoing_factor
+        &dual_factor.to_bytes_le(),
+        dual_factor
             .bits()
             .try_into()
             .expect("Size in bits of (2^a - q) is too big to fit in a usize (we do not ever expect this to happen)"),

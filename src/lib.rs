@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 #![feature(generic_const_exprs)]
 
-use std::{io::Read as _, marker::PhantomData};
+use std::{array, io::Read as _, marker::PhantomData};
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
@@ -12,10 +12,7 @@ use isogeny::{
         add_bn_vartime, bn_bit_length_vartime, mul_bn_by_u64_vartime, prime_power_to_bn_vartime,
     },
 };
-use ndarray::Array2;
-use ndarray_rand::{RandomExt as _, rand::distributions::Uniform};
 use num_bigint::{BigUint, RandBigInt as _};
-use num_integer::gcd;
 use sha3::{
     Shake256,
     digest::{ExtendableOutput as _, Update as _},
@@ -104,6 +101,108 @@ pub fn word_bn_to_byte_bn(words: &[u64]) -> BigNum {
         repr: bytes,
         bitlen,
     }
+}
+
+// WARN: Assumes we are given an a priori invertible element as input
+fn invert_element_mod(element: &BigUint, modulus: &BigUint) -> BigNum {
+    let inverse = element.modinv(modulus);
+    let Some(inverse) = inverse else {
+        unreachable!("We expect an invertible element as input");
+    };
+
+    let bitlen = inverse
+        .bits()
+        .try_into()
+        .expect("Size in bits of the inverse scalar is too big to fit in a usize (we do not ever expect this to happen)");
+    let repr = inverse.to_bytes_le();
+
+    BigNum { repr, bitlen }
+}
+
+fn sample_random_element_mod(modulus: &BigUint) -> BigNum {
+    let mut rng = old_rand::thread_rng();
+
+    let element = rng.gen_biguint_below(modulus);
+
+    // Transform element to our own BigNum type
+    let bitlen = element
+        .bits()
+        .try_into()
+        .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)");
+    let repr = element.to_bytes_le();
+
+    BigNum { repr, bitlen }
+}
+
+fn sample_random_unit_mod(modulus: &BigUint) -> (BigNum, BigNum) {
+    let mut rng = old_rand::thread_rng();
+
+    // Keep generating elements until we find an invertible one
+    let mut element = rng.gen_biguint_below(modulus);
+    let mut inverse = element.modinv(modulus);
+    while let None = inverse {
+        element = rng.gen_biguint_below(modulus);
+        inverse = element.modinv(modulus);
+    }
+    let Some(inverse) = inverse else {
+        unreachable!("At this point, we are ensured to have an invertible element");
+    };
+
+    // Transform element to our own BigNum type
+    let element_bitlen = element
+        .bits()
+        .try_into()
+        .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)");
+    let element = element.to_bytes_le();
+    let element = BigNum {
+        repr: element,
+        bitlen: element_bitlen,
+    };
+
+    // Transform inverse of element to our own BigNum type
+    let inverse_bitlen = inverse
+        .bits()
+        .try_into()
+        .expect("Size in bits of the inverse scalar is too big to fit in a usize (we do not ever expect this to happen)");
+    let inverse = inverse.to_bytes_le();
+    let inverse = BigNum {
+        repr: inverse,
+        bitlen: inverse_bitlen,
+    };
+
+    (element, inverse)
+}
+
+fn sample_random_invertible_matrix_mod(modulus: &BigUint) -> [[BigNum; 2]; 2] {
+    let mut rng = old_rand::thread_rng();
+
+    // Randomly generate the first 3 elements
+    let mut matrix = array::from_fn(|_| [BigUint::ZERO; 2]);
+    matrix[0][0] = rng.gen_biguint_below(modulus);
+    matrix[0][1] = rng.gen_biguint_below(modulus);
+    matrix[1][0] = rng.gen_biguint_below(modulus);
+
+    // Select the 4th element to have gcd(det(D), 5^c) == 1
+    let cross_term = modulus - (&matrix[0][1] * &matrix[1][0]) % modulus;
+    let mut element = rng.gen_biguint_below(modulus);
+    let mut det_inverse = (&cross_term + (&matrix[0][0] * &element) % modulus).modinv(modulus);
+    while let None = det_inverse {
+        element = rng.gen_biguint_below(modulus);
+        det_inverse = (&cross_term + (&matrix[0][0] * &element)).modinv(modulus);
+    }
+    matrix[1][1] = element;
+
+    matrix.map(|row| {
+        row.map(|element| {
+            let bitlen = element
+                .bits()
+                .try_into()
+                .expect("Size in bits of the matrix element is too big to fit in a usize (we do not ever expect this to happen)");
+            let repr = element.to_bytes_le();
+
+            BigNum { repr, bitlen }
+        })
+    })
 }
 
 pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
@@ -341,78 +440,27 @@ where
 
     /* Sample scalars used for masking torsion points images or generating new kernels */
 
-    let mut rng = ndarray_rand::rand::thread_rng();
-    let ONE = BigUint::from(1u8);
-
     // Sample scalar used to generate new kernels for sender's parallel isogenies
-    let r = rng.gen_biguint_below(&pub_params.three_torsion_order); // FIXME: what happens if this is 0?
-    let r_bitsize =
-        r.bits().try_into().expect("Size in bits of the scalar r is too big to fit in a usize (we do not ever expect this to happen)");
-    let r = r.to_bytes_le();
+    let r = sample_random_element_mod(&pub_params.three_torsion_order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let mut omega = rng.gen_biguint_range(&ONE, &pub_params.effective_two_torsion_order);
-    let mut omega_inv = omega.modinv(&pub_params.effective_two_torsion_order);
-    while let None = omega_inv {
-        println!("omega = {} is not invertible, retrying", omega);
-        omega = rng.gen_biguint_range(&ONE, &pub_params.effective_two_torsion_order);
-        omega_inv = omega.modinv(&pub_params.effective_two_torsion_order);
-    }
-    println!();
-    let Some(omega_inv) = omega_inv else {
-        unreachable!();
-    };
-    let omega_bitsize =
-        omega.bits().try_into().expect("Size in bits of the scalar omega is too big to fit in a usize (we do not ever expect this to happen)");
-    let omega_inv_bitsize =
-        omega_inv.bits().try_into().expect("Size in bits of the scalar 1/omega is too big to fit in a usize (we do not ever expect this to happen)");
-    let omega = omega.to_bytes_le();
-    let omega_inv = omega_inv.to_bytes_le();
+    let (omega, omega_inv) = sample_random_unit_mod(&pub_params.effective_two_torsion_order);
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
-    // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
-    let mut D = Array2::random_using(
-        (2, 2),
-        Uniform::new(BigUint::ZERO, &pub_params.five_torsion_order),
-        &mut rng,
-    );
-    let mut det = (((&D[(0, 0)] * &D[(1, 1)]) % &pub_params.five_torsion_order)
-        + (&pub_params.five_torsion_order
-            - ((&D[(0, 1)] * &D[(1, 0)]) % &pub_params.five_torsion_order)))
-        % &pub_params.five_torsion_order;
-    let mut det_gcd = gcd(det.clone(), pub_params.five_torsion_order.clone()); // TODO: look into a borrowing GCD function
-    while det_gcd != ONE {
-        println!("det(D) = {}, gcd(det(D), 5^c) = {}, retrying", det, det_gcd);
-        D = Array2::random_using(
-            (2, 2),
-            Uniform::new(BigUint::ZERO, &pub_params.five_torsion_order),
-            &mut rng,
-        );
-        det = (((&D[(0, 0)] * &D[(1, 1)]) % &pub_params.five_torsion_order)
-            + (&pub_params.five_torsion_order
-                - ((&D[(0, 1)] * &D[(1, 0)]) % &pub_params.five_torsion_order)))
-            % &pub_params.five_torsion_order;
-        det_gcd = gcd(det.clone(), pub_params.five_torsion_order.clone()); // TODO: look into a borrowing GCD function
-    }
-    println!();
-    let D_bitsize = D.map(|elem| {
-        TryInto::<usize>::try_into(elem.bits())
-            .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)")
-    });
-    let D = D.map(|elem| elem.to_bytes_le());
+    let D = sample_random_invertible_matrix_mod(&pub_params.five_torsion_order);
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>) and psi' (<R_A + [r] S_A>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
-        &r,
-        r_bitsize,
+        &r.repr,
+        r.bitlen,
     );
     let psi_prime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
-        &r,
-        r_bitsize,
+        &r.repr,
+        r.bitlen,
     );
 
     // Apply sender's secret isogeny to 2^a-torsion basis to obtain their codomain curve E_B and basis image points (P_B, Q_B)
@@ -430,8 +478,8 @@ where
         retval == SUCCESS_RETVAL,
     );
 
-    let masked_P_B = codomain_curve.mul(&P_B, &omega, omega_bitsize);
-    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv, omega_inv_bitsize);
+    let masked_P_B = codomain_curve.mul(&P_B, &omega.repr, omega.bitlen);
+    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.repr, omega_inv.bitlen);
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
 
@@ -460,12 +508,12 @@ where
     );
 
     let masked_X_B = codomain_curve_verif.add(
-        &codomain_curve_verif.mul(&X_B, &D[(0, 0)], D_bitsize[(0, 0)]),
-        &codomain_curve_verif.mul(&Y_B, &D[(0, 1)], D_bitsize[(0, 1)]),
+        &codomain_curve_verif.mul(&X_B, &D[0][0].repr, D[0][0].bitlen),
+        &codomain_curve_verif.mul(&Y_B, &D[0][1].repr, D[0][1].bitlen),
     );
     let masked_Y_B = codomain_curve_verif.add(
-        &codomain_curve_verif.mul(&X_B, &D[(1, 0)], D_bitsize[(1, 0)]),
-        &codomain_curve_verif.mul(&Y_B, &D[(1, 1)], D_bitsize[(1, 1)]),
+        &codomain_curve_verif.mul(&X_B, &D[1][0].repr, D[1][0].bitlen),
+        &codomain_curve_verif.mul(&Y_B, &D[1][1].repr, D[1][1].bitlen),
     );
 
 
@@ -504,8 +552,8 @@ where
         retval == SUCCESS_RETVAL,
     );
 
-    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega, omega_bitsize);
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv, omega_inv_bitsize);
+    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.repr, omega.bitlen);
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.repr, omega_inv.bitlen);
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
 
@@ -534,12 +582,12 @@ where
     );
 
     let masked_X_AB = shared_end_curve_verif.add(
-        &shared_end_curve_verif.mul(&X_AB, &D[(0, 0)], D_bitsize[(0, 0)]),
-        &shared_end_curve_verif.mul(&Y_AB, &D[(0, 1)], D_bitsize[(0, 1)]),
+        &shared_end_curve_verif.mul(&X_AB, &D[0][0].repr, D[0][0].bitlen),
+        &shared_end_curve_verif.mul(&Y_AB, &D[0][1].repr, D[0][1].bitlen),
     );
     let masked_Y_AB = shared_end_curve_verif.add(
-        &shared_end_curve_verif.mul(&X_AB, &D[(1, 0)], D_bitsize[(1, 0)]),
-        &shared_end_curve_verif.mul(&Y_AB, &D[(1, 1)], D_bitsize[(1, 1)]),
+        &shared_end_curve_verif.mul(&X_AB, &D[1][0].repr, D[1][0].bitlen),
+        &shared_end_curve_verif.mul(&Y_AB, &D[1][1].repr, D[1][1].bitlen),
     );
 
     println!("j-invariant for the shared end curve:");
@@ -588,21 +636,9 @@ where
 
 
     // Invert secret scalars, to neutralize their action on masked points we receive
-    let alpha_inv = prv_key.alpha.modinv(&pub_params.full_two_torsion_order);
-    let Some(alpha_inv) = alpha_inv else {
-        unreachable!();
-    };
-    let alpha_inv_bitsize =
-        alpha_inv.bits().try_into().expect("Size in bits of the scalar 1/alpha is too big to fit in a usize (we do not ever expect this to happen)");
-    let alpha_inv = alpha_inv.to_bytes_le();
+    let alpha_inv = invert_element_mod(&prv_key.alpha, &pub_params.full_two_torsion_order);
+    let beta_inv = invert_element_mod(&prv_key.beta, &pub_params.full_two_torsion_order);
 
-    let beta_inv = prv_key.beta.modinv(&pub_params.full_two_torsion_order);
-    let Some(beta_inv) = beta_inv else {
-        unreachable!();
-    };
-    let beta_inv_bitsize =
-        beta_inv.bits().try_into().expect("Size in bits of the scalar 1/beta is too big to fit in a usize (we do not ever expect this to happen)");
-    let beta_inv = beta_inv.to_bytes_le();
 
     // Neutralize action of our own secret scalars on the masked 2^a-torsion basis for E_AB
     let (P_AB, Q_AB) = ciphertext
@@ -610,10 +646,10 @@ where
         .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
     let unmasked_P_AB = ciphertext
         .shared_end_curve
-        .mul(&P_AB, &alpha_inv, alpha_inv_bitsize);
+        .mul(&P_AB, &alpha_inv.repr, alpha_inv.bitlen);
     let unmasked_Q_AB = ciphertext
         .shared_end_curve
-        .mul(&Q_AB, &beta_inv, beta_inv_bitsize);
+        .mul(&Q_AB, &beta_inv.repr, beta_inv.bitlen);
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let (P_B, Q_B) = ciphertext

@@ -6,10 +6,8 @@ edition = "2024"
 [dependencies]
 fp2 = "0.3"
 isogeny = { path = "isogeny_rs" }
-ndarray = "0.16"
-ndarray-rand = "0.15"
 num-bigint = { version = "0.4", features = ["rand"] }
-num-integer = "0.1"
+old_rand = { version = "0.8", package = "rand" }
 rand = "0.9"
 rand_core = "0.9"
 sha3 = "0.10"

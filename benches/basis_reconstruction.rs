@@ -9,7 +9,7 @@ fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
     let params = poke_i::get_params();
 
     // Generate scalars by which to multiply basis points
-    let mut rng = ndarray_rand::rand::thread_rng();
+    let mut rng = old_rand::thread_rng();
     let ONE = BigUint::from(1u8);
     let Z_two_torsion_order = BigUint::from(2u8).pow(
         params

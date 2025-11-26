@@ -703,7 +703,7 @@ where
     retval &= ok;
 
     // Generate random basis of the 5^c-torsion on E_AB
-    let (U, V, _) = sample_random_torsion_basis(
+    let (U, V, eUV_AB) = sample_random_torsion_basis(
         &ciphertext.shared_end_curve,
         &pub_params.five_torsion_order,
         &pub_params.five_torsion_cofactor,
@@ -770,17 +770,27 @@ where
 
     // Compute the pairings e(U, V), e(X, V) = e(U, V)^x and e(X, -U) = e(U, V)^y,
     // e(Y, V) = e(U, V)^w and e(Y, -U) = e(U, V)^z
-    let eUV = aux_curves_verif.curves().0.weil_pairing(
-        &U_intermediate_curve.to_pointx().x(),
-        &V_intermediate_curve.to_pointx().x(),
-        &UV_intermediate_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_bytes_le(),
-        pub_params.five_torsion_order
+    // FIXME: Why does this direct way of computing the pairing not work?
+    // let eUV_aux = aux_curves_verif.curves().0.weil_pairing(
+    //     &U_intermediate_curve.to_pointx().x(),
+    //     &V_intermediate_curve.to_pointx().x(),
+    //     &UV_intermediate_curve.to_pointx().x(),
+    //     &pub_params.five_torsion_order.to_bytes_le(),
+    //     pub_params.five_torsion_order
+    //         .bits()
+    //         .try_into()
+    //         .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+    // );
+    let eUV_aux = eUV_AB.pow(
+        &dual_factor.to_bytes_le(),
+        dual_factor
             .bits()
             .try_into()
-            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+            .expect("Size in bits of (2^a - q) is too big to fit into a usize (we don't expect this to ever happen)"),
     );
 
+    // FIXME: none of the subsequent pairings are correct! This breaks everything!
+    // I suspect a discrepancy between Sage's Weil pairing and the one here
     let eXV = aux_curves_verif.curves().0.weil_pairing(
         &X_intermediate_curve.to_pointx().x(),
         &V_intermediate_curve.to_pointx().x(),
@@ -827,13 +837,15 @@ where
     );
 
     // Solve discrete logarithm between pairings to obtain expression of X' in terms of <U',V'>
-    let (x, ok) = solve_dlp_small_prime_power_order(&eUV, &eXV, 5, pub_params.five_torsion_exp);
+    let (x, ok) = solve_dlp_small_prime_power_order(&eUV_aux, &eXV, 5, pub_params.five_torsion_exp);
     retval &= ok;
-    let (y, ok) = solve_dlp_small_prime_power_order(&eUV, &eXmU, 5, pub_params.five_torsion_exp);
+    let (y, ok) =
+        solve_dlp_small_prime_power_order(&eUV_aux, &eXmU, 5, pub_params.five_torsion_exp);
     retval &= ok;
-    let (w, ok) = solve_dlp_small_prime_power_order(&eUV, &eYV, 5, pub_params.five_torsion_exp);
+    let (w, ok) = solve_dlp_small_prime_power_order(&eUV_aux, &eYV, 5, pub_params.five_torsion_exp);
     retval &= ok;
-    let (z, ok) = solve_dlp_small_prime_power_order(&eUV, &eYmU, 5, pub_params.five_torsion_exp);
+    let (z, ok) =
+        solve_dlp_small_prime_power_order(&eUV_aux, &eYmU, 5, pub_params.five_torsion_exp);
     retval &= ok;
 
     /* Decrypt message using one-time pad derived from shared secret */

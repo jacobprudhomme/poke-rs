@@ -173,6 +173,7 @@ fn sample_random_unit_mod(modulus: &BigUint) -> (BigNum, BigNum) {
     (element, inverse)
 }
 
+// FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
 fn sample_random_invertible_matrix_mod(modulus: &BigUint) -> [[BigNum; 2]; 2] {
     let mut rng = old_rand::thread_rng();
 
@@ -183,6 +184,7 @@ fn sample_random_invertible_matrix_mod(modulus: &BigUint) -> [[BigNum; 2]; 2] {
     matrix[1][0] = rng.gen_biguint_below(modulus);
 
     // Select the 4th element to have gcd(det(D), 5^c) == 1
+    // TODO: is this valid? I would assume the operations between 3 random numbers also gives a random number. Prove this
     let cross_term = modulus - (&matrix[0][1] * &matrix[1][0]) % modulus;
     let mut element = rng.gen_biguint_below(modulus);
     let mut det_inverse = (&cross_term + (&matrix[0][0] * &element) % modulus).modinv(modulus);
@@ -212,29 +214,15 @@ pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
 ) -> (usize, u32) {
     let mut retval = FAILURE_RETVAL;
 
-    println!("\nSolving in subgroup of order {}", order);
-    println!("({}) = ({})^x", value, generator);
-
     let mut element = Fp2::ONE;
     let mut result = 0;
     for i in 0..order {
         let found_log = value.equals(&element);
-        println!(
-            "i = {}, {}",
-            i,
-            if found_log == SUCCESS_RETVAL {
-                "FOUND"
-            } else {
-                "NOT FOUND"
-            }
-        );
         result |= i & (((found_log as usize) << 32) | found_log as usize);
         retval |= found_log;
 
         element *= *generator;
     }
-
-    println!("Result: {}", result);
 
     (result, retval)
 }
@@ -247,9 +235,6 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     e: usize,
 ) -> (BigNum, u32) {
     let mut retval = SUCCESS_RETVAL;
-
-    println!("\nSolving in subgroup of order {}^{}", p, e);
-    println!("({}) = ({})^x", value, generator);
 
     let p_to_the_e_basis = (0..=e)
         .map(|exp| word_bn_to_byte_bn(&prime_power_to_bn_vartime(p, exp)))
@@ -288,13 +273,6 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
         );
         retval &= ok;
     }
-
-    println!(
-        "x = {} in ({}) = ({})^x",
-        BigUint::from_bytes_le(&word_bn_to_byte_bn(&partial_sum).repr),
-        value,
-        generator,
-    );
 
     (word_bn_to_byte_bn(&partial_sum), retval)
 }
@@ -338,9 +316,6 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
         let U_in_torsion_subgroup = curve.mul(&U, &order_cofactor, order_cofactor_bitsize);
         // We don't want a point in the ((p + 1)/(pi)^(ei))-torsion
         if U_in_torsion_subgroup.is_zero() == SUCCESS_RETVAL {
-            println!(
-                "Generated point U is in the torsion subgroup of the other cofactors of p + 1. Trying a new point"
-            );
             continue;
         }
 
@@ -350,7 +325,6 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
             reduced_torsion_subgroup_order_bitsize,
         );
         if U_saturated.is_zero() == SUCCESS_RETVAL {
-            println!("Generated point U has order < (pi)^(ei). Trying a new point");
             continue;
         }
 
@@ -367,9 +341,6 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
         let V_in_torsion_subgroup = curve.mul(&V, &order_cofactor, order_cofactor_bitsize);
         // We don't want a point in the ((p + 1)/(pi)^(ei))-torsion
         if V_in_torsion_subgroup.is_zero() == SUCCESS_RETVAL {
-            println!(
-                "Generated point V is in the torsion subgroup of the other cofactors. Trying a new point"
-            );
             continue;
         }
 
@@ -379,7 +350,6 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
             reduced_torsion_subgroup_order_bitsize,
         );
         if V_saturated.is_zero() == SUCCESS_RETVAL {
-            println!("Generated point V has order < (pi)^(ei). Trying a new point");
             continue;
         }
 
@@ -388,6 +358,8 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
 
         /* Check point is linearly independent to U */
 
+        // FIXME: why the heck does this Weil pairing not produce the same as what Sage does??
+        // In the hardcoded example below, it produces the square of what Sage does, for example
         let eUV = curve.weil_pairing(
             &U.to_pointx().x(),
             &V.to_pointx().x(),
@@ -401,7 +373,6 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
             reduced_torsion_subgroup_order_bitsize,
         );
         if eUV_saturated.equals(&Fp2::ONE) == SUCCESS_RETVAL {
-            println!("e(U, V) does not have full multiplicative order");
             continue;
         }
         // TODO: is this check necessary? Because of the fact that the group might have order m*n
@@ -415,12 +386,62 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
             .equals(&Fp2::ONE)
             == FAILURE_RETVAL
         {
-            println!("e(U, V) has multiplicative order > (pi)^(ei)");
             continue;
         }
 
         break (V, eUV);
     };
+
+    // let xU = PointX::from_x_coord(&Fp2::decode_reduce(&[
+    //     74, 197, 179, 60, 61, 71, 181, 238, 134, 215, 70, 233, 42, 125, 178, 160, 122, 74, 93, 70,
+    //     55, 174, 167, 240, 208, 192, 66, 113, 92, 61, 229, 3, 17, 243, 39, 220, 41, 221, 102, 217,
+    //     166, 69, 165, 197, 137, 6, 178, 108, 68, 208, 75, 132, 29, 98, 211, 72, 56, 202, 64, 195,
+    //     8, 61, 46, 181, 95, 190, 226, 231, 4, 46, 74, 83, 140, 103, 164, 178, 47, 92, 94, 189, 71,
+    //     117, 202, 53, 190, 254, 253, 179, 113, 253, 146, 68, 86, 121, 139, 209, 76, 219, 209, 231,
+    //     93, 207, 56, 147, 13, 176, 187, 23,
+    // ]));
+    // let xV = PointX::from_x_coord(&Fp2::decode_reduce(&[
+    //     135, 58, 149, 162, 71, 21, 110, 65, 140, 176, 190, 97, 35, 153, 221, 164, 27, 174, 240,
+    //     122, 245, 113, 63, 36, 40, 23, 23, 140, 171, 173, 142, 244, 239, 208, 180, 220, 186, 145,
+    //     41, 170, 15, 153, 170, 69, 252, 133, 7, 40, 6, 45, 87, 57, 210, 53, 64, 102, 36, 72, 20,
+    //     46, 107, 111, 45, 167, 80, 189, 188, 94, 3, 86, 165, 82, 65, 248, 166, 14, 216, 110, 83,
+    //     136, 51, 229, 88, 169, 189, 212, 120, 246, 217, 164, 43, 110, 126, 94, 137, 136, 190, 101,
+    //     147, 171, 33, 209, 47, 152, 120, 48, 24, 4,
+    // ]));
+    // let xUV = PointX::from_x_coord(&Fp2::decode_reduce(&[
+    //     77, 215, 149, 22, 64, 114, 182, 118, 22, 44, 208, 178, 202, 144, 130, 204, 125, 146, 126,
+    //     148, 179, 17, 148, 187, 194, 164, 234, 12, 211, 89, 111, 179, 29, 140, 77, 29, 122, 199,
+    //     151, 202, 9, 61, 167, 8, 163, 96, 2, 181, 233, 40, 155, 155, 140, 11, 119, 224, 139, 100,
+    //     109, 18, 235, 101, 77, 160, 132, 141, 177, 236, 26, 195, 85, 101, 232, 74, 106, 250, 131,
+    //     167, 196, 87, 230, 73, 213, 255, 88, 44, 47, 45, 124, 185, 134, 97, 87, 55, 160, 114, 182,
+    //     166, 9, 49, 202, 232, 100, 244, 139, 212, 204, 57,
+    // ]));
+    // let (U, V) = curve.lift_basis(&BasisX::from_points(&xU, &xV, &xUV));
+
+    // // FIXME: why the heck does the Weil pairing produce the square of what Sage produces??
+    // let (eUV, ok) = curve
+    //     .weil_pairing(
+    //         &xU.x(),
+    //         &xV.x(),
+    //         &xUV.x(),
+    //         &torsion_subgroup_order,
+    //         torsion_subgroup_order_bitsize,
+    //     )
+    //     .sqrt();
+    // assert_eq!(ok, SUCCESS_RETVAL, "Weil pairing doesn't produce a square");
+    // assert_eq!(
+    //     eUV.pow(
+    //         &reduced_torsion_subgroup_order,
+    //         reduced_torsion_subgroup_order_bitsize
+    //     )
+    //     .equals(&Fp2::ONE),
+    //     FAILURE_RETVAL
+    // );
+    // assert_eq!(
+    //     eUV.pow(&torsion_subgroup_order, torsion_subgroup_order_bitsize)
+    //         .equals(&Fp2::ONE),
+    //     SUCCESS_RETVAL
+    // );
 
     (U, V, eUV)
 }
@@ -444,6 +465,7 @@ where
     let r = sample_random_element_mod(&pub_params.three_torsion_order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
+    // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
     let (omega, omega_inv) = sample_random_unit_mod(&pub_params.effective_two_torsion_order);
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
@@ -473,10 +495,6 @@ where
     let two_torsion_basis_EB = BasisX::from_slice(&two_torsion_basis_EB);
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
     retval &= kernel_has_right_order;
-    println!(
-        "Successful execution after applying psi to 2^a-torsion: {}",
-        retval == SUCCESS_RETVAL,
-    );
 
     let masked_P_B = codomain_curve.mul(&P_B, &omega.repr, omega.bitlen);
     let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.repr, omega_inv.bitlen);
@@ -502,10 +520,6 @@ where
     let five_torsion_basis_EB = BasisX::from_slice(&five_torsion_basis_EB);
     let (X_B, Y_B) = codomain_curve_verif.lift_basis(&five_torsion_basis_EB);
     retval &= kernel_has_right_order;
-    println!(
-        "Successful execution after applying psi to 5^c-torsion: {}",
-        retval == SUCCESS_RETVAL,
-    );
 
     let masked_X_B = codomain_curve_verif.add(
         &codomain_curve_verif.mul(&X_B, &D[0][0].repr, D[0][0].bitlen),
@@ -527,9 +541,6 @@ where
     PointX::batch_normalise(&mut masked_five_torsion_basis_EB);
     let masked_five_torsion_basis_EB = BasisX::from_slice(&masked_five_torsion_basis_EB);
 
-    println!("j-invariant for sender's codomain curve:");
-    println!("{}", codomain_curve.j_invariant());
-    println!("{}\n", codomain_curve_verif.j_invariant());
     assert_eq!(
         codomain_curve
             .j_invariant()
@@ -547,10 +558,6 @@ where
     let two_torsion_basis_EAB = BasisX::from_slice(&two_torsion_basis_EAB);
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
     retval &= kernel_has_right_order;
-    println!(
-        "Successful execution after applying psi' to 2^a-torsion: {}",
-        retval == SUCCESS_RETVAL,
-    );
 
     let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.repr, omega.bitlen);
     let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.repr, omega_inv.bitlen);
@@ -576,10 +583,6 @@ where
     let five_torsion_basis_EAB = BasisX::from_slice(&five_torsion_basis_EAB);
     let (X_AB, Y_AB) = shared_end_curve_verif.lift_basis(&five_torsion_basis_EAB);
     retval &= kernel_has_right_order;
-    println!(
-        "Successful execution after applying psi' to 5^c-torsion: {}",
-        retval == SUCCESS_RETVAL,
-    );
 
     let masked_X_AB = shared_end_curve_verif.add(
         &shared_end_curve_verif.mul(&X_AB, &D[0][0].repr, D[0][0].bitlen),
@@ -590,9 +593,6 @@ where
         &shared_end_curve_verif.mul(&Y_AB, &D[1][1].repr, D[1][1].bitlen),
     );
 
-    println!("j-invariant for the shared end curve:");
-    println!("{}", shared_end_curve.j_invariant());
-    println!("{}\n", shared_end_curve_verif.j_invariant());
     assert_eq!(
         shared_end_curve
             .j_invariant()
@@ -634,6 +634,8 @@ where
 {
     let mut retval = SUCCESS_RETVAL;
 
+    // Factor that shows up in the application of the 2D-isogeny, from the dual that appears in the representation
+    let dual_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
 
     // Invert secret scalars, to neutralize their action on masked points we receive
     let alpha_inv = invert_element_mod(&prv_key.alpha, &pub_params.full_two_torsion_order);
@@ -697,10 +699,6 @@ where
         ],
     );
     retval &= ok;
-    println!(
-        "Successful execution after applying Phi' to 5^c-torsion on E_B: {}",
-        retval == SUCCESS_RETVAL,
-    );
 
     // Generate random basis of the 5^c-torsion on E_AB
     let (U, V, _) = sample_random_torsion_basis(
@@ -839,8 +837,6 @@ where
     /* Decrypt message using one-time pad derived from shared secret */
 
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
-    let dual_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
-
     ciphertext
         .shared_end_curve
         .mul_into(&mut X_intermediate_curve, &U, &x.repr, x.bitlen);

@@ -657,7 +657,7 @@ where
     let (P_B, Q_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
-    let deg_P_B = ciphertext
+    let mut deg_P_B = ciphertext
         .codomain_curve
         .mul(
             &P_B,
@@ -667,7 +667,8 @@ where
                 .try_into()
                 .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
         );
-    let deg_Q_B = ciphertext
+    deg_P_B.set_neg();
+    let mut deg_Q_B = ciphertext
         .codomain_curve
         .mul(
             &Q_B,
@@ -677,6 +678,7 @@ where
                 .try_into()
                 .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
         );
+    deg_Q_B.set_neg();
 
     let P1P2 = ProductPoint::new(&deg_P_B, &unmasked_P_AB);
     let Q1Q2 = ProductPoint::new(&deg_Q_B, &unmasked_Q_AB);

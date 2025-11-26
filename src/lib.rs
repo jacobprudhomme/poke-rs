@@ -638,9 +638,9 @@ where
     let dual_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
 
     // Invert secret scalars, to neutralize their action on masked points we receive
-    let alpha_inv = invert_element_mod(&prv_key.alpha, &pub_params.full_two_torsion_order);
-    let beta_inv = invert_element_mod(&prv_key.beta, &pub_params.full_two_torsion_order);
-
+    // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
+    let alpha_inv = invert_element_mod(&prv_key.alpha, &pub_params.effective_two_torsion_order);
+    let beta_inv = invert_element_mod(&prv_key.beta, &pub_params.effective_two_torsion_order);
 
     // Neutralize action of our own secret scalars on the masked 2^a-torsion basis for E_AB
     let (P_AB, Q_AB) = ciphertext

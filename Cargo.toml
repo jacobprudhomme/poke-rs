@@ -19,7 +19,7 @@ rstest_reuse = "0.7.0"
 sha2 = "0.10"
 
 [[bench]]
-name = "poke_i"
+name = "poke"
 harness = false
 
 [[bench]]

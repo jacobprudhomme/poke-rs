@@ -723,6 +723,25 @@ where
         );
     retval &= ok;
 
+    assert_eq!(
+        aux_curves
+            .curves()
+            .0
+            .j_invariant()
+            .equals(&aux_curves_verif.curves().0.j_invariant()),
+        SUCCESS_RETVAL,
+        "j-invariant of F1 in F1 x F2 does not match",
+    );
+    assert_eq!(
+        aux_curves
+            .curves()
+            .1
+            .j_invariant()
+            .equals(&aux_curves_verif.curves().1.j_invariant()),
+        SUCCESS_RETVAL,
+        "j-invariant of F2 in F1 x F2 does not match",
+    );
+
     /* Find change-of-basis matrix */
 
     // Compute pairs of point subtractions for later computing the pairings between them

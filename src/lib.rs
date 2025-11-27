@@ -207,23 +207,35 @@ fn sample_random_unit_mod(modulus: &BigUint) -> (BigNum, BigNum) {
 }
 
 // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
-fn sample_random_invertible_matrix_mod(modulus: &BigUint) -> [[BigNum; 2]; 2] {
+fn sample_random_invertible_matrix_mod(
+    modulus_base: &BigUint,
+    modulus: &BigUint,
+) -> [[BigNum; 2]; 2] {
     let mut rng = old_rand::thread_rng();
+
+    let ONE = BigUint::from(1u8);
 
     // Randomly generate the first 3 elements
     let mut matrix = array::from_fn(|_| [BigUint::ZERO; 2]);
-    matrix[0][0] = rng.gen_biguint_below(modulus);
+    matrix[0][0] = rng.gen_biguint_range(&ONE, modulus); // This avoids getting a zero-term for the term in the determinant with our degree of freedom
     matrix[0][1] = rng.gen_biguint_below(modulus);
     matrix[1][0] = rng.gen_biguint_below(modulus);
+    while ((&matrix[0][1] * &matrix[1][0]) % modulus_base) == BigUint::ZERO
+        && ((modulus - &matrix[0][0]) % modulus_base) == BigUint::ZERO
+    {
+        matrix[0][0] = rng.gen_biguint_range(&ONE, modulus); // This avoids getting a zero-term for the term in the determinant with our degree of freedom
+    }
 
     // Select the 4th element to have gcd(det(D), 5^c) == 1
     // TODO: is this valid? I would assume the operations between 3 random numbers also gives a random number. Prove this
-    let cross_term = modulus - (&matrix[0][1] * &matrix[1][0]) % modulus;
+    let cross_term = (modulus - ((&matrix[0][1] * &matrix[1][0]) % modulus)) % modulus;
     let mut element = rng.gen_biguint_below(modulus);
-    let mut det_inverse = (&cross_term + (&matrix[0][0] * &element) % modulus).modinv(modulus);
+    let mut det_inverse =
+        ((&cross_term + (&matrix[0][0] * &element) % modulus) % modulus).modinv(modulus);
     while let None = det_inverse {
         element = rng.gen_biguint_below(modulus);
-        det_inverse = (&cross_term + (&matrix[0][0] * &element)).modinv(modulus);
+        det_inverse =
+            ((&cross_term + (&matrix[0][0] * &element) % modulus) % modulus).modinv(modulus);
     }
     matrix[1][1] = element;
 

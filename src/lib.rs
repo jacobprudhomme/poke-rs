@@ -514,7 +514,8 @@ where
     let (omega, omega_inv) = sample_random_unit_mod(&pub_params.effective_two_torsion_order);
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
-    let D = sample_random_invertible_matrix_mod(&pub_params.five_torsion_order);
+    let D =
+        sample_random_invertible_matrix_mod(&BigUint::from(5u8), &pub_params.five_torsion_order);
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 

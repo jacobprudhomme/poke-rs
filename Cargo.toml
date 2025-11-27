@@ -23,5 +23,9 @@ name = "poke"
 harness = false
 
 [[bench]]
+name = "inke"
+harness = false
+
+[[bench]]
 name = "basis_reconstruction"
 harness = false

@@ -681,3 +681,222 @@ pub mod poke_v {
         }
     }
 }
+
+pub mod inke_i {
+    use crate::{
+        InkePrvKey, InkePubKey,
+        fields::{InkeFieldI, InkeFieldIBase},
+    };
+
+    use super::*;
+
+    // Parameter for codomain curve E_A (obtained by using INKE keygen)
+    const A_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        184, 191, 215, 86, 164, 214, 17, 161, 209, 212, 131, 221, 17, 252, 130, 228, 2, 33, 94,
+        188, 125, 42, 117, 246, 70, 243, 35, 124, 101, 30, 53, 127, 223, 246, 207, 27, 91, 28, 10,
+        3, 113, 69, 145, 48, 19, 245, 156, 227, 30,
+    ];
+    const A_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        39, 137, 94, 73, 229, 145, 219, 221, 164, 68, 177, 134, 38, 0, 249, 104, 50, 220, 128, 81,
+        9, 137, 112, 213, 195, 170, 255, 240, 106, 75, 204, 41, 129, 48, 35, 240, 70, 148, 6, 85,
+        218, 29, 171, 197, 11, 223, 152, 20, 112,
+    ];
+    const A: InkeFieldI = InkeFieldI::const_decode_no_check(&A_RE, &A_IM);
+
+    // Parameter for intermediate curve E_A1 (obtained by using INKE keygen)
+    const A1_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        69, 34, 71, 95, 187, 219, 48, 181, 248, 87, 202, 185, 248, 38, 17, 163, 168, 162, 0, 145,
+        20, 166, 206, 218, 164, 10, 160, 9, 64, 134, 99, 183, 201, 172, 242, 163, 27, 131, 66, 63,
+        252, 180, 58, 143, 181, 51, 95, 42, 62,
+    ];
+    const A1_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        143, 204, 105, 217, 76, 160, 169, 76, 63, 9, 91, 80, 57, 71, 137, 92, 198, 196, 104, 225,
+        93, 178, 161, 121, 31, 58, 54, 233, 212, 226, 52, 201, 88, 62, 133, 84, 136, 98, 98, 96,
+        98, 225, 17, 168, 198, 105, 204, 185, 137,
+    ];
+    const A1: InkeFieldI = InkeFieldI::const_decode_no_check(&A1_RE, &A1_IM);
+
+    // Masked images of 2^a-torsion basis for E_0 on E_A (obtained by using INKE keygen)
+    const P_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        13, 90, 36, 178, 12, 47, 116, 66, 105, 167, 103, 249, 227, 37, 156, 44, 226, 171, 232, 240,
+        145, 15, 24, 69, 99, 205, 96, 87, 7, 115, 173, 204, 134, 149, 218, 187, 120, 100, 147, 54,
+        16, 2, 97, 17, 11, 119, 150, 46, 136,
+    ];
+    const P_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        47, 122, 100, 205, 232, 113, 71, 47, 228, 211, 159, 66, 35, 0, 200, 12, 17, 98, 224, 102,
+        115, 152, 195, 171, 88, 149, 107, 26, 189, 6, 145, 88, 241, 189, 104, 8, 95, 215, 37, 140,
+        58, 218, 236, 51, 59, 90, 66, 47, 212,
+    ];
+    const Q_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        243, 47, 75, 182, 12, 41, 26, 134, 233, 21, 169, 61, 103, 42, 244, 60, 251, 52, 65, 252,
+        192, 22, 164, 68, 216, 54, 2, 195, 81, 248, 155, 43, 241, 24, 157, 19, 57, 34, 157, 145,
+        183, 108, 245, 252, 255, 171, 85, 215, 82,
+    ];
+    const Q_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        132, 10, 174, 87, 235, 176, 145, 17, 139, 70, 213, 92, 19, 48, 208, 237, 142, 130, 128, 98,
+        118, 73, 247, 104, 147, 100, 121, 81, 173, 222, 109, 86, 49, 224, 140, 237, 13, 94, 239,
+        60, 156, 54, 124, 223, 235, 234, 26, 29, 67,
+    ];
+    const PQ_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        235, 74, 27, 210, 9, 9, 28, 27, 63, 17, 143, 140, 249, 2, 10, 183, 187, 6, 43, 177, 190,
+        200, 70, 140, 73, 206, 206, 206, 236, 135, 155, 1, 70, 208, 171, 114, 57, 107, 177, 29, 89,
+        45, 161, 77, 11, 207, 172, 106, 154,
+    ];
+    const PQ_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        79, 168, 108, 187, 62, 54, 131, 61, 213, 98, 39, 192, 26, 27, 28, 251, 215, 172, 168, 217,
+        89, 152, 191, 130, 96, 43, 190, 244, 60, 20, 51, 8, 154, 238, 67, 80, 149, 120, 195, 62,
+        47, 124, 117, 204, 234, 15, 205, 147, 44,
+    ];
+    const P_X: InkeFieldI = InkeFieldI::const_decode_no_check(&P_X_RE, &P_X_IM);
+    const Q_X: InkeFieldI = InkeFieldI::const_decode_no_check(&Q_X_RE, &Q_X_IM);
+    const PQ_X: InkeFieldI = InkeFieldI::const_decode_no_check(&PQ_X_RE, &PQ_X_IM);
+
+    // Masked images of 3^b-torsion basis for E_0 on E_A1 (obtained by using INKE keygen)
+    const R_A1_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        249, 46, 59, 13, 145, 1, 240, 99, 12, 123, 141, 166, 19, 208, 141, 130, 107, 140, 252, 118,
+        132, 43, 76, 238, 152, 27, 134, 179, 244, 27, 124, 41, 77, 51, 244, 153, 148, 60, 151, 192,
+        159, 184, 212, 179, 189, 7, 184, 134, 143,
+    ];
+    const R_A1_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        219, 112, 173, 111, 78, 161, 1, 253, 79, 225, 221, 126, 79, 214, 221, 232, 163, 6, 40, 117,
+        73, 87, 234, 152, 188, 188, 216, 227, 46, 201, 147, 144, 20, 26, 19, 162, 168, 124, 30,
+        132, 38, 136, 157, 32, 103, 158, 131, 47, 118,
+    ];
+    const S_A1_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        163, 174, 11, 11, 199, 86, 75, 221, 65, 181, 145, 129, 159, 29, 145, 24, 50, 140, 244, 95,
+        127, 170, 10, 163, 27, 228, 121, 120, 127, 159, 221, 231, 228, 193, 234, 156, 56, 3, 241,
+        29, 13, 186, 126, 21, 93, 170, 18, 102, 173,
+    ];
+    const S_A1_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        16, 169, 98, 35, 42, 251, 154, 144, 176, 35, 61, 64, 64, 251, 77, 12, 161, 184, 201, 209,
+        89, 114, 181, 203, 158, 241, 94, 97, 148, 90, 36, 128, 237, 61, 238, 17, 114, 110, 241,
+        224, 224, 51, 180, 11, 124, 169, 191, 6, 196,
+    ];
+    const RS_A1_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        251, 144, 201, 141, 234, 85, 62, 162, 62, 23, 253, 93, 180, 80, 102, 132, 11, 218, 25, 147,
+        189, 37, 83, 101, 37, 228, 48, 122, 129, 119, 113, 190, 51, 1, 251, 230, 29, 89, 35, 57,
+        131, 63, 84, 203, 79, 204, 78, 7, 144,
+    ];
+    const RS_A1_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        3, 181, 51, 184, 135, 227, 169, 17, 217, 66, 29, 42, 221, 235, 174, 61, 45, 234, 179, 7, 5,
+        24, 191, 210, 124, 101, 168, 157, 226, 75, 156, 42, 206, 250, 81, 92, 71, 125, 149, 195,
+        18, 13, 115, 127, 114, 152, 104, 211, 141,
+    ];
+    const R_A1_X: InkeFieldI = InkeFieldI::const_decode_no_check(&R_A1_X_RE, &R_A1_X_IM);
+    const S_A1_X: InkeFieldI = InkeFieldI::const_decode_no_check(&S_A1_X_RE, &S_A1_X_IM);
+    const RS_A1_X: InkeFieldI = InkeFieldI::const_decode_no_check(&RS_A1_X_RE, &RS_A1_X_IM);
+
+    // Masked images of 3^b-torsion basis for E_0 on E_A (obtained by using INKE keygen)
+    const R_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        64, 95, 125, 120, 56, 150, 3, 153, 200, 242, 232, 129, 210, 6, 98, 131, 121, 131, 40, 224,
+        137, 218, 13, 55, 238, 16, 96, 113, 180, 80, 73, 190, 43, 163, 38, 103, 26, 18, 202, 237,
+        25, 244, 213, 212, 100, 14, 154, 10, 59,
+    ];
+    const R_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        106, 175, 119, 59, 193, 57, 252, 250, 43, 161, 18, 96, 34, 78, 88, 73, 70, 73, 130, 209,
+        70, 78, 3, 252, 143, 3, 195, 53, 27, 61, 38, 66, 188, 29, 62, 99, 3, 75, 63, 73, 210, 117,
+        230, 135, 186, 171, 177, 14, 86,
+    ];
+    const S_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        112, 88, 99, 129, 15, 219, 141, 203, 77, 223, 18, 164, 58, 97, 255, 214, 196, 35, 77, 196,
+        191, 165, 106, 139, 181, 94, 148, 12, 113, 49, 116, 188, 203, 82, 109, 200, 123, 42, 197,
+        166, 0, 226, 14, 95, 179, 253, 203, 151, 79,
+    ];
+    const S_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        107, 40, 28, 82, 254, 96, 156, 168, 60, 119, 42, 154, 226, 89, 86, 150, 181, 212, 179, 238,
+        60, 62, 250, 104, 127, 88, 100, 178, 29, 4, 189, 137, 74, 164, 14, 248, 252, 236, 26, 190,
+        64, 225, 158, 250, 143, 94, 194, 103, 167,
+    ];
+    const RS_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        183, 96, 78, 15, 4, 220, 185, 181, 167, 62, 111, 23, 159, 135, 141, 124, 92, 32, 107, 75,
+        177, 194, 55, 61, 134, 106, 147, 10, 181, 20, 80, 8, 110, 108, 216, 252, 230, 210, 35, 181,
+        90, 92, 74, 177, 118, 29, 136, 50, 112,
+    ];
+    const RS_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        255, 210, 114, 111, 203, 27, 206, 228, 4, 121, 214, 84, 70, 105, 200, 170, 169, 230, 206,
+        203, 10, 62, 150, 116, 30, 53, 200, 207, 108, 154, 170, 85, 200, 181, 83, 1, 160, 140, 165,
+        95, 136, 199, 218, 203, 133, 122, 28, 95, 135,
+    ];
+    const R_X: InkeFieldI = InkeFieldI::const_decode_no_check(&R_X_RE, &R_X_IM);
+    const S_X: InkeFieldI = InkeFieldI::const_decode_no_check(&S_X_RE, &S_X_IM);
+    const RS_X: InkeFieldI = InkeFieldI::const_decode_no_check(&RS_X_RE, &RS_X_IM);
+
+    // Degree and scalars that make up private key
+    const Q: [u8; 15] = [
+        3, 37, 128, 102, 17, 96, 87, 198, 23, 48, 95, 254, 51, 135, 156,
+    ];
+    const ALPHA: [u8; 16] = [
+        203, 206, 43, 3, 88, 111, 162, 86, 98, 172, 84, 127, 109, 32, 6, 4,
+    ];
+    const BETA: [u8; 16] = [
+        243, 166, 231, 73, 240, 174, 15, 214, 241, 107, 208, 205, 21, 68, 192, 46,
+    ];
+
+    pub fn get_pub_key() -> InkePubKey<InkeFieldI> {
+        let E_A = Curve::new(&A);
+        let E_A1 = Curve::new(&A1);
+
+        let xP = PointX::from_x_coord(&P_X);
+        let xQ = PointX::from_x_coord(&Q_X);
+        let xPQ = PointX::from_x_coord(&PQ_X);
+        assert_eq!(E_A.is_on_curve(&xP.x()), SUCCESS_RETVAL, "P is not on E_A");
+        assert_eq!(E_A.is_on_curve(&xQ.x()), SUCCESS_RETVAL, "Q is not on E_A");
+        assert_eq!(
+            E_A.is_on_curve(&xPQ.x()),
+            SUCCESS_RETVAL,
+            "P - Q is not on E_A"
+        );
+        // TODO: check that points not only have given order, but that they also don't have smaller order
+
+        let xR_A1 = PointX::from_x_coord(&R_A1_X);
+        let xS_A1 = PointX::from_x_coord(&S_A1_X);
+        let xRS_A1 = PointX::from_x_coord(&RS_A1_X);
+        assert_eq!(
+            E_A1.is_on_curve(&xR_A1.x()),
+            SUCCESS_RETVAL,
+            "R_A1 is not on E_A1"
+        );
+        assert_eq!(
+            E_A1.is_on_curve(&xS_A1.x()),
+            SUCCESS_RETVAL,
+            "S_A1 is not on E_A1"
+        );
+        assert_eq!(
+            E_A1.is_on_curve(&xRS_A1.x()),
+            SUCCESS_RETVAL,
+            "R_A1 - S_A1 is not on E_A1"
+        );
+        // TODO: check that points not only have given order, but that they also don't have smaller order
+
+        let xR = PointX::from_x_coord(&R_X);
+        let xS = PointX::from_x_coord(&S_X);
+        let xRS = PointX::from_x_coord(&RS_X);
+        assert_eq!(E_A.is_on_curve(&xR.x()), SUCCESS_RETVAL, "R is not on E_A");
+        assert_eq!(E_A.is_on_curve(&xS.x()), SUCCESS_RETVAL, "S is not on E_A");
+        assert_eq!(
+            E_A.is_on_curve(&xRS.x()),
+            SUCCESS_RETVAL,
+            "R - S is not on E_A"
+        );
+
+        // Construct public key from above values (E_A, (P_A, Q_A), (R_A, S_A), (X_A, Y_A))
+        InkePubKey {
+            codomain_curve: E_A,
+            masked_two_torsion_basis_img: BasisX::from_points(&xP, &xQ, &xPQ),
+            masked_three_torsion_basis_img: BasisX::from_points(&xR, &xS, &xRS),
+            intermediate_curve: E_A1,
+            masked_three_torsion_basis_img_intermediate: BasisX::from_points(
+                &xR_A1, &xS_A1, &xRS_A1,
+            ),
+        }
+    }
+
+    pub fn get_prv_key() -> InkePrvKey<InkeFieldI> {
+        InkePrvKey {
+            q: BigUint::from_bytes_le(&Q),
+            alpha: BigUint::from_bytes_le(&ALPHA),
+            beta: BigUint::from_bytes_le(&BETA),
+            _field: PhantomData,
+        }
+    }
+}

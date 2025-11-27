@@ -2,7 +2,7 @@ use fp2::traits::Fp as _;
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
 use num_bigint::BigUint;
 
-use crate::PublicParams;
+use crate::{InkePublicParams, PublicParams};
 
 pub mod poke_i {
     use super::*;
@@ -584,6 +584,111 @@ pub mod poke_v {
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
+        }
+    }
+}
+
+pub mod inke_i {
+    use super::*;
+    use crate::fields::{InkeFieldI, InkeFieldIBase};
+
+    // Construct basis points for the 2^a-torsion on E_0
+    const P_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        192, 183, 86, 149, 226, 222, 255, 120, 182, 237, 206, 70, 164, 6, 47, 239, 247, 203, 194,
+        222, 95, 49, 2, 0, 70, 143, 39, 23, 189, 230, 19, 227, 51, 67, 69, 75, 44, 206, 222, 99,
+        117, 77, 90, 186, 16, 104, 191, 147, 98,
+    ];
+    const P_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        103, 20, 45, 159, 190, 74, 229, 27, 40, 110, 246, 167, 114, 121, 59, 147, 227, 222, 89,
+        200, 106, 18, 254, 33, 35, 144, 213, 47, 33, 61, 242, 61, 91, 210, 85, 208, 44, 7, 174,
+        197, 57, 51, 57, 248, 222, 45, 22, 51, 51,
+    ];
+    const Q_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        192, 183, 86, 149, 226, 222, 255, 120, 182, 237, 206, 70, 164, 6, 47, 239, 247, 203, 194,
+        222, 95, 49, 2, 0, 70, 143, 39, 23, 189, 230, 19, 227, 51, 67, 69, 75, 44, 206, 222, 99,
+        117, 77, 90, 186, 16, 104, 191, 147, 98,
+    ];
+    const Q_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        152, 235, 210, 96, 65, 181, 26, 228, 215, 145, 9, 88, 141, 134, 196, 108, 19, 233, 136,
+        172, 43, 32, 150, 155, 88, 242, 136, 34, 104, 154, 48, 198, 24, 14, 80, 84, 164, 56, 21,
+        226, 167, 4, 226, 165, 186, 151, 174, 117, 164,
+    ];
+    const PQ_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        199, 25, 149, 66, 206, 100, 5, 92, 190, 57, 147, 159, 33, 79, 218, 137, 166, 189, 178, 41,
+        212, 25, 119, 242, 153, 215, 95, 201, 165, 211, 241, 142, 171, 154, 39, 20, 141, 171, 37,
+        161, 182, 218, 227, 33, 210, 44, 192, 30, 210,
+    ];
+    const PQ_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [0; InkeFieldIBase::ENCODED_LENGTH];
+    const P_X: InkeFieldI = InkeFieldI::const_decode_no_check(&P_X_RE, &P_X_IM);
+    const Q_X: InkeFieldI = InkeFieldI::const_decode_no_check(&Q_X_RE, &Q_X_IM);
+    const PQ_X: InkeFieldI = InkeFieldI::const_decode_no_check(&PQ_X_RE, &PQ_X_IM);
+
+    // Construct basis points for the 3^b-torsion on E_0
+    const R_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        108, 167, 135, 111, 178, 224, 28, 174, 96, 181, 136, 82, 249, 187, 46, 204, 206, 49, 3,
+        204, 114, 40, 146, 39, 5, 71, 82, 132, 158, 215, 28, 134, 196, 214, 95, 88, 230, 233, 133,
+        99, 152, 170, 38, 65, 82, 174, 219, 91, 4,
+    ];
+    const R_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        208, 75, 131, 19, 229, 75, 213, 65, 93, 141, 216, 128, 54, 73, 161, 65, 25, 204, 153, 123,
+        0, 157, 106, 204, 5, 203, 106, 228, 90, 94, 218, 91, 75, 82, 44, 119, 210, 239, 91, 174,
+        101, 137, 241, 236, 172, 199, 222, 84, 96,
+    ];
+    const S_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        108, 167, 135, 111, 178, 224, 28, 174, 96, 181, 136, 82, 249, 187, 46, 204, 206, 49, 3,
+        204, 114, 40, 146, 39, 5, 71, 82, 132, 158, 215, 28, 134, 196, 214, 95, 88, 230, 233, 133,
+        99, 152, 170, 38, 65, 82, 174, 219, 91, 4,
+    ];
+    const S_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        47, 180, 124, 236, 26, 180, 42, 190, 162, 114, 39, 127, 201, 182, 94, 190, 221, 251, 72,
+        249, 149, 149, 41, 241, 117, 183, 243, 109, 46, 121, 72, 168, 40, 142, 121, 173, 254, 79,
+        103, 249, 123, 174, 41, 177, 236, 253, 229, 83, 119,
+    ];
+    const RS_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
+        77, 147, 144, 129, 1, 122, 226, 93, 70, 80, 179, 245, 103, 143, 211, 87, 29, 115, 84, 244,
+        63, 170, 158, 138, 40, 113, 38, 113, 230, 251, 245, 173, 129, 20, 114, 96, 158, 182, 208,
+        161, 75, 71, 228, 191, 250, 107, 148, 107, 19,
+    ];
+    const RS_X_IM: [u8; InkeFieldIBase::ENCODED_LENGTH] = [0; InkeFieldIBase::ENCODED_LENGTH];
+    const R_X: InkeFieldI = InkeFieldI::const_decode_no_check(&R_X_RE, &R_X_IM);
+    const S_X: InkeFieldI = InkeFieldI::const_decode_no_check(&S_X_RE, &S_X_IM);
+    const RS_X: InkeFieldI = InkeFieldI::const_decode_no_check(&RS_X_RE, &RS_X_IM);
+
+    const FULL_TWO_TORSION_EXP: usize = 128;
+    const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
+    const THREE_TORSION_EXP: usize = 162;
+
+    pub fn get_params() -> InkePublicParams<InkeFieldI> {
+        let effective_two_torsion_order = BigUint::from(2u8).pow(
+            EFFECTIVE_TWO_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 2-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
+        let two_torsion_basis = BasisX::from_points(
+            &PointX::from_x_coord(&P_X),
+            &PointX::from_x_coord(&Q_X),
+            &PointX::from_x_coord(&PQ_X),
+        );
+
+        let three_torsion_order = BigUint::from(3u8).pow(
+            THREE_TORSION_EXP
+                .try_into()
+                .expect("Exponent of the 3-torsion subgroup is too big to fit in a u32 (we do not ever expect this to be the case)")
+            );
+        let three_torsion_basis = BasisX::from_points(
+            &PointX::from_x_coord(&R_X),
+            &PointX::from_x_coord(&S_X),
+            &PointX::from_x_coord(&RS_X),
+        );
+
+        InkePublicParams {
+            starting_curve: Curve::new(&InkeFieldI::from_i32(0)),
+            effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
+            effective_two_torsion_order,
+            three_torsion_exp: THREE_TORSION_EXP,
+            three_torsion_order,
+            two_torsion_basis,
+            three_torsion_basis,
         }
     }
 }

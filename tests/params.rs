@@ -28,7 +28,6 @@ fn starting_curve_has_j_invariant_1728<Fp2: FpTrait>(#[case] params: PublicParam
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
 fn torsion_basis_points_have_correct_order<Fp2: FpTrait>(#[case] params: PublicParams<Fp2>) {
-    let ONE = BigUint::from(1u8);
     let THREE = BigUint::from(3u8);
     let FIVE = BigUint::from(5u8);
 
@@ -215,7 +214,6 @@ fn torsion_basis_points_are_on_curve<Fp2: FpTrait>(#[case] params: PublicParams<
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
 fn torsion_basis_points_are_linearly_independent<Fp2: FpTrait>(#[case] params: PublicParams<Fp2>) {
-    let ONE = BigUint::from(1u8);
     let TWO = BigUint::from(2u8);
     let THREE = BigUint::from(3u8);
     let FIVE = BigUint::from(5u8);

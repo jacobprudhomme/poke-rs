@@ -29,3 +29,7 @@ harness = false
 [[bench]]
 name = "basis_reconstruction"
 harness = false
+
+[[bench]]
+name = "dlp"
+harness = false

@@ -1,4 +1,6 @@
-use isogeny::utilities::bn::bn_bit_length_vartime;
+use isogeny::utilities::bn::{
+    bn_bit_length_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct BigNum {
@@ -6,34 +8,58 @@ pub struct BigNum {
     pub bitlen: usize,
 }
 
-pub fn byte_bn_to_word_bn(bytes: &BigNum) -> Vec<u64> {
-    bytes
-        .repr
-        .chunks(8)
-        .map(|word_bytes| {
-            let mut word_bytes = word_bytes.to_vec();
-            word_bytes.resize(8, 0);
-            u64::from_le_bytes(word_bytes.try_into().unwrap())
-        })
-        .collect()
-}
+impl BigNum {
+    pub fn new(le_words: &[u64]) -> Self {
+        let mut le_bytes = le_words
+            .iter()
+            .flat_map(|word| word.to_le_bytes())
+            .collect::<Vec<_>>();
+        while le_bytes.len() > 1
+            && let Some(&last_byte) = le_bytes.last()
+            && last_byte == 0
+        {
+            le_bytes.pop();
+        }
+        let bitlen = bn_bit_length_vartime(le_words);
 
-pub fn word_bn_to_byte_bn(words: &[u64]) -> BigNum {
-    let bitlen = bn_bit_length_vartime(words);
-    let mut bytes = words
-        .iter()
-        .flat_map(|word| word.to_le_bytes())
-        .collect::<Vec<_>>();
-    while bytes.len() > 1
-        && let Some(&last_byte) = bytes.last()
-        && last_byte == 0
-    {
-        bytes.pop();
+        Self {
+            repr: le_bytes,
+            bitlen,
+        }
     }
 
-    BigNum {
-        repr: bytes,
-        bitlen,
+    pub fn from_prime(p: usize) -> Self {
+        Self::new(&prime_power_to_bn_vartime(p, 1))
+    }
+
+    pub fn from_prime_power(p: usize, exp: usize) -> Self {
+        Self::new(&prime_power_to_bn_vartime(p, exp))
+    }
+
+    pub fn from_prime_factors(prime_factorization: &[(usize, usize)]) -> Self {
+        Self::new(&factorisation_to_bn_vartime(prime_factorization))
+    }
+
+    pub fn as_le_bytes<'a>(&'a self) -> &'a [u8] {
+        &self.repr
+    }
+
+    pub fn to_le_words(&self) -> Vec<u64> {
+        self.repr
+            .chunks(8)
+            .map(|word_bytes| {
+                let mut word_bytes = word_bytes.to_vec();
+                word_bytes.resize(8, 0);
+                let Ok(word_bytes) = word_bytes.try_into() else {
+                    unreachable!("Need 8 bytes to form a u64 (we never expect to reach here)")
+                };
+                u64::from_le_bytes(word_bytes)
+            })
+            .collect()
+    }
+
+    pub fn bits(&self) -> usize {
+        self.bitlen
     }
 }
 
@@ -42,7 +68,7 @@ mod tests {
     use rand::RngCore as _;
     use rstest::rstest;
 
-    use super::{BigNum, byte_bn_to_word_bn, word_bn_to_byte_bn};
+    use super::BigNum;
 
     #[rstest]
     fn word_bn_is_inverse_of_byte_bn() {
@@ -55,8 +81,8 @@ mod tests {
             bitlen: 42 * 8 + 1,
         };
 
-        let bn_words = byte_bn_to_word_bn(&bn);
-        let bn_bytes_roundtrip = word_bn_to_byte_bn(&bn_words);
+        let bn_words = bn.to_le_words();
+        let bn_bytes_roundtrip = BigNum::new(&bn_words);
 
         assert_eq!(bn, bn_bytes_roundtrip);
     }
@@ -71,8 +97,8 @@ mod tests {
         }
         let (_, bn_words, _) = unsafe { bn_bytes.align_to::<u64>() };
 
-        let bn = word_bn_to_byte_bn(&bn_words);
-        let bn_words_roundtrip = byte_bn_to_word_bn(&bn);
+        let bn = BigNum::new(&bn_words);
+        let bn_words_roundtrip = bn.to_le_words();
 
         assert_eq!(bn_words, bn_words_roundtrip);
     }

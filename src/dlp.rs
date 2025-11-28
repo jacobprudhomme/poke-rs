@@ -1,10 +1,7 @@
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::utilities::bn::{add_bn_vartime, mul_bn_by_u64_vartime, prime_power_to_bn_vartime};
 
-use crate::{
-    FAILURE_RETVAL, SUCCESS_RETVAL,
-    bn::{BigNum, byte_bn_to_word_bn, word_bn_to_byte_bn},
-};
+use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
 
 pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     generator: &Fp2,
@@ -36,7 +33,7 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     let mut retval = SUCCESS_RETVAL;
 
     let p_to_the_e_basis = (0..=e)
-        .map(|exp| word_bn_to_byte_bn(&prime_power_to_bn_vartime(p, exp)))
+        .map(|exp| BigNum::new(&prime_power_to_bn_vartime(p, exp)))
         .collect::<Vec<_>>();
 
     let prime_order_subgroup_generator = generator.pow(
@@ -54,7 +51,7 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     let mut partial_solutions = Vec::with_capacity(e);
     let mut partial_sum = vec![0];
     for i in 0..e {
-        let partial_sum_bn = word_bn_to_byte_bn(&partial_sum);
+        let partial_sum_bn = BigNum::new(&partial_sum);
         let r = *value
             * generator
                 .pow(&partial_sum_bn.repr, partial_sum_bn.bitlen)
@@ -68,12 +65,12 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
         partial_solutions.push(x);
         partial_sum = add_bn_vartime(
             &partial_sum,
-            &mul_bn_by_u64_vartime(&byte_bn_to_word_bn(&p_to_the_e_basis[i]), x as u64),
+            &mul_bn_by_u64_vartime(&p_to_the_e_basis[i].to_le_words(), x as u64),
         );
         retval &= ok;
     }
 
-    (word_bn_to_byte_bn(&partial_sum), retval)
+    (BigNum::new(&partial_sum), retval)
 }
 
 pub fn solve_dlp_order_five<Fp2: Fp2Trait>(generator: &Fp2, value: &Fp2) -> (u8, u32) {
@@ -122,7 +119,7 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     let mut retval = SUCCESS_RETVAL;
 
     let p_to_the_e_basis = (0..=e)
-        .map(|exp| word_bn_to_byte_bn(&prime_power_to_bn_vartime(5, exp)))
+        .map(|exp| BigNum::new(&prime_power_to_bn_vartime(5, exp)))
         .collect::<Vec<_>>();
 
     let prime_order_subgroup_generator = generator.pow(
@@ -139,7 +136,7 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     let mut partial_solutions = Vec::with_capacity(e);
     let mut partial_sum = vec![0];
     for i in 0..e {
-        let partial_sum_bn = word_bn_to_byte_bn(&partial_sum);
+        let partial_sum_bn = BigNum::new(&partial_sum);
         let r = *value
             * generator
                 .pow(&partial_sum_bn.repr, partial_sum_bn.bitlen)
@@ -153,12 +150,12 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
         partial_solutions.push(x);
         partial_sum = add_bn_vartime(
             &partial_sum,
-            &mul_bn_by_u64_vartime(&byte_bn_to_word_bn(&p_to_the_e_basis[i]), x as u64),
+            &mul_bn_by_u64_vartime(&p_to_the_e_basis[i].to_le_words(), x as u64),
         );
         retval &= ok;
     }
 
-    (word_bn_to_byte_bn(&partial_sum), retval)
+    (BigNum::new(&partial_sum), retval)
 }
 
 #[cfg(test)]

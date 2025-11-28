@@ -122,7 +122,7 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     let mut retval = SUCCESS_RETVAL;
 
     let p_to_the_e_basis = (0..=e)
-        .map(|exp| word_bn_to_byte_bn(&prime_power_to_bn_vartime(p, exp)))
+        .map(|exp| word_bn_to_byte_bn(&prime_power_to_bn_vartime(5, exp)))
         .collect::<Vec<_>>();
 
     let prime_order_subgroup_generator = generator.pow(

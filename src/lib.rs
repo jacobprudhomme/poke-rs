@@ -670,7 +670,7 @@ where
     (ct, retval)
 }
 
-pub fn decrypt<'a, Fp2: Fp2Trait>(
+pub fn decrypt<Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     prv_key: &PrvKey<Fp2>,
     ciphertext: &Ciphertext<Fp2>,
@@ -768,6 +768,7 @@ where
             ],
         );
     retval &= ok;
+    let aux_curve = aux_curves.curves().0;
 
     assert_eq!(
         aux_curves
@@ -791,55 +792,39 @@ where
     /* Find change-of-basis matrix */
 
     // Compute pairs of point subtractions for later computing the pairings between them
-    let mut X_intermediate_curve = five_torsion_basis_EB_on_aux_curve[0].points().0;
-    let mut Y_intermediate_curve = five_torsion_basis_EB_on_aux_curve[1].points().0;
-    let XY_intermediate_curve = five_torsion_basis_EB_on_aux_curve[2].points().0;
-    Y_intermediate_curve.set_condneg(
-        !aux_curves
-            .curves()
-            .0
-            .sub(&X_intermediate_curve, &Y_intermediate_curve)
+    let mut X_aux_curve = five_torsion_basis_EB_on_aux_curve[0].points().0;
+    let mut Y_aux_curve = five_torsion_basis_EB_on_aux_curve[1].points().0;
+    let XY_aux_curve = five_torsion_basis_EB_on_aux_curve[2].points().0;
+    Y_aux_curve.set_condneg(
+        !aux_curve
+            .sub(&X_aux_curve, &Y_aux_curve)
             .to_pointx()
-            .equals(&XY_intermediate_curve.to_pointx()),
+            .equals(&XY_aux_curve.to_pointx()),
     );
 
-    let mut U_intermediate_curve = five_torsion_basis_EAB_on_aux_curve[0].points().0;
-    let mut V_intermediate_curve = five_torsion_basis_EAB_on_aux_curve[1].points().0;
-    let UV_intermediate_curve = five_torsion_basis_EAB_on_aux_curve[2].points().0;
-    V_intermediate_curve.set_condneg(
-        !aux_curves_verif
-            .curves()
-            .0
-            .sub(&U_intermediate_curve, &V_intermediate_curve)
+    let mut U_aux_curve = five_torsion_basis_EAB_on_aux_curve[0].points().0;
+    let mut V_aux_curve = five_torsion_basis_EAB_on_aux_curve[1].points().0;
+    let UV_aux_curve = five_torsion_basis_EAB_on_aux_curve[2].points().0;
+    V_aux_curve.set_condneg(
+        !aux_curve
+            .sub(&U_aux_curve, &V_aux_curve)
             .to_pointx()
-            .equals(&UV_intermediate_curve.to_pointx()),
+            .equals(&UV_aux_curve.to_pointx()),
     );
 
-    let XV_intermediate_curve = aux_curves
-        .curves()
-        .0
-        .sub(&X_intermediate_curve, &V_intermediate_curve);
-    let XmU_intermediate_curve = aux_curves
-        .curves()
-        .0
-        .add(&X_intermediate_curve, &U_intermediate_curve);
+    let XV_aux_curve = aux_curve.sub(&X_aux_curve, &V_aux_curve);
+    let XmU_aux_curve = aux_curve.add(&X_aux_curve, &U_aux_curve);
 
-    let YV_intermediate_curve = aux_curves
-        .curves()
-        .0
-        .sub(&Y_intermediate_curve, &V_intermediate_curve);
-    let YmU_intermediate_curve = aux_curves
-        .curves()
-        .0
-        .add(&Y_intermediate_curve, &U_intermediate_curve);
+    let YV_aux_curve = aux_curve.sub(&Y_aux_curve, &V_aux_curve);
+    let YmU_aux_curve = aux_curve.add(&Y_aux_curve, &U_aux_curve);
 
     // Compute the pairings e(U, V), e(X, V) = e(U, V)^x and e(X, -U) = e(U, V)^y,
     // e(Y, V) = e(U, V)^w and e(Y, -U) = e(U, V)^z
     // FIXME: Why does this direct way of computing the pairing not work?
-    // let eUV_aux = aux_curves_verif.curves().0.weil_pairing(
-    //     &U_intermediate_curve.to_pointx().x(),
-    //     &V_intermediate_curve.to_pointx().x(),
-    //     &UV_intermediate_curve.to_pointx().x(),
+    // let eUV_aux = aux_curve.weil_pairing(
+    //     &U_aux_curve.to_pointx().x(),
+    //     &V_aux_curve.to_pointx().x(),
+    //     &UV_aux_curve.to_pointx().x(),
     //     &pub_params.five_torsion_order.to_bytes_le(),
     //     pub_params.five_torsion_order
     //         .bits()
@@ -856,10 +841,10 @@ where
 
     // FIXME: none of the subsequent pairings are correct! This breaks everything!
     // I suspect a discrepancy between Sage's Weil pairing and the one here
-    let eXV = aux_curves_verif.curves().0.weil_pairing(
-        &X_intermediate_curve.to_pointx().x(),
-        &V_intermediate_curve.to_pointx().x(),
-        &XV_intermediate_curve.to_pointx().x(),
+    let eXV = aux_curve.weil_pairing(
+        &X_aux_curve.to_pointx().x(),
+        &V_aux_curve.to_pointx().x(),
+        &XV_aux_curve.to_pointx().x(),
         &pub_params.five_torsion_order.to_bytes_le(),
         pub_params.five_torsion_order
             .bits()
@@ -867,11 +852,11 @@ where
             .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     );
 
-    let mU_intermediate_curve = -U_intermediate_curve;
-    let eXmU = aux_curves_verif.curves().0.weil_pairing(
-        &X_intermediate_curve.to_pointx().x(),
-        &mU_intermediate_curve.to_pointx().x(),
-        &XmU_intermediate_curve.to_pointx().x(),
+    let mU_aux_curve = -U_aux_curve;
+    let eXmU = aux_curve.weil_pairing(
+        &X_aux_curve.to_pointx().x(),
+        &mU_aux_curve.to_pointx().x(),
+        &XmU_aux_curve.to_pointx().x(),
         &pub_params.five_torsion_order.to_bytes_le(),
         pub_params.five_torsion_order
             .bits()
@@ -879,10 +864,10 @@ where
             .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     );
 
-    let eYV = aux_curves_verif.curves().0.weil_pairing(
-        &Y_intermediate_curve.to_pointx().x(),
-        &V_intermediate_curve.to_pointx().x(),
-        &YV_intermediate_curve.to_pointx().x(),
+    let eYV = aux_curve.weil_pairing(
+        &Y_aux_curve.to_pointx().x(),
+        &V_aux_curve.to_pointx().x(),
+        &YV_aux_curve.to_pointx().x(),
         &pub_params.five_torsion_order.to_bytes_le(),
         pub_params.five_torsion_order
             .bits()
@@ -890,10 +875,10 @@ where
             .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     );
 
-    let eYmU = aux_curves_verif.curves().0.weil_pairing(
-        &Y_intermediate_curve.to_pointx().x(),
-        &mU_intermediate_curve.to_pointx().x(),
-        &YmU_intermediate_curve.to_pointx().x(),
+    let eYmU = aux_curve.weil_pairing(
+        &Y_aux_curve.to_pointx().x(),
+        &mU_aux_curve.to_pointx().x(),
+        &YmU_aux_curve.to_pointx().x(),
         &pub_params.five_torsion_order.to_bytes_le(),
         pub_params.five_torsion_order
             .bits()
@@ -918,18 +903,16 @@ where
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_intermediate_curve, &U, &x.repr, x.bitlen);
+        .mul_into(&mut X_aux_curve, &U, &x.repr, x.bitlen);
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_intermediate_curve, &V, &y.repr, y.bitlen);
-    ciphertext.shared_end_curve.add_into(
-        &mut U_intermediate_curve,
-        &X_intermediate_curve,
-        &Y_intermediate_curve,
-    );
+        .mul_into(&mut Y_aux_curve, &V, &y.repr, y.bitlen);
+    ciphertext
+        .shared_end_curve
+        .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
     ciphertext.shared_end_curve.mul_into(
-        &mut V_intermediate_curve,
-        &U_intermediate_curve,
+        &mut V_aux_curve,
+        &U_aux_curve,
         &dual_factor.to_bytes_le(),
         dual_factor
             .bits()
@@ -939,7 +922,7 @@ where
     let X_AB = ciphertext
         .shared_end_curve
         .mul(
-            &V_intermediate_curve,
+            &V_aux_curve,
             &prv_key.delta.to_bytes_le(),
             prv_key.delta
                 .bits()
@@ -949,18 +932,16 @@ where
 
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_intermediate_curve, &U, &w.repr, w.bitlen);
+        .mul_into(&mut X_aux_curve, &U, &w.repr, w.bitlen);
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_intermediate_curve, &V, &z.repr, z.bitlen);
-    ciphertext.shared_end_curve.add_into(
-        &mut U_intermediate_curve,
-        &X_intermediate_curve,
-        &Y_intermediate_curve,
-    );
+        .mul_into(&mut Y_aux_curve, &V, &z.repr, z.bitlen);
+    ciphertext
+        .shared_end_curve
+        .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
     ciphertext.shared_end_curve.mul_into(
-        &mut V_intermediate_curve,
-        &U_intermediate_curve,
+        &mut V_aux_curve,
+        &U_aux_curve,
         &dual_factor.to_bytes_le(),
         dual_factor
             .bits()
@@ -970,7 +951,7 @@ where
     let Y_AB = ciphertext
         .shared_end_curve
         .mul(
-            &V_intermediate_curve,
+            &V_aux_curve,
             &prv_key.delta.to_bytes_le(),
             prv_key.delta
                 .bits()

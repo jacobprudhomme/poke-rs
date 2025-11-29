@@ -36,7 +36,7 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
         .collect::<Vec<_>>();
 
     let prime_order_subgroup_generator = generator.pow(
-        &p_to_the_e_basis[e - 1].as_le_bytes(),
+        p_to_the_e_basis[e - 1].as_le_bytes(),
         p_to_the_e_basis[e - 1].nbits(),
     );
     assert_eq!(
@@ -52,10 +52,10 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     for i in 0..e {
         let r = *value
             * generator
-                .pow(&partial_sum.as_le_bytes(), partial_sum.nbits())
+                .pow(partial_sum.as_le_bytes(), partial_sum.nbits())
                 .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
-            &p_to_the_e_basis[e - i - 1].as_le_bytes(),
+            p_to_the_e_basis[e - i - 1].as_le_bytes(),
             p_to_the_e_basis[e - i - 1].nbits(),
         );
 
@@ -118,7 +118,7 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
         .collect::<Vec<_>>();
 
     let prime_order_subgroup_generator = generator.pow(
-        &p_to_the_e_basis[e - 1].as_le_bytes(),
+        p_to_the_e_basis[e - 1].as_le_bytes(),
         p_to_the_e_basis[e - 1].nbits(),
     );
     assert_eq!(
@@ -133,10 +133,10 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     for i in 0..e {
         let r = *value
             * generator
-                .pow(&partial_sum.as_le_bytes(), partial_sum.nbits())
+                .pow(partial_sum.as_le_bytes(), partial_sum.nbits())
                 .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
-            &p_to_the_e_basis[e - i - 1].as_le_bytes(),
+            p_to_the_e_basis[e - i - 1].as_le_bytes(),
             p_to_the_e_basis[e - i - 1].nbits(),
         );
 
@@ -181,7 +181,7 @@ mod tests {
         let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 5, 3);
 
         assert_eq!(ok, SUCCESS_RETVAL);
-        assert_eq!(&x.as_le_bytes(), &[7]);
+        assert_eq!(x.as_le_bytes(), &[7]);
         assert_eq!(x.nbits(), 3);
     }
     #[rstest]
@@ -206,7 +206,7 @@ mod tests {
         let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 7, 4);
 
         assert_eq!(ok, SUCCESS_RETVAL);
-        assert_eq!(&x.as_le_bytes(), &[255, 1]);
+        assert_eq!(x.as_le_bytes(), &[255, 1]);
         assert_eq!(x.nbits(), 9);
     }
 }

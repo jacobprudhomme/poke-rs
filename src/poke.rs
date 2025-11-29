@@ -13,6 +13,7 @@ use sha3::{
 
 use crate::{
     SUCCESS_RETVAL,
+    bn::BigNum,
     dlp::solve_dlp_small_prime_power_order,
     rand::{
         sample_random_element_mod, sample_random_invertible_matrix_mod,
@@ -23,15 +24,15 @@ use crate::{
 
 pub struct PublicParams<Fp2: Fp2Trait> {
     pub starting_curve: Curve<Fp2>,
-    pub full_two_torsion_order: BigUint,
+    pub full_two_torsion_order: BigNum,
     pub full_two_torsion_exp: usize,
-    pub effective_two_torsion_order: BigUint,
+    pub effective_two_torsion_order: BigNum,
     pub effective_two_torsion_exp: usize,
-    pub three_torsion_order: BigUint,
+    pub three_torsion_order: BigNum,
     pub three_torsion_exp: usize,
-    pub five_torsion_order: BigUint,
+    pub five_torsion_order: BigNum,
     pub five_torsion_exp: usize,
-    pub five_torsion_cofactor: BigUint,
+    pub five_torsion_cofactor: BigNum,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
     pub five_torsion_basis: BasisX<Fp2>,
@@ -39,10 +40,10 @@ pub struct PublicParams<Fp2: Fp2Trait> {
 
 // FIXME: represent scalars as their LE byte arrays and bitsize. Removes external dependency on num-bigint
 pub struct PrvKey<Fp2: Fp2Trait> {
-    pub q: BigUint,
-    pub alpha: BigUint,
-    pub beta: BigUint,
-    pub delta: BigUint,
+    pub q: BigNum,
+    pub alpha: BigNum,
+    pub beta: BigNum,
+    pub delta: BigNum,
     pub _field: PhantomData<Fp2>,
 }
 
@@ -86,19 +87,19 @@ where
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
     let D =
-        sample_random_invertible_matrix_mod(&BigUint::from(5u8), &pub_params.five_torsion_order);
+        sample_random_invertible_matrix_mod(&BigNum::from_prime(5), &pub_params.five_torsion_order);
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>) and psi' (<R_A + [r] S_A>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
-        &r.as_le_bytes(),
+        r.as_le_bytes(),
         r.nbits(),
     );
     let psi_prime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
-        &r.as_le_bytes(),
+        r.as_le_bytes(),
         r.nbits(),
     );
 
@@ -117,8 +118,8 @@ where
 
     // let masked_xP_B = codomain_curve.xmul(P_B, &omega, omega_bitsize);
     // let masked_xQ_B = codomain_curve.xmul(Q_B, &omega_inv, omega_inv_bitsize);
-    let masked_P_B = codomain_curve.mul(&P_B, &omega.as_le_bytes(), omega.nbits());
-    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.as_le_bytes(), omega_inv.nbits());
+    let masked_P_B = codomain_curve.mul(&P_B, omega.as_le_bytes(), omega.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, omega_inv.as_le_bytes(), omega_inv.nbits());
 
     // let (masked_P_B, ok) = codomain_curve.lift_pointx(&masked_xP_B);
     // retval &= ok;
@@ -164,12 +165,12 @@ where
     //     D_bitsize[(1, 1)],
     // );
     let masked_X_B = codomain_curve_verif.add(
-        &codomain_curve_verif.mul(&X_B, &D[0][0].as_le_bytes(), D[0][0].nbits()),
-        &codomain_curve_verif.mul(&Y_B, &D[0][1].as_le_bytes(), D[0][1].nbits()),
+        &codomain_curve_verif.mul(&X_B, D[0][0].as_le_bytes(), D[0][0].nbits()),
+        &codomain_curve_verif.mul(&Y_B, D[0][1].as_le_bytes(), D[0][1].nbits()),
     );
     let masked_Y_B = codomain_curve_verif.add(
-        &codomain_curve_verif.mul(&X_B, &D[1][0].as_le_bytes(), D[1][0].nbits()),
-        &codomain_curve_verif.mul(&Y_B, &D[1][1].as_le_bytes(), D[1][1].nbits()),
+        &codomain_curve_verif.mul(&X_B, D[1][0].as_le_bytes(), D[1][0].nbits()),
+        &codomain_curve_verif.mul(&Y_B, D[1][1].as_le_bytes(), D[1][1].nbits()),
     );
 
     // let (masked_X_B, ok) = codomain_curve_verif.lift_pointx(&masked_xX_B);
@@ -210,8 +211,8 @@ where
 
     // let masked_xP_AB = shared_end_curve.xmul(xP_AB, &omega, omega_bitsize);
     // let masked_xQ_AB = shared_end_curve.xmul(xQ_AB, &omega_inv, omega_inv_bitsize);
-    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.as_le_bytes(), omega.nbits());
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.as_le_bytes(), omega_inv.nbits());
+    let masked_P_AB = shared_end_curve.mul(&P_AB, omega.as_le_bytes(), omega.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega_inv.as_le_bytes(), omega_inv.nbits());
 
     // let (masked_P_AB, ok) = shared_end_curve.lift_pointx(&masked_xP_AB);
     // retval &= ok;
@@ -257,12 +258,12 @@ where
     //     D_bitsize[(1, 1)],
     // );
     let masked_X_AB = shared_end_curve_verif.add(
-        &shared_end_curve_verif.mul(&X_AB, &D[0][0].as_le_bytes(), D[0][0].nbits()),
-        &shared_end_curve_verif.mul(&Y_AB, &D[0][1].as_le_bytes(), D[0][1].nbits()),
+        &shared_end_curve_verif.mul(&X_AB, D[0][0].as_le_bytes(), D[0][0].nbits()),
+        &shared_end_curve_verif.mul(&Y_AB, D[0][1].as_le_bytes(), D[0][1].nbits()),
     );
     let masked_Y_AB = shared_end_curve_verif.add(
-        &shared_end_curve_verif.mul(&X_AB, &D[1][0].as_le_bytes(), D[1][0].nbits()),
-        &shared_end_curve_verif.mul(&Y_AB, &D[1][1].as_le_bytes(), D[1][1].nbits()),
+        &shared_end_curve_verif.mul(&X_AB, D[1][0].as_le_bytes(), D[1][0].nbits()),
+        &shared_end_curve_verif.mul(&Y_AB, D[1][1].as_le_bytes(), D[1][1].nbits()),
     );
 
     // let (masked_X_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xX_AB);
@@ -315,7 +316,11 @@ where
     let mut retval = SUCCESS_RETVAL;
 
     // Factor that shows up in the application of the 2D-isogeny, from the dual that appears in the representation
-    let dual_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
+    let dual_factor = BigNum::new(
+        &(BigUint::from_bytes_le(pub_params.effective_two_torsion_order.as_le_bytes())
+            - BigUint::from_bytes_le(prv_key.q.as_le_bytes()))
+        .to_u64_digits(),
+    );
 
     // Invert secret scalars, to neutralize their action on masked points we receive
     // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
@@ -329,37 +334,25 @@ where
     let unmasked_P_AB =
         ciphertext
             .shared_end_curve
-            .mul(&P_AB, &alpha_inv.as_le_bytes(), alpha_inv.nbits());
+            .mul(&P_AB, alpha_inv.as_le_bytes(), alpha_inv.nbits());
     let unmasked_Q_AB =
         ciphertext
             .shared_end_curve
-            .mul(&Q_AB, &beta_inv.as_le_bytes(), beta_inv.nbits());
+            .mul(&Q_AB, beta_inv.as_le_bytes(), beta_inv.nbits());
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let (P_B, Q_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
-    let mut deg_P_B = ciphertext
-        .codomain_curve
-        .mul(
-            &P_B,
-            &prv_key.q.to_bytes_le(),
-            prv_key.q
-                .bits()
-                .try_into()
-                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
+    let mut deg_P_B =
+        ciphertext
+            .codomain_curve
+            .mul(&P_B, prv_key.q.as_le_bytes(), prv_key.q.nbits());
     deg_P_B.set_neg();
-    let mut deg_Q_B = ciphertext
-        .codomain_curve
-        .mul(
-            &Q_B,
-            &prv_key.q.to_bytes_le(),
-            prv_key.q
-                .bits()
-                .try_into()
-                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
+    let mut deg_Q_B =
+        ciphertext
+            .codomain_curve
+            .mul(&Q_B, prv_key.q.as_le_bytes(), prv_key.q.nbits());
     deg_Q_B.set_neg();
 
     let P1P2 = ProductPoint::new(&deg_P_B, &unmasked_P_AB);
@@ -467,13 +460,7 @@ where
     //         .try_into()
     //         .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     // );
-    let eUV_aux = eUV_AB.pow(
-        &dual_factor.to_bytes_le(),
-        dual_factor
-            .bits()
-            .try_into()
-            .expect("Size in bits of (2^a - q) is too big to fit into a usize (we don't expect this to ever happen)"),
-    );
+    let eUV_aux = eUV_AB.pow(dual_factor.as_le_bytes(), dual_factor.nbits());
 
     // FIXME: none of the subsequent pairings are correct! This breaks everything!
     // I suspect a discrepancy between Sage's Weil pairing and the one here
@@ -481,11 +468,8 @@ where
         &X_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &XV_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_bytes_le(),
-        pub_params.five_torsion_order
-            .bits()
-            .try_into()
-            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+        pub_params.five_torsion_order.as_le_bytes(),
+        pub_params.five_torsion_order.nbits(),
     );
 
     let mU_aux_curve = -U_aux_curve;
@@ -493,33 +477,24 @@ where
         &X_aux_curve.to_pointx().x(),
         &mU_aux_curve.to_pointx().x(),
         &XmU_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_bytes_le(),
-        pub_params.five_torsion_order
-            .bits()
-            .try_into()
-            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+        pub_params.five_torsion_order.as_le_bytes(),
+        pub_params.five_torsion_order.nbits(),
     );
 
     let eYV = aux_curve.weil_pairing(
         &Y_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &YV_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_bytes_le(),
-        pub_params.five_torsion_order
-            .bits()
-            .try_into()
-            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+        pub_params.five_torsion_order.as_le_bytes(),
+        pub_params.five_torsion_order.nbits(),
     );
 
     let eYmU = aux_curve.weil_pairing(
         &Y_aux_curve.to_pointx().x(),
         &mU_aux_curve.to_pointx().x(),
         &YmU_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_bytes_le(),
-        pub_params.five_torsion_order
-            .bits()
-            .try_into()
-            .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+        pub_params.five_torsion_order.as_le_bytes(),
+        pub_params.five_torsion_order.nbits(),
     );
 
     // Solve discrete logarithm between pairings to obtain expression of X' in terms of <U',V'>
@@ -539,61 +514,45 @@ where
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, &x.as_le_bytes(), x.nbits());
+        .mul_into(&mut X_aux_curve, &U, x.as_le_bytes(), x.nbits());
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, &y.as_le_bytes(), y.nbits());
+        .mul_into(&mut Y_aux_curve, &V, y.as_le_bytes(), y.nbits());
     ciphertext
         .shared_end_curve
         .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
     ciphertext.shared_end_curve.mul_into(
         &mut V_aux_curve,
         &U_aux_curve,
-        &dual_factor.to_bytes_le(),
-        dual_factor
-            .bits()
-            .try_into()
-            .expect("Size in bits of (2^a - q) is too big to fit in a usize (we do not ever expect this to happen)"),
+        dual_factor.as_le_bytes(),
+        dual_factor.nbits(),
     );
-    let X_AB = ciphertext
-        .shared_end_curve
-        .mul(
-            &V_aux_curve,
-            &prv_key.delta.to_bytes_le(),
-            prv_key.delta
-                .bits()
-                .try_into()
-                .expect("Size in bits of delta is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
+    let X_AB = ciphertext.shared_end_curve.mul(
+        &V_aux_curve,
+        prv_key.delta.as_le_bytes(),
+        prv_key.delta.nbits(),
+    );
 
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, &w.as_le_bytes(), w.nbits());
+        .mul_into(&mut X_aux_curve, &U, w.as_le_bytes(), w.nbits());
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, &z.as_le_bytes(), z.nbits());
+        .mul_into(&mut Y_aux_curve, &V, z.as_le_bytes(), z.nbits());
     ciphertext
         .shared_end_curve
         .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
     ciphertext.shared_end_curve.mul_into(
         &mut V_aux_curve,
         &U_aux_curve,
-        &dual_factor.to_bytes_le(),
-        dual_factor
-            .bits()
-            .try_into()
-            .expect("Size in bits of (2^a - q) is too big to fit in a usize (we do not ever expect this to happen)"),
+        dual_factor.as_le_bytes(),
+        dual_factor.nbits(),
     );
-    let Y_AB = ciphertext
-        .shared_end_curve
-        .mul(
-            &V_aux_curve,
-            &prv_key.delta.to_bytes_le(),
-            prv_key.delta
-                .bits()
-                .try_into()
-                .expect("Size in bits of delta is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
+    let Y_AB = ciphertext.shared_end_curve.mul(
+        &V_aux_curve,
+        prv_key.delta.as_le_bytes(),
+        prv_key.delta.nbits(),
+    );
 
     // Undo one-time pad of message
     let mut kdf = Shake256::default();

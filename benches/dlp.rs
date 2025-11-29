@@ -2,8 +2,8 @@
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use fp2::traits::{Fp as _, Fp2 as Fp2Trait};
-use num_bigint::BigUint;
 use poke::{
+    bn::BigNum,
     dlp::{
         solve_dlp_order_five, solve_dlp_order_power_of_five, solve_dlp_small_prime_order,
         solve_dlp_small_prime_power_order,
@@ -18,11 +18,9 @@ fn generate_fp2_power_of_five_subgroup_generator<Fp2: Fp2Trait>(
     pub_params: PublicParams<Fp2>,
     exp: usize,
 ) -> Fp2 {
-    let FIVE = BigUint::from(5u8);
-
-    let torsion_order = &FIVE.pow(exp.try_into().unwrap());
+    let torsion_order = BigNum::from_prime_power(5, exp);
     let cofactor_order = &pub_params.five_torsion_cofactor
-        * &FIVE.pow((pub_params.five_torsion_exp - exp).try_into().unwrap());
+        * &BigNum::from_prime_power(5, pub_params.five_torsion_exp - exp);
 
     // The Weil pairing of a basis of the n-torsion subgroup will be the generator of an order-n subgroup of Fp^2
     let (_, _, eUV) =

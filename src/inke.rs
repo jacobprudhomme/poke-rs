@@ -5,7 +5,6 @@ use isogeny::{
     elliptic::{basis::BasisX, curve::Curve, point::PointX},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
-use num_bigint::BigUint;
 use sha3::{
     Shake256,
     digest::{ExtendableOutput as _, Update as _, XofReader as _},
@@ -13,24 +12,25 @@ use sha3::{
 
 use crate::{
     SUCCESS_RETVAL,
+    bn::BigNum,
     rand::{sample_random_element_mod, sample_random_unit_mod},
     utilities::invert_element_mod,
 };
 
 pub struct PublicParams<Fp2: Fp2Trait> {
     pub starting_curve: Curve<Fp2>,
-    pub effective_two_torsion_order: BigUint,
+    pub effective_two_torsion_order: BigNum,
     pub effective_two_torsion_exp: usize,
-    pub three_torsion_order: BigUint,
+    pub three_torsion_order: BigNum,
     pub three_torsion_exp: usize,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
 }
 
 pub struct PrvKey<Fp2: Fp2Trait> {
-    pub q: BigUint,
-    pub alpha: BigUint,
-    pub beta: BigUint,
+    pub q: BigNum,
+    pub alpha: BigNum,
+    pub beta: BigNum,
     pub _field: PhantomData<Fp2>,
 }
 
@@ -73,17 +73,17 @@ where
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>), psi' (<R_A + [r] S_A>) and psi'' (<R_A1 + [r] S_A1>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
-        &r.as_le_bytes(),
+        r.as_le_bytes(),
         r.nbits(),
     );
     let psi_prime_kernel = pub_key.intermediate_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img_intermediate,
-        &r.as_le_bytes(),
+        r.as_le_bytes(),
         r.nbits(),
     );
     let psi_dblprime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
-        &r.as_le_bytes(),
+        r.as_le_bytes(),
         r.nbits(),
     );
 
@@ -98,8 +98,8 @@ where
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
     retval &= kernel_has_right_order;
 
-    let masked_P_B = codomain_curve.mul(&P_B, &omega.as_le_bytes(), omega.nbits());
-    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.as_le_bytes(), omega_inv.nbits());
+    let masked_P_B = codomain_curve.mul(&P_B, omega.as_le_bytes(), omega.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, omega_inv.as_le_bytes(), omega_inv.nbits());
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
 
@@ -122,8 +122,8 @@ where
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
     retval &= kernel_has_right_order;
 
-    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.as_le_bytes(), omega.nbits());
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.as_le_bytes(), omega_inv.nbits());
+    let masked_P_AB = shared_end_curve.mul(&P_AB, omega.as_le_bytes(), omega.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega_inv.as_le_bytes(), omega_inv.nbits());
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
 
@@ -185,37 +185,25 @@ where
     let unmasked_P_AB =
         ciphertext
             .shared_end_curve
-            .mul(&P_AB, &alpha_inv.as_le_bytes(), alpha_inv.nbits());
+            .mul(&P_AB, alpha_inv.as_le_bytes(), alpha_inv.nbits());
     let unmasked_Q_AB =
         ciphertext
             .shared_end_curve
-            .mul(&Q_AB, &beta_inv.as_le_bytes(), beta_inv.nbits());
+            .mul(&Q_AB, beta_inv.as_le_bytes(), beta_inv.nbits());
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let (P_B, Q_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
-    let mut deg_P_B = ciphertext
-        .codomain_curve
-        .mul(
-            &P_B,
-            &prv_key.q.to_bytes_le(),
-            prv_key.q
-                .bits()
-                .try_into()
-                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
+    let mut deg_P_B =
+        ciphertext
+            .codomain_curve
+            .mul(&P_B, prv_key.q.as_le_bytes(), prv_key.q.nbits());
     deg_P_B.set_neg();
-    let mut deg_Q_B = ciphertext
-        .codomain_curve
-        .mul(
-            &Q_B,
-            &prv_key.q.to_bytes_le(),
-            prv_key.q
-                .bits()
-                .try_into()
-                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
-        );
+    let mut deg_Q_B =
+        ciphertext
+            .codomain_curve
+            .mul(&Q_B, prv_key.q.as_le_bytes(), prv_key.q.nbits());
     deg_Q_B.set_neg();
 
     let P1P2 = ProductPoint::new(&deg_P_B, &unmasked_P_AB);

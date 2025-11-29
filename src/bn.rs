@@ -5,7 +5,7 @@ use core::{
 
 use isogeny::utilities::bn::{
     add_bn_vartime, bn_bit_length_vartime, factorisation_to_bn_vartime, mul_bn_by_u64_vartime,
-    prime_power_to_bn_vartime,
+    mul_bn_vartime, prime_power_to_bn_vartime,
 };
 use num_bigint::BigUint;
 
@@ -15,6 +15,21 @@ pub struct BigNum {
     bitlen: usize,
 }
 
+fn le_bytes_to_le_words(bytes: &[u8]) -> Vec<u64> {
+    bytes
+        .chunks(8)
+        .map(|word_bytes| {
+            let mut word_bytes = word_bytes.to_vec();
+            word_bytes.resize(8, 0);
+            let Ok(word_bytes) = word_bytes.try_into() else {
+                unreachable!("Need 8 bytes to form a u64 (we never expect to reach here)")
+            };
+            u64::from_le_bytes(word_bytes)
+        })
+        .collect()
+}
+
+// WARN: all of these functions are vartime
 impl BigNum {
     pub fn zero() -> Self {
         Self {
@@ -42,6 +57,10 @@ impl BigNum {
         }
     }
 
+    pub fn from_le_bytes(bytes: &[u8]) -> Self {
+        Self::new(&le_bytes_to_le_words(bytes))
+    }
+
     pub fn from_prime(p: usize) -> Self {
         Self::new(&prime_power_to_bn_vartime(p, 1))
     }
@@ -59,17 +78,7 @@ impl BigNum {
     }
 
     pub fn to_le_words(&self) -> Vec<u64> {
-        self.repr
-            .chunks(8)
-            .map(|word_bytes| {
-                let mut word_bytes = word_bytes.to_vec();
-                word_bytes.resize(8, 0);
-                let Ok(word_bytes) = word_bytes.try_into() else {
-                    unreachable!("Need 8 bytes to form a u64 (we never expect to reach here)")
-                };
-                u64::from_le_bytes(word_bytes)
-            })
-            .collect()
+        le_bytes_to_le_words(&self.repr)
     }
 
     pub fn nbits(&self) -> usize {
@@ -98,6 +107,14 @@ impl Mul<u64> for &BigNum {
 
     fn mul(self, rhs: u64) -> Self::Output {
         BigNum::new(&mul_bn_by_u64_vartime(&self.to_le_words(), rhs))
+    }
+}
+
+impl Mul<&BigNum> for &BigNum {
+    type Output = BigNum;
+
+    fn mul(self, rhs: &BigNum) -> Self::Output {
+        BigNum::new(&mul_bn_vartime(&self.to_le_words(), &rhs.to_le_words()))
     }
 }
 

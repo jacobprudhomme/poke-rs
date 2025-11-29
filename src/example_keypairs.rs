@@ -1,9 +1,8 @@
 use std::marker::PhantomData;
 
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
-use num_bigint::BigUint;
 
-use crate::SUCCESS_RETVAL;
+use crate::{SUCCESS_RETVAL, bn::BigNum};
 
 pub mod poke_i {
     use crate::{
@@ -187,10 +186,10 @@ pub mod poke_i {
 
     pub fn get_prv_key() -> PrvKey<PokeFieldI> {
         PrvKey {
-            q: BigUint::from_bytes_le(&Q),
-            alpha: BigUint::from_bytes_le(&ALPHA),
-            beta: BigUint::from_bytes_le(&BETA),
-            delta: BigUint::from_bytes_le(&DELTA),
+            q: BigNum::from_le_bytes(&Q),
+            alpha: BigNum::from_le_bytes(&ALPHA),
+            beta: BigNum::from_le_bytes(&BETA),
+            delta: BigNum::from_le_bytes(&DELTA),
             _field: PhantomData,
         }
     }
@@ -424,10 +423,10 @@ pub mod poke_iii {
 
     pub fn get_prv_key() -> PrvKey<PokeFieldIII> {
         PrvKey {
-            q: BigUint::from_bytes_le(&Q),
-            alpha: BigUint::from_bytes_le(&ALPHA),
-            beta: BigUint::from_bytes_le(&BETA),
-            delta: BigUint::from_bytes_le(&DELTA),
+            q: BigNum::from_le_bytes(&Q),
+            alpha: BigNum::from_le_bytes(&ALPHA),
+            beta: BigNum::from_le_bytes(&BETA),
+            delta: BigNum::from_le_bytes(&DELTA),
             _field: PhantomData,
         }
     }
@@ -682,10 +681,10 @@ pub mod poke_v {
 
     pub fn get_prv_key() -> PrvKey<PokeFieldV> {
         PrvKey {
-            q: BigUint::from_bytes_le(&Q),
-            alpha: BigUint::from_bytes_le(&ALPHA),
-            beta: BigUint::from_bytes_le(&BETA),
-            delta: BigUint::from_bytes_le(&DELTA),
+            q: BigNum::from_le_bytes(&Q),
+            alpha: BigNum::from_le_bytes(&ALPHA),
+            beta: BigNum::from_le_bytes(&BETA),
+            delta: BigNum::from_le_bytes(&DELTA),
             _field: PhantomData,
         }
     }
@@ -902,9 +901,9 @@ pub mod inke_i {
 
     pub fn get_prv_key() -> PrvKey<InkeFieldI> {
         PrvKey {
-            q: BigUint::from_bytes_le(&Q),
-            alpha: BigUint::from_bytes_le(&ALPHA),
-            beta: BigUint::from_bytes_le(&BETA),
+            q: BigNum::from_le_bytes(&Q),
+            alpha: BigNum::from_le_bytes(&ALPHA),
+            beta: BigNum::from_le_bytes(&BETA),
             _field: PhantomData,
         }
     }

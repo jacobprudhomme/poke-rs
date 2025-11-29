@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 #![feature(generic_const_exprs)]
 
-mod bn;
+pub mod bn;
 pub mod dlp;
 pub mod example_keypairs;
 pub mod fields;

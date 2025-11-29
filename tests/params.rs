@@ -3,8 +3,9 @@
 use fp2::traits::Fp2 as FpTrait;
 use num_bigint::BigUint;
 use poke::{
-    FAILURE_RETVAL, PublicParams, SUCCESS_RETVAL,
+    FAILURE_RETVAL, SUCCESS_RETVAL,
     params::{poke_i, poke_iii, poke_v},
+    poke::PublicParams,
 };
 use rstest::rstest;
 

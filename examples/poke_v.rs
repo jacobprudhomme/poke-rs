@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use poke::{SUCCESS_RETVAL, encrypt, example_keypairs, params};
+use poke::{SUCCESS_RETVAL, example_keypairs, params, poke::encrypt};
 
 fn main() {
     let params = params::poke_v::get_params();

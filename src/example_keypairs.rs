@@ -3,10 +3,13 @@ use std::marker::PhantomData;
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
 use num_bigint::BigUint;
 
-use crate::{PrvKey, PubKey, SUCCESS_RETVAL};
+use crate::SUCCESS_RETVAL;
 
 pub mod poke_i {
-    use crate::fields::{PokeFieldI, PokeFieldIBase};
+    use crate::{
+        fields::{PokeFieldI, PokeFieldIBase},
+        poke::{PrvKey, PubKey},
+    };
 
     use super::*;
 
@@ -194,7 +197,10 @@ pub mod poke_i {
 }
 
 pub mod poke_iii {
-    use crate::fields::{PokeFieldIII, PokeFieldIIIBase};
+    use crate::{
+        fields::{PokeFieldIII, PokeFieldIIIBase},
+        poke::{PrvKey, PubKey},
+    };
 
     use super::*;
 
@@ -428,7 +434,10 @@ pub mod poke_iii {
 }
 
 pub mod poke_v {
-    use crate::fields::{PokeFieldV, PokeFieldVBase};
+    use crate::{
+        fields::{PokeFieldV, PokeFieldVBase},
+        poke::{PrvKey, PubKey},
+    };
 
     use super::*;
 
@@ -684,8 +693,8 @@ pub mod poke_v {
 
 pub mod inke_i {
     use crate::{
-        InkePrvKey, InkePubKey,
         fields::{InkeFieldI, InkeFieldIBase},
+        inke::{PrvKey, PubKey},
     };
 
     use super::*;
@@ -832,7 +841,7 @@ pub mod inke_i {
         243, 166, 231, 73, 240, 174, 15, 214, 241, 107, 208, 205, 21, 68, 192, 46,
     ];
 
-    pub fn get_pub_key() -> InkePubKey<InkeFieldI> {
+    pub fn get_pub_key() -> PubKey<InkeFieldI> {
         let E_A = Curve::new(&A);
         let E_A1 = Curve::new(&A1);
 
@@ -880,7 +889,7 @@ pub mod inke_i {
         );
 
         // Construct public key from above values (E_A, (P_A, Q_A), (R_A, S_A), (X_A, Y_A))
-        InkePubKey {
+        PubKey {
             codomain_curve: E_A,
             masked_two_torsion_basis_img: BasisX::from_points(&xP, &xQ, &xPQ),
             masked_three_torsion_basis_img: BasisX::from_points(&xR, &xS, &xRS),
@@ -891,8 +900,8 @@ pub mod inke_i {
         }
     }
 
-    pub fn get_prv_key() -> InkePrvKey<InkeFieldI> {
-        InkePrvKey {
+    pub fn get_prv_key() -> PrvKey<InkeFieldI> {
+        PrvKey {
             q: BigUint::from_bytes_le(&Q),
             alpha: BigUint::from_bytes_le(&ALPHA),
             beta: BigUint::from_bytes_le(&BETA),

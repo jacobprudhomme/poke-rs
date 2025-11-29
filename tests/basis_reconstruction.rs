@@ -3,9 +3,10 @@
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::{BigUint, RandBigInt as _};
 use poke::{
-    PublicParams, SUCCESS_RETVAL,
+    SUCCESS_RETVAL,
     fields::{PokeFieldI, PokeFieldIBase},
     params::poke_i,
+    poke::PublicParams,
 };
 use rstest::{fixture, rstest};
 

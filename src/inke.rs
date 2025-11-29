@@ -1,0 +1,244 @@
+use std::marker::PhantomData;
+
+use fp2::traits::Fp2 as Fp2Trait;
+use isogeny::{
+    elliptic::{basis::BasisX, curve::Curve, point::PointX},
+    theta::elliptic_product::{EllipticProduct, ProductPoint},
+};
+use num_bigint::BigUint;
+use sha3::{
+    Shake256,
+    digest::{ExtendableOutput as _, Update as _, XofReader as _},
+};
+
+use crate::{
+    SUCCESS_RETVAL,
+    rand::{sample_random_element_mod, sample_random_unit_mod},
+    utilities::invert_element_mod,
+};
+
+pub struct PublicParams<Fp2: Fp2Trait> {
+    pub starting_curve: Curve<Fp2>,
+    pub effective_two_torsion_order: BigUint,
+    pub effective_two_torsion_exp: usize,
+    pub three_torsion_order: BigUint,
+    pub three_torsion_exp: usize,
+    pub two_torsion_basis: BasisX<Fp2>,
+    pub three_torsion_basis: BasisX<Fp2>,
+}
+
+pub struct PrvKey<Fp2: Fp2Trait> {
+    pub q: BigUint,
+    pub alpha: BigUint,
+    pub beta: BigUint,
+    pub _field: PhantomData<Fp2>,
+}
+
+pub struct PubKey<Fp2: Fp2Trait> {
+    pub codomain_curve: Curve<Fp2>,
+    pub masked_two_torsion_basis_img: BasisX<Fp2>,
+    pub masked_three_torsion_basis_img: BasisX<Fp2>,
+    pub intermediate_curve: Curve<Fp2>,
+    pub masked_three_torsion_basis_img_intermediate: BasisX<Fp2>,
+}
+
+pub struct Ciphertext<Fp2: Fp2Trait> {
+    pub codomain_curve: Curve<Fp2>,
+    pub masked_two_torsion_basis_EB: BasisX<Fp2>,
+    pub shared_end_curve: Curve<Fp2>,
+    pub masked_two_torsion_basis_EAB: BasisX<Fp2>,
+    pub encrypted_message: Vec<u8>,
+}
+
+pub fn encrypt<'a, Fp2: Fp2Trait>(
+    pub_params: &PublicParams<Fp2>,
+    pub_key: &PubKey<Fp2>,
+    message: &[u8],
+) -> (Ciphertext<Fp2>, u32)
+where
+    [(); Fp2::ENCODED_LENGTH]: Sized,
+{
+    let mut retval = SUCCESS_RETVAL;
+
+    /* Sample scalars used for masking torsion points images or generating new kernels */
+
+    // Sample scalar used to generate new kernels for sender's parallel isogenies
+    let r = sample_random_element_mod(&pub_params.three_torsion_order);
+
+    // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
+    let (omega, omega_inv) = sample_random_unit_mod(&pub_params.effective_two_torsion_order);
+
+    /* Compute images of points, codomain curves through sender's secret parallel isogenies */
+
+    // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>), psi' (<R_A + [r] S_A>) and psi'' (<R_A1 + [r] S_A1>)
+    let psi_kernel = pub_params.starting_curve.three_point_ladder(
+        &pub_params.three_torsion_basis,
+        &r.as_le_bytes(),
+        r.nbits(),
+    );
+    let psi_prime_kernel = pub_key.intermediate_curve.three_point_ladder(
+        &pub_key.masked_three_torsion_basis_img_intermediate,
+        &r.as_le_bytes(),
+        r.nbits(),
+    );
+    let psi_dblprime_kernel = pub_key.codomain_curve.three_point_ladder(
+        &pub_key.masked_three_torsion_basis_img,
+        &r.as_le_bytes(),
+        r.nbits(),
+    );
+
+    // Apply sender's secret isogeny to 2^a-torsion basis to obtain their codomain curve E_B and basis image points (P_B, Q_B)
+    let mut two_torsion_basis_EB = pub_params.two_torsion_basis.to_array();
+    let (codomain_curve, kernel_has_right_order) = pub_params.starting_curve.three_isogeny_chain(
+        &psi_kernel,
+        pub_params.three_torsion_exp,
+        &mut two_torsion_basis_EB,
+    );
+    let two_torsion_basis_EB = BasisX::from_slice(&two_torsion_basis_EB);
+    let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
+    retval &= kernel_has_right_order;
+
+    let masked_P_B = codomain_curve.mul(&P_B, &omega.as_le_bytes(), omega.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.as_le_bytes(), omega_inv.nbits());
+
+    let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
+
+    let mut masked_two_torsion_basis_EB = [
+        masked_P_B.to_pointx(),
+        masked_Q_B.to_pointx(),
+        masked_PQ_B.to_pointx(),
+    ];
+    PointX::batch_normalise(&mut masked_two_torsion_basis_EB);
+    let masked_two_torsion_basis_EB = BasisX::from_slice(&masked_two_torsion_basis_EB);
+
+    // Apply sender's secret parallel isogeny to receiver's masked 2^a-torsion basis image points to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB)
+    let mut two_torsion_basis_EAB = pub_key.masked_two_torsion_basis_img.to_array();
+    let (shared_end_curve, kernel_has_right_order) = pub_key.codomain_curve.three_isogeny_chain(
+        &psi_dblprime_kernel,
+        pub_params.three_torsion_exp,
+        &mut two_torsion_basis_EAB,
+    );
+    let two_torsion_basis_EAB = BasisX::from_slice(&two_torsion_basis_EAB);
+    let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
+    retval &= kernel_has_right_order;
+
+    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.as_le_bytes(), omega.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.as_le_bytes(), omega_inv.nbits());
+
+    let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
+
+    let mut masked_two_torsion_basis_EAB = [
+        masked_P_AB.to_pointx(),
+        masked_Q_AB.to_pointx(),
+        masked_PQ_AB.to_pointx(),
+    ];
+    PointX::batch_normalise(&mut masked_two_torsion_basis_EAB);
+    let masked_two_torsion_basis_EAB = BasisX::from_slice(&masked_two_torsion_basis_EAB);
+
+    // Compute codomain of sender's secret intermediate parallel isogeny to obtain shared secret curve
+    let (secret_curve, _) = pub_key.intermediate_curve.three_isogeny_chain(
+        &psi_prime_kernel,
+        pub_params.three_torsion_exp,
+        &mut [],
+    );
+
+    // Compute shared secret from j-invariant of shared secret curve and encrypt message
+    let mut kdf = Shake256::default();
+    kdf.update(&secret_curve.j_invariant().encode());
+    let mut one_time_pad = kdf.finalize_xof();
+    let mut encrypted_message = vec![0u8; message.len()];
+    one_time_pad.read(&mut encrypted_message);
+    for (encrypted_message_byte, message_byte) in encrypted_message.iter_mut().zip(message) {
+        *encrypted_message_byte ^= message_byte;
+    }
+
+    let ct = Ciphertext {
+        codomain_curve,
+        masked_two_torsion_basis_EB,
+        shared_end_curve,
+        masked_two_torsion_basis_EAB,
+        encrypted_message,
+    };
+
+    (ct, retval)
+}
+
+pub fn decrypt<Fp2: Fp2Trait>(
+    pub_params: &PublicParams<Fp2>,
+    prv_key: &PrvKey<Fp2>,
+    ciphertext: &Ciphertext<Fp2>,
+) -> (Vec<u8>, u32)
+where
+    [(); Fp2::ENCODED_LENGTH]: Sized,
+{
+    let mut retval = SUCCESS_RETVAL;
+
+    // Invert secret scalars, to neutralize their action on masked points we receive
+    // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
+    let alpha_inv = invert_element_mod(&prv_key.alpha, &pub_params.effective_two_torsion_order);
+    let beta_inv = invert_element_mod(&prv_key.beta, &pub_params.effective_two_torsion_order);
+
+    // Neutralize action of our own secret scalars on the masked 2^a-torsion basis for E_AB
+    let (P_AB, Q_AB) = ciphertext
+        .shared_end_curve
+        .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
+    let unmasked_P_AB =
+        ciphertext
+            .shared_end_curve
+            .mul(&P_AB, &alpha_inv.as_le_bytes(), alpha_inv.nbits());
+    let unmasked_Q_AB =
+        ciphertext
+            .shared_end_curve
+            .mul(&Q_AB, &beta_inv.as_le_bytes(), beta_inv.nbits());
+
+    // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
+    let (P_B, Q_B) = ciphertext
+        .codomain_curve
+        .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
+    let mut deg_P_B = ciphertext
+        .codomain_curve
+        .mul(
+            &P_B,
+            &prv_key.q.to_bytes_le(),
+            prv_key.q
+                .bits()
+                .try_into()
+                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+    deg_P_B.set_neg();
+    let mut deg_Q_B = ciphertext
+        .codomain_curve
+        .mul(
+            &Q_B,
+            &prv_key.q.to_bytes_le(),
+            prv_key.q
+                .bits()
+                .try_into()
+                .expect("Size in bits of the hidden degree q is too big to fit in a usize (we do not ever expect this to happen)"),
+        );
+    deg_Q_B.set_neg();
+
+    let P1P2 = ProductPoint::new(&deg_P_B, &unmasked_P_AB);
+    let Q1Q2 = ProductPoint::new(&deg_Q_B, &unmasked_Q_AB);
+
+    // Compute codomain curve pair of Phi', which contains the shared secret curve
+    let domain = EllipticProduct::new(&ciphertext.codomain_curve, &ciphertext.shared_end_curve);
+    let (aux_curves, _, ok) =
+        domain.elliptic_product_isogeny(&P1P2, &Q1Q2, pub_params.effective_two_torsion_exp, &[]);
+    retval &= ok;
+    let secret_curve = aux_curves.curves().0;
+
+    // Undo one-time pad of message
+    let mut kdf = Shake256::default();
+    kdf.update(&secret_curve.j_invariant().encode());
+    let mut one_time_pad = kdf.finalize_xof();
+    let mut message = vec![0u8; ciphertext.encrypted_message.len()];
+    one_time_pad.read(&mut message);
+    for (message_byte, encrypted_message_byte) in
+        message.iter_mut().zip(&ciphertext.encrypted_message)
+    {
+        *message_byte ^= encrypted_message_byte;
+    }
+
+    (message, retval)
+}

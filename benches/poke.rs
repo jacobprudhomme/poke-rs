@@ -1,7 +1,10 @@
 #![allow(non_snake_case)]
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use poke::{decrypt, encrypt, example_keypairs, params};
+use poke::{
+    example_keypairs, params,
+    poke::{decrypt, encrypt},
+};
 use rand::RngCore;
 
 fn poke(c: &mut Criterion) {

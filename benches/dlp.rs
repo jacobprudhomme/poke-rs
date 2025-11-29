@@ -4,12 +4,12 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use fp2::traits::{Fp as _, Fp2 as Fp2Trait};
 use num_bigint::BigUint;
 use poke::{
-    PublicParams,
     dlp::{
         solve_dlp_order_five, solve_dlp_order_power_of_five, solve_dlp_small_prime_order,
         solve_dlp_small_prime_power_order,
     },
     params::{poke_i, poke_iii, poke_v},
+    poke::PublicParams,
     rand::sample_random_torsion_basis,
 };
 

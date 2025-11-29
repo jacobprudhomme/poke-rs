@@ -2,11 +2,12 @@ use fp2::traits::Fp as _;
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
 use num_bigint::BigUint;
 
-use crate::{InkePublicParams, PublicParams};
-
 pub mod poke_i {
     use super::*;
-    use crate::fields::{PokeFieldI, PokeFieldIBase};
+    use crate::{
+        fields::{PokeFieldI, PokeFieldIBase},
+        poke::PublicParams,
+    };
 
     // Construct basis points for the 2^a-torsion on E_0
     const P_X_RE: [u8; PokeFieldIBase::ENCODED_LENGTH] = [
@@ -162,7 +163,10 @@ pub mod poke_i {
 
 pub mod poke_iii {
     use super::*;
-    use crate::fields::{PokeFieldIII, PokeFieldIIIBase};
+    use crate::{
+        fields::{PokeFieldIII, PokeFieldIIIBase},
+        poke::PublicParams,
+    };
 
     // Construct basis points for the 2^a-torsion on E_0
     const P_X_RE: [u8; PokeFieldIIIBase::ENCODED_LENGTH] = [
@@ -367,7 +371,10 @@ pub mod poke_iii {
 
 pub mod poke_v {
     use super::*;
-    use crate::fields::{PokeFieldV, PokeFieldVBase};
+    use crate::{
+        fields::{PokeFieldV, PokeFieldVBase},
+        poke::PublicParams,
+    };
 
     // Construct basis points for the 2^a-torsion on E_0
     const P_X_RE: [u8; PokeFieldVBase::ENCODED_LENGTH] = [
@@ -590,7 +597,10 @@ pub mod poke_v {
 
 pub mod inke_i {
     use super::*;
-    use crate::fields::{InkeFieldI, InkeFieldIBase};
+    use crate::{
+        fields::{InkeFieldI, InkeFieldIBase},
+        inke::PublicParams,
+    };
 
     // Construct basis points for the 2^a-torsion on E_0
     const P_X_RE: [u8; InkeFieldIBase::ENCODED_LENGTH] = [
@@ -658,7 +668,7 @@ pub mod inke_i {
     const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
     const THREE_TORSION_EXP: usize = 162;
 
-    pub fn get_params() -> InkePublicParams<InkeFieldI> {
+    pub fn get_params() -> PublicParams<InkeFieldI> {
         let effective_two_torsion_order = BigUint::from(2u8).pow(
             EFFECTIVE_TWO_TORSION_EXP
                 .try_into()
@@ -681,7 +691,7 @@ pub mod inke_i {
             &PointX::from_x_coord(&RS_X),
         );
 
-        InkePublicParams {
+        PublicParams {
             starting_curve: Curve::new(&InkeFieldI::from_i32(0)),
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,

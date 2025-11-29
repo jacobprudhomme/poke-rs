@@ -5,7 +5,8 @@
 use fp2::traits::Fp2 as FpTrait;
 use num_bigint::BigUint;
 use poke::{
-    FAILURE_RETVAL, PubKey, PublicParams, SUCCESS_RETVAL, encrypt, example_keypairs, params,
+    FAILURE_RETVAL, SUCCESS_RETVAL, example_keypairs, params,
+    poke::{PubKey, PublicParams, encrypt},
 };
 use rstest::rstest;
 use rstest_reuse::{apply, template};

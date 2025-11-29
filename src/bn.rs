@@ -1,14 +1,28 @@
-use isogeny::utilities::bn::{
-    bn_bit_length_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
+use core::{
+    fmt,
+    ops::{Add, Mul},
 };
+
+use isogeny::utilities::bn::{
+    add_bn_vartime, bn_bit_length_vartime, factorisation_to_bn_vartime, mul_bn_by_u64_vartime,
+    prime_power_to_bn_vartime,
+};
+use num_bigint::BigUint;
 
 #[derive(Debug, PartialEq)]
 pub struct BigNum {
-    pub repr: Vec<u8>,
-    pub bitlen: usize,
+    repr: Vec<u8>,
+    bitlen: usize,
 }
 
 impl BigNum {
+    pub fn zero() -> Self {
+        Self {
+            repr: vec![0],
+            bitlen: 0,
+        }
+    }
+
     pub fn new(le_words: &[u64]) -> Self {
         let mut le_bytes = le_words
             .iter()
@@ -58,8 +72,38 @@ impl BigNum {
             .collect()
     }
 
-    pub fn bits(&self) -> usize {
+    pub fn nbits(&self) -> usize {
         self.bitlen
+    }
+}
+
+impl Add for &BigNum {
+    type Output = BigNum;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        BigNum::new(&add_bn_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl Mul<&BigNum> for u64 {
+    type Output = BigNum;
+
+    fn mul(self, rhs: &BigNum) -> Self::Output {
+        BigNum::new(&mul_bn_by_u64_vartime(&rhs.to_le_words(), self))
+    }
+}
+
+impl Mul<u64> for &BigNum {
+    type Output = BigNum;
+
+    fn mul(self, rhs: u64) -> Self::Output {
+        BigNum::new(&mul_bn_by_u64_vartime(&self.to_le_words(), rhs))
+    }
+}
+
+impl fmt::Display for BigNum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        BigUint::from_bytes_le(self.as_le_bytes()).fmt(f)
     }
 }
 

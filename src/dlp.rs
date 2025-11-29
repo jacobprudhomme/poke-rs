@@ -1,5 +1,4 @@
 use fp2::traits::Fp2 as Fp2Trait;
-use isogeny::utilities::bn::{add_bn_vartime, mul_bn_by_u64_vartime, prime_power_to_bn_vartime};
 
 use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
 
@@ -33,12 +32,12 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     let mut retval = SUCCESS_RETVAL;
 
     let p_to_the_e_basis = (0..=e)
-        .map(|exp| BigNum::new(&prime_power_to_bn_vartime(p, exp)))
+        .map(|exp| BigNum::from_prime_power(p, exp))
         .collect::<Vec<_>>();
 
     let prime_order_subgroup_generator = generator.pow(
-        &p_to_the_e_basis[e - 1].repr,
-        p_to_the_e_basis[e - 1].bitlen,
+        &p_to_the_e_basis[e - 1].as_le_bytes(),
+        p_to_the_e_basis[e - 1].nbits(),
     );
     assert_eq!(
         prime_order_subgroup_generator.equals(&Fp2::ONE),
@@ -49,28 +48,24 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     );
 
     let mut partial_solutions = Vec::with_capacity(e);
-    let mut partial_sum = vec![0];
+    let mut partial_sum = BigNum::zero();
     for i in 0..e {
-        let partial_sum_bn = BigNum::new(&partial_sum);
         let r = *value
             * generator
-                .pow(&partial_sum_bn.repr, partial_sum_bn.bitlen)
+                .pow(&partial_sum.as_le_bytes(), partial_sum.nbits())
                 .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
-            &p_to_the_e_basis[e - i - 1].repr,
-            p_to_the_e_basis[e - i - 1].bitlen,
+            &p_to_the_e_basis[e - i - 1].as_le_bytes(),
+            p_to_the_e_basis[e - i - 1].nbits(),
         );
 
         let (x, ok) = solve_dlp_small_prime_order(&prime_order_subgroup_generator, &u, p);
         partial_solutions.push(x);
-        partial_sum = add_bn_vartime(
-            &partial_sum,
-            &mul_bn_by_u64_vartime(&p_to_the_e_basis[i].to_le_words(), x as u64),
-        );
+        partial_sum = &partial_sum + &((x as u64) * &p_to_the_e_basis[i]);
         retval &= ok;
     }
 
-    (BigNum::new(&partial_sum), retval)
+    (partial_sum, retval)
 }
 
 pub fn solve_dlp_order_five<Fp2: Fp2Trait>(generator: &Fp2, value: &Fp2) -> (u8, u32) {
@@ -119,12 +114,12 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     let mut retval = SUCCESS_RETVAL;
 
     let p_to_the_e_basis = (0..=e)
-        .map(|exp| BigNum::new(&prime_power_to_bn_vartime(5, exp)))
+        .map(|exp| BigNum::from_prime_power(5, exp))
         .collect::<Vec<_>>();
 
     let prime_order_subgroup_generator = generator.pow(
-        &p_to_the_e_basis[e - 1].repr,
-        p_to_the_e_basis[e - 1].bitlen,
+        &p_to_the_e_basis[e - 1].as_le_bytes(),
+        p_to_the_e_basis[e - 1].nbits(),
     );
     assert_eq!(
         prime_order_subgroup_generator.equals(&Fp2::ONE),
@@ -134,28 +129,24 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     );
 
     let mut partial_solutions = Vec::with_capacity(e);
-    let mut partial_sum = vec![0];
+    let mut partial_sum = BigNum::zero();
     for i in 0..e {
-        let partial_sum_bn = BigNum::new(&partial_sum);
         let r = *value
             * generator
-                .pow(&partial_sum_bn.repr, partial_sum_bn.bitlen)
+                .pow(&partial_sum.as_le_bytes(), partial_sum.nbits())
                 .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
-            &p_to_the_e_basis[e - i - 1].repr,
-            p_to_the_e_basis[e - i - 1].bitlen,
+            &p_to_the_e_basis[e - i - 1].as_le_bytes(),
+            p_to_the_e_basis[e - i - 1].nbits(),
         );
 
         let (x, ok) = solve_dlp_order_five(&prime_order_subgroup_generator, &u);
         partial_solutions.push(x);
-        partial_sum = add_bn_vartime(
-            &partial_sum,
-            &mul_bn_by_u64_vartime(&p_to_the_e_basis[i].to_le_words(), x as u64),
-        );
+        partial_sum = &partial_sum + &((x as u64) * &p_to_the_e_basis[i]);
         retval &= ok;
     }
 
-    (BigNum::new(&partial_sum), retval)
+    (partial_sum, retval)
 }
 
 #[cfg(test)]
@@ -190,8 +181,8 @@ mod tests {
         let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 5, 3);
 
         assert_eq!(ok, SUCCESS_RETVAL);
-        assert_eq!(&x.repr, &[7]);
-        assert_eq!(x.bitlen, 3);
+        assert_eq!(&x.as_le_bytes(), &[7]);
+        assert_eq!(x.nbits(), 3);
     }
     #[rstest]
     fn test_complex_dlp() {
@@ -215,7 +206,7 @@ mod tests {
         let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 7, 4);
 
         assert_eq!(ok, SUCCESS_RETVAL);
-        assert_eq!(&x.repr, &[255, 1]);
-        assert_eq!(x.bitlen, 9);
+        assert_eq!(&x.as_le_bytes(), &[255, 1]);
+        assert_eq!(x.nbits(), 9);
     }
 }

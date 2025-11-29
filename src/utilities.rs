@@ -9,11 +9,5 @@ pub fn invert_element_mod(element: &BigUint, modulus: &BigUint) -> BigNum {
         unreachable!("We expect an invertible element as input");
     };
 
-    let bitlen = inverse
-        .bits()
-        .try_into()
-        .expect("Size in bits of the inverse scalar is too big to fit in a usize (we do not ever expect this to happen)");
-    let repr = inverse.to_bytes_le();
-
-    BigNum { repr, bitlen }
+    BigNum::new(&inverse.to_u64_digits())
 }

@@ -238,13 +238,13 @@ where
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>) and psi' (<R_A + [r] S_A>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
-        &r.repr,
-        r.bitlen,
+        &r.as_le_bytes(),
+        r.nbits(),
     );
     let psi_prime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
-        &r.repr,
-        r.bitlen,
+        &r.as_le_bytes(),
+        r.nbits(),
     );
 
     // Apply sender's secret isogeny to 2^a-torsion basis to obtain their codomain curve E_B and basis image points (P_B, Q_B)
@@ -258,8 +258,8 @@ where
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
     retval &= kernel_has_right_order;
 
-    let masked_P_B = codomain_curve.mul(&P_B, &omega.repr, omega.bitlen);
-    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.repr, omega_inv.bitlen);
+    let masked_P_B = codomain_curve.mul(&P_B, &omega.as_le_bytes(), omega.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.as_le_bytes(), omega_inv.nbits());
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
 
@@ -284,12 +284,12 @@ where
     retval &= kernel_has_right_order;
 
     let masked_X_B = codomain_curve_verif.add(
-        &codomain_curve_verif.mul(&X_B, &D[0][0].repr, D[0][0].bitlen),
-        &codomain_curve_verif.mul(&Y_B, &D[0][1].repr, D[0][1].bitlen),
+        &codomain_curve_verif.mul(&X_B, &D[0][0].as_le_bytes(), D[0][0].nbits()),
+        &codomain_curve_verif.mul(&Y_B, &D[0][1].as_le_bytes(), D[0][1].nbits()),
     );
     let masked_Y_B = codomain_curve_verif.add(
-        &codomain_curve_verif.mul(&X_B, &D[1][0].repr, D[1][0].bitlen),
-        &codomain_curve_verif.mul(&Y_B, &D[1][1].repr, D[1][1].bitlen),
+        &codomain_curve_verif.mul(&X_B, &D[1][0].as_le_bytes(), D[1][0].nbits()),
+        &codomain_curve_verif.mul(&Y_B, &D[1][1].as_le_bytes(), D[1][1].nbits()),
     );
 
 
@@ -321,8 +321,8 @@ where
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
     retval &= kernel_has_right_order;
 
-    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.repr, omega.bitlen);
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.repr, omega_inv.bitlen);
+    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.as_le_bytes(), omega.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.as_le_bytes(), omega_inv.nbits());
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
 
@@ -347,12 +347,12 @@ where
     retval &= kernel_has_right_order;
 
     let masked_X_AB = shared_end_curve_verif.add(
-        &shared_end_curve_verif.mul(&X_AB, &D[0][0].repr, D[0][0].bitlen),
-        &shared_end_curve_verif.mul(&Y_AB, &D[0][1].repr, D[0][1].bitlen),
+        &shared_end_curve_verif.mul(&X_AB, &D[0][0].as_le_bytes(), D[0][0].nbits()),
+        &shared_end_curve_verif.mul(&Y_AB, &D[0][1].as_le_bytes(), D[0][1].nbits()),
     );
     let masked_Y_AB = shared_end_curve_verif.add(
-        &shared_end_curve_verif.mul(&X_AB, &D[1][0].repr, D[1][0].bitlen),
-        &shared_end_curve_verif.mul(&Y_AB, &D[1][1].repr, D[1][1].bitlen),
+        &shared_end_curve_verif.mul(&X_AB, &D[1][0].as_le_bytes(), D[1][0].nbits()),
+        &shared_end_curve_verif.mul(&Y_AB, &D[1][1].as_le_bytes(), D[1][1].nbits()),
     );
 
     assert_eq!(
@@ -408,12 +408,14 @@ where
     let (P_AB, Q_AB) = ciphertext
         .shared_end_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
-    let unmasked_P_AB = ciphertext
-        .shared_end_curve
-        .mul(&P_AB, &alpha_inv.repr, alpha_inv.bitlen);
-    let unmasked_Q_AB = ciphertext
-        .shared_end_curve
-        .mul(&Q_AB, &beta_inv.repr, beta_inv.bitlen);
+    let unmasked_P_AB =
+        ciphertext
+            .shared_end_curve
+            .mul(&P_AB, &alpha_inv.as_le_bytes(), alpha_inv.nbits());
+    let unmasked_Q_AB =
+        ciphertext
+            .shared_end_curve
+            .mul(&Q_AB, &beta_inv.as_le_bytes(), beta_inv.nbits());
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let (P_B, Q_B) = ciphertext
@@ -619,10 +621,10 @@ where
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, &x.repr, x.bitlen);
+        .mul_into(&mut X_aux_curve, &U, &x.as_le_bytes(), x.nbits());
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, &y.repr, y.bitlen);
+        .mul_into(&mut Y_aux_curve, &V, &y.as_le_bytes(), y.nbits());
     ciphertext
         .shared_end_curve
         .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
@@ -648,10 +650,10 @@ where
 
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, &w.repr, w.bitlen);
+        .mul_into(&mut X_aux_curve, &U, &w.as_le_bytes(), w.nbits());
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, &z.repr, z.bitlen);
+        .mul_into(&mut Y_aux_curve, &V, &z.as_le_bytes(), z.nbits());
     ciphertext
         .shared_end_curve
         .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
@@ -717,18 +719,18 @@ where
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>), psi' (<R_A + [r] S_A>) and psi'' (<R_A1 + [r] S_A1>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
-        &r.repr,
-        r.bitlen,
+        &r.as_le_bytes(),
+        r.nbits(),
     );
     let psi_prime_kernel = pub_key.intermediate_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img_intermediate,
-        &r.repr,
-        r.bitlen,
+        &r.as_le_bytes(),
+        r.nbits(),
     );
     let psi_dblprime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
-        &r.repr,
-        r.bitlen,
+        &r.as_le_bytes(),
+        r.nbits(),
     );
 
     // Apply sender's secret isogeny to 2^a-torsion basis to obtain their codomain curve E_B and basis image points (P_B, Q_B)
@@ -742,8 +744,8 @@ where
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
     retval &= kernel_has_right_order;
 
-    let masked_P_B = codomain_curve.mul(&P_B, &omega.repr, omega.bitlen);
-    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.repr, omega_inv.bitlen);
+    let masked_P_B = codomain_curve.mul(&P_B, &omega.as_le_bytes(), omega.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, &omega_inv.as_le_bytes(), omega_inv.nbits());
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
 
@@ -766,8 +768,8 @@ where
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
     retval &= kernel_has_right_order;
 
-    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.repr, omega.bitlen);
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.repr, omega_inv.bitlen);
+    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega.as_le_bytes(), omega.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega_inv.as_le_bytes(), omega_inv.nbits());
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
 
@@ -828,12 +830,14 @@ where
     let (P_AB, Q_AB) = ciphertext
         .shared_end_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
-    let unmasked_P_AB = ciphertext
-        .shared_end_curve
-        .mul(&P_AB, &alpha_inv.repr, alpha_inv.bitlen);
-    let unmasked_Q_AB = ciphertext
-        .shared_end_curve
-        .mul(&Q_AB, &beta_inv.repr, beta_inv.bitlen);
+    let unmasked_P_AB =
+        ciphertext
+            .shared_end_curve
+            .mul(&P_AB, &alpha_inv.as_le_bytes(), alpha_inv.nbits());
+    let unmasked_Q_AB =
+        ciphertext
+            .shared_end_curve
+            .mul(&Q_AB, &beta_inv.as_le_bytes(), beta_inv.nbits());
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let (P_B, Q_B) = ciphertext

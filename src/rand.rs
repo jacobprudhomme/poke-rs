@@ -11,14 +11,7 @@ pub fn sample_random_element_mod(modulus: &BigUint) -> BigNum {
 
     let element = rng.gen_biguint_below(modulus);
 
-    // Transform element to our own BigNum type
-    let bitlen = element
-        .bits()
-        .try_into()
-        .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)");
-    let repr = element.to_bytes_le();
-
-    BigNum { repr, bitlen }
+    BigNum::new(&element.to_u64_digits())
 }
 
 pub fn sample_random_unit_mod(modulus: &BigUint) -> (BigNum, BigNum) {
@@ -35,27 +28,9 @@ pub fn sample_random_unit_mod(modulus: &BigUint) -> (BigNum, BigNum) {
         unreachable!("At this point, we are ensured to have an invertible element");
     };
 
-    // Transform element to our own BigNum type
-    let element_bitlen = element
-        .bits()
-        .try_into()
-        .expect("Size in bits of the scalar is too big to fit in a usize (we do not ever expect this to happen)");
-    let element = element.to_bytes_le();
-    let element = BigNum {
-        repr: element,
-        bitlen: element_bitlen,
-    };
+    let element = BigNum::new(&element.to_u64_digits());
 
-    // Transform inverse of element to our own BigNum type
-    let inverse_bitlen = inverse
-        .bits()
-        .try_into()
-        .expect("Size in bits of the inverse scalar is too big to fit in a usize (we do not ever expect this to happen)");
-    let inverse = inverse.to_bytes_le();
-    let inverse = BigNum {
-        repr: inverse,
-        bitlen: inverse_bitlen,
-    };
+    let inverse = BigNum::new(&inverse.to_u64_digits());
 
     (element, inverse)
 }
@@ -93,17 +68,7 @@ pub fn sample_random_invertible_matrix_mod(
     }
     matrix[1][1] = element;
 
-    matrix.map(|row| {
-        row.map(|element| {
-            let bitlen = element
-                .bits()
-                .try_into()
-                .expect("Size in bits of the matrix element is too big to fit in a usize (we do not ever expect this to happen)");
-            let repr = element.to_bytes_le();
-
-            BigNum { repr, bitlen }
-        })
-    })
+    matrix.map(|row| row.map(|element| BigNum::new(&element.to_u64_digits())))
 }
 
 // Randomly find a basis of the given torsion subgroup on the given curve

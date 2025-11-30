@@ -4,8 +4,8 @@ use core::{
 };
 
 use isogeny::utilities::bn::{
-    add_bn_vartime, bn_bit_length_vartime, factorisation_to_bn_vartime, mul_bn_by_u64_vartime,
-    mul_bn_vartime, prime_power_to_bn_vartime,
+    bn_add_vartime, bn_bit_length_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
+    factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
 use num_bigint::BigUint;
 
@@ -90,7 +90,7 @@ impl Add for &BigNum {
     type Output = BigNum;
 
     fn add(self, rhs: Self) -> Self::Output {
-        BigNum::new(&add_bn_vartime(&self.to_le_words(), &rhs.to_le_words()))
+        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
     }
 }
 
@@ -98,7 +98,7 @@ impl Mul<&BigNum> for u64 {
     type Output = BigNum;
 
     fn mul(self, rhs: &BigNum) -> Self::Output {
-        BigNum::new(&mul_bn_by_u64_vartime(&rhs.to_le_words(), self))
+        BigNum::new(&bn_mul_by_u64_vartime(&rhs.to_le_words(), self))
     }
 }
 
@@ -106,7 +106,7 @@ impl Mul<u64> for &BigNum {
     type Output = BigNum;
 
     fn mul(self, rhs: u64) -> Self::Output {
-        BigNum::new(&mul_bn_by_u64_vartime(&self.to_le_words(), rhs))
+        BigNum::new(&bn_mul_by_u64_vartime(&self.to_le_words(), rhs))
     }
 }
 
@@ -114,7 +114,7 @@ impl Mul<&BigNum> for &BigNum {
     type Output = BigNum;
 
     fn mul(self, rhs: &BigNum) -> Self::Output {
-        BigNum::new(&mul_bn_vartime(&self.to_le_words(), &rhs.to_le_words()))
+        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
     }
 }
 

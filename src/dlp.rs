@@ -149,6 +149,57 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     (partial_sum, retval)
 }
 
+pub fn solve_dlp_order_five_explicit<Fp2: Fp2Trait>(subgroup: &[Fp2; 5], value: &Fp2) -> (u8, u32) {
+    let mut retval = FAILURE_RETVAL;
+    let mut result = 0;
+
+    for (i, element) in subgroup.iter().enumerate() {
+        let found_log = value.equals(element);
+        result |= (i as u8) & (found_log as u8);
+        retval |= found_log;
+    }
+
+    (result, retval)
+}
+pub fn solve_dlp_order_power_of_five_explicit<Fp2: Fp2Trait>(
+    subgroup: &[Fp2; 5],
+    value: &Fp2,
+    e: usize,
+) -> (BigNum, u32) {
+    let mut retval = SUCCESS_RETVAL;
+
+    let p_to_the_e_basis = (0..=e)
+        .map(|exp| BigNum::from_prime_power(5, exp))
+        .collect::<Vec<_>>();
+
+    let prime_order_subgroup = subgroup.map(|element| {
+        element.pow(
+            p_to_the_e_basis[e - 1].as_le_bytes(),
+            p_to_the_e_basis[e - 1].nbits(),
+        )
+    });
+
+    let mut partial_solutions = Vec::with_capacity(e);
+    let mut partial_sum = BigNum::zero();
+    for i in 0..e {
+        let r = *value
+            * subgroup[1]
+                .pow(partial_sum.as_le_bytes(), partial_sum.nbits())
+                .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
+        let u = r.pow(
+            p_to_the_e_basis[e - i - 1].as_le_bytes(),
+            p_to_the_e_basis[e - i - 1].nbits(),
+        );
+
+        let (x, ok) = solve_dlp_order_five_explicit(&prime_order_subgroup, &u);
+        partial_solutions.push(x);
+        partial_sum = &partial_sum + &((x as u64) * &p_to_the_e_basis[i]);
+        retval &= ok;
+    }
+
+    (partial_sum, retval)
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;

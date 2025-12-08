@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use poke::{
     SUCCESS_RETVAL, example_keypairs, params,
     poke::{decrypt, encrypt},
@@ -16,9 +14,9 @@ fn main() {
 
     let (ct, ok) = encrypt(&params, &pub_key, message);
     assert_eq!(ok, SUCCESS_RETVAL, "Encryption finished with errors");
-    println!("\nEncrypted message: {:?}", ct.encrypted_message);
+    println!("Encrypted message: {:?}", ct.encrypted_message);
 
     let (message, ok) = decrypt(&params, &prv_key, &ct);
     assert_eq!(ok, SUCCESS_RETVAL, "Decryption finished with errors");
-    println!("\nDecrypted message: {:?}", message);
+    println!("Decrypted message: {:?}", message);
 }

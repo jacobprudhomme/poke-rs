@@ -506,6 +506,39 @@ where
         solve_dlp_small_prime_power_order(&eUV_aux, &eYmU, 5, pub_params.five_torsion_exp);
     retval &= ok;
 
+    println!();
+    println!("X_B' = {}", X_aux_curve);
+    println!("Y_B' = {}", Y_aux_curve);
+    println!("U' = {}", U_aux_curve);
+    println!("V' = {}", V_aux_curve);
+    println!();
+    println!("e(U, V) = {}", eUV_AB);
+    println!("e(U', V') = e(U, V)^q (Sage way) = {}", eUV_aux);
+    println!(
+        "e(U', V') (paper way) = {}",
+        aux_curve.weil_pairing(
+            &U_aux_curve.to_pointx().x(),
+            &V_aux_curve.to_pointx().x(),
+            &UV_aux_curve.to_pointx().x(),
+            pub_params.five_torsion_order.as_le_bytes(),
+            pub_params.five_torsion_order.nbits(),
+        ),
+    );
+    println!();
+    println!(
+        "WARNING: the following all use the 'correct' (i.e. consistent with Sage) e(U', V') value"
+    );
+    println!("e(X', V') = e(U', V')^x = {}", eXV);
+    println!("e(X', -U') = e(U', V')^y = {}", eXmU);
+    println!("e(Y', V') = e(U', V')^w = {}", eYV);
+    println!("e(Y', -U') = e(U', V')^z = {}", eYmU);
+    println!();
+    println!("x = {}", x);
+    println!("y = {}", y);
+    println!("w = {}", w);
+    println!("z = {}", z);
+    println!();
+
     /* Decrypt message using one-time pad derived from shared secret */
 
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)

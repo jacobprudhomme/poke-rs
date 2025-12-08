@@ -63,13 +63,13 @@ pub struct Ciphertext<Fp2: Fp2Trait> {
     pub encrypted_message: Vec<u8>,
 }
 
-pub fn encrypt<'a, Fp2: Fp2Trait>(
+pub fn encrypt<Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     pub_key: &PubKey<Fp2>,
     message: &[u8],
 ) -> (Ciphertext<Fp2>, u32)
 where
-    [(); Fp2::ENCODED_LENGTH]: Sized,
+    [(); Fp2::ENCODED_LENGTH]:,
 {
     // FIXME: where can I use vartime functions (i.e. operations on BigUint, gcd)? Where must things be constant-time?
 
@@ -311,7 +311,7 @@ pub fn decrypt<Fp2: Fp2Trait>(
     ciphertext: &Ciphertext<Fp2>,
 ) -> (Vec<u8>, u32)
 where
-    [(); Fp2::ENCODED_LENGTH]: Sized,
+    [(); Fp2::ENCODED_LENGTH]:,
 {
     let mut retval = SUCCESS_RETVAL;
 
@@ -460,6 +460,7 @@ where
     //         .try_into()
     //         .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
     // );
+    // Lift e(U, V) to e(U', V') by e(phi(U), phi(V)) = e^(U, V)^deg(phi)
     let eUV_aux = eUV_AB.pow(dual_factor.as_le_bytes(), dual_factor.nbits());
 
     // FIXME: none of the subsequent pairings are correct! This breaks everything!

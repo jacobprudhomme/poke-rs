@@ -50,13 +50,13 @@ pub struct Ciphertext<Fp2: Fp2Trait> {
     pub encrypted_message: Vec<u8>,
 }
 
-pub fn encrypt<'a, Fp2: Fp2Trait>(
+pub fn encrypt<Fp2: Fp2Trait>(
     pub_params: &PublicParams<Fp2>,
     pub_key: &PubKey<Fp2>,
     message: &[u8],
 ) -> (Ciphertext<Fp2>, u32)
 where
-    [(); Fp2::ENCODED_LENGTH]: Sized,
+    [(); Fp2::ENCODED_LENGTH]:,
 {
     let mut retval = SUCCESS_RETVAL;
 
@@ -169,7 +169,7 @@ pub fn decrypt<Fp2: Fp2Trait>(
     ciphertext: &Ciphertext<Fp2>,
 ) -> (Vec<u8>, u32)
 where
-    [(); Fp2::ENCODED_LENGTH]: Sized,
+    [(); Fp2::ENCODED_LENGTH]:,
 {
     let mut retval = SUCCESS_RETVAL;
 

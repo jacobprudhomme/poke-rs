@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use fp2::traits::Fp2 as FpTrait;
+use fp2::traits::Fp2 as Fp2Trait;
 use num_bigint::BigUint;
 use poke::{
     FAILURE_RETVAL, SUCCESS_RETVAL,
@@ -14,7 +14,7 @@ use rstest::rstest;
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn starting_curve_has_j_invariant_1728<Fp2: FpTrait>(#[case] params: PublicParams<Fp2>) {
+fn starting_curve_has_j_invariant_1728<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
     assert_eq!(
         params
             .starting_curve
@@ -29,7 +29,7 @@ fn starting_curve_has_j_invariant_1728<Fp2: FpTrait>(#[case] params: PublicParam
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn torsion_basis_points_have_correct_order<Fp2: FpTrait>(#[case] params: PublicParams<Fp2>) {
+fn torsion_basis_points_have_correct_order<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
     let reduced_three_torsion_order = BigNum::new(
         &(BigUint::from_bytes_le(params.three_torsion_order.as_le_bytes()) / BigUint::from(3u8))
             .to_u64_digits(),
@@ -146,7 +146,7 @@ fn torsion_basis_points_have_correct_order<Fp2: FpTrait>(#[case] params: PublicP
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn torsion_basis_points_are_on_curve<Fp2: FpTrait>(#[case] params: PublicParams<Fp2>) {
+fn torsion_basis_points_are_on_curve<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
     // Check (P, Q, P - Q), a basis of the 2^a-torsion
     assert_eq!(
         params
@@ -221,7 +221,7 @@ fn torsion_basis_points_are_on_curve<Fp2: FpTrait>(#[case] params: PublicParams<
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn torsion_basis_points_are_linearly_independent<Fp2: FpTrait>(#[case] params: PublicParams<Fp2>) {
+fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
     let reduced_full_two_torsion_order = BigNum::new(
         &(BigUint::from_bytes_le(params.full_two_torsion_order.as_le_bytes()) / BigUint::from(2u8))
             .to_u64_digits(),

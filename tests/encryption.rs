@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 #![feature(generic_const_exprs)]
 
-use fp2::traits::Fp2 as FpTrait;
+use fp2::traits::Fp2 as Fp2Trait;
 use num_bigint::BigUint;
 use poke::{
     FAILURE_RETVAL, SUCCESS_RETVAL,
@@ -23,14 +23,14 @@ const MESSAGE: &'static [u8; 13] = b"Hello, world!";
     example_keypairs::poke_iii::get_pub_key()
 )]
 #[case::poke_level_v(params::poke_v::get_params(), example_keypairs::poke_v::get_pub_key())]
-fn encryption_test_data<Fp2: FpTrait>(
+fn encryption_test_data<Fp2: Fp2Trait>(
     #[case] params: PublicParams<Fp2>,
     #[case] pub_key: PubKey<Fp2>,
 ) {
 }
 
 #[apply(encryption_test_data)]
-fn encryption_passes<Fp2: FpTrait>(params: PublicParams<Fp2>, pub_key: PubKey<Fp2>)
+fn encryption_passes<Fp2: Fp2Trait>(params: PublicParams<Fp2>, pub_key: PubKey<Fp2>)
 where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
@@ -42,7 +42,7 @@ where
 }
 
 #[apply(encryption_test_data)]
-fn message_and_ciphertext_have_same_length<Fp2: FpTrait>(
+fn message_and_ciphertext_have_same_length<Fp2: Fp2Trait>(
     params: PublicParams<Fp2>,
     pub_key: PubKey<Fp2>,
 ) where
@@ -56,7 +56,7 @@ fn message_and_ciphertext_have_same_length<Fp2: FpTrait>(
 }
 
 #[apply(encryption_test_data)]
-fn masked_image_points_have_correct_order<Fp2: FpTrait>(
+fn masked_image_points_have_correct_order<Fp2: Fp2Trait>(
     params: PublicParams<Fp2>,
     pub_key: PubKey<Fp2>,
 ) where
@@ -180,7 +180,7 @@ fn masked_image_points_have_correct_order<Fp2: FpTrait>(
 }
 
 #[apply(encryption_test_data)]
-fn masked_image_points_are_on_curve<Fp2: FpTrait>(params: PublicParams<Fp2>, pub_key: PubKey<Fp2>)
+fn masked_image_points_are_on_curve<Fp2: Fp2Trait>(params: PublicParams<Fp2>, pub_key: PubKey<Fp2>)
 where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
@@ -250,7 +250,7 @@ where
 }
 
 #[apply(encryption_test_data)]
-fn masked_image_points_are_linearly_independent<Fp2: FpTrait>(
+fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
     params: PublicParams<Fp2>,
     pub_key: PubKey<Fp2>,
 ) where

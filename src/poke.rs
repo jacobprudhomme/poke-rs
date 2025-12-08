@@ -79,7 +79,6 @@ where
 
     // Sample scalar used to generate new kernels for sender's parallel isogenies
     let r = sample_random_element_mod(&pub_params.three_torsion_order);
-    // let r = BigNum::zero();
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
     // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
@@ -454,11 +453,8 @@ where
     //     &U_aux_curve.to_pointx().x(),
     //     &V_aux_curve.to_pointx().x(),
     //     &UV_aux_curve.to_pointx().x(),
-    //     &pub_params.five_torsion_order.to_bytes_le(),
-    //     pub_params.five_torsion_order
-    //         .bits()
-    //         .try_into()
-    //         .expect("Size in bits of 5^c is too big to fit in a usize (we do not ever expect this to happen)"),
+    //     pub_params.five_torsion_order.as_le_bytes(),
+    //     pub_params.five_torsion_order.nbits(),
     // );
     // Lift e(U, V) to e(U', V') by e(phi(U), phi(V)) = e^(U, V)^deg(phi)
     let eUV_aux = eUV_AB.pow(dual_factor.as_le_bytes(), dual_factor.nbits());

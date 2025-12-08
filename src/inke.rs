@@ -56,7 +56,7 @@ pub fn encrypt<Fp2: Fp2Trait>(
     message: &[u8],
 ) -> (Ciphertext<Fp2>, u32)
 where
-    [(); Fp2::ENCODED_LENGTH]:,
+    [(); Fp2::ENCODED_LENGTH]: Sized,
 {
     let mut retval = SUCCESS_RETVAL;
 
@@ -169,7 +169,7 @@ pub fn decrypt<Fp2: Fp2Trait>(
     ciphertext: &Ciphertext<Fp2>,
 ) -> (Vec<u8>, u32)
 where
-    [(); Fp2::ENCODED_LENGTH]:,
+    [(); Fp2::ENCODED_LENGTH]: Sized,
 {
     let mut retval = SUCCESS_RETVAL;
 

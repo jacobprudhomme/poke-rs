@@ -422,7 +422,7 @@ where
     // Compute pairs of point subtractions for later computing the pairings between them
     let mut X_aux_curve = five_torsion_basis_EB_on_aux_curve[0].points().0;
     let mut Y_aux_curve = five_torsion_basis_EB_on_aux_curve[1].points().0;
-    let XY_aux_curve = five_torsion_basis_EB_on_aux_curve[2].points().0;
+    let mut XY_aux_curve = five_torsion_basis_EB_on_aux_curve[2].points().0;
     Y_aux_curve.set_condneg(
         !aux_curve
             .sub(&X_aux_curve, &Y_aux_curve)
@@ -432,7 +432,7 @@ where
 
     let mut U_aux_curve = five_torsion_basis_EAB_on_aux_curve[0].points().0;
     let mut V_aux_curve = five_torsion_basis_EAB_on_aux_curve[1].points().0;
-    let UV_aux_curve = five_torsion_basis_EAB_on_aux_curve[2].points().0;
+    let mut UV_aux_curve = five_torsion_basis_EAB_on_aux_curve[2].points().0;
     V_aux_curve.set_condneg(
         !aux_curve
             .sub(&U_aux_curve, &V_aux_curve)
@@ -448,16 +448,18 @@ where
 
     // Compute the pairings e(U, V), e(X, V) = e(U, V)^x and e(X, -U) = e(U, V)^y,
     // e(Y, V) = e(U, V)^w and e(Y, -U) = e(U, V)^z
-    // FIXME: Why does this direct way of computing the pairing not work?
-    // let eUV_aux = aux_curve.weil_pairing(
-    //     &U_aux_curve.to_pointx().x(),
-    //     &V_aux_curve.to_pointx().x(),
-    //     &UV_aux_curve.to_pointx().x(),
-    //     pub_params.five_torsion_order.as_le_bytes(),
-    //     pub_params.five_torsion_order.nbits(),
-    // );
-    // Lift e(U, V) to e(U', V') by e(phi(U), phi(V)) = e^(U, V)^deg(phi)
-    let eUV_aux = eUV_AB.pow(dual_factor.as_le_bytes(), dual_factor.nbits());
+    let eUV_aux = aux_curve.weil_pairing(
+        &U_aux_curve.to_pointx().x(),
+        &V_aux_curve.to_pointx().x(),
+        &UV_aux_curve.to_pointx().x(),
+        pub_params.five_torsion_order.as_le_bytes(),
+        pub_params.five_torsion_order.nbits(),
+    );
+    // Used to make a choice of scalar factor later
+    // FIXME: if we're computing this in addition to the proper pairing, would it not be better to just
+    // compute the pairing from the power of e(U,V) directly, and fix that in both keygen and decryption?
+    let eUV_power_q = eUV_AB.pow(prv_key.q.as_le_bytes(), prv_key.q.nbits());
+    let eUV_aux_is_eUV_power_q = eUV_aux.equals(&eUV_power_q);
 
     // FIXME: none of the subsequent pairings are correct! This breaks everything!
     // I suspect a discrepancy between Sage's Weil pairing and the one here
@@ -506,39 +508,6 @@ where
         solve_dlp_small_prime_power_order(&eUV_aux, &eYmU, 5, pub_params.five_torsion_exp);
     retval &= ok;
 
-    println!();
-    println!("X_B' = {}", X_aux_curve);
-    println!("Y_B' = {}", Y_aux_curve);
-    println!("U' = {}", U_aux_curve);
-    println!("V' = {}", V_aux_curve);
-    println!();
-    println!("e(U, V) = {}", eUV_AB);
-    println!("e(U', V') = e(U, V)^q (Sage way) = {}", eUV_aux);
-    println!(
-        "e(U', V') (paper way) = {}",
-        aux_curve.weil_pairing(
-            &U_aux_curve.to_pointx().x(),
-            &V_aux_curve.to_pointx().x(),
-            &UV_aux_curve.to_pointx().x(),
-            pub_params.five_torsion_order.as_le_bytes(),
-            pub_params.five_torsion_order.nbits(),
-        ),
-    );
-    println!();
-    println!(
-        "WARNING: the following all use the 'correct' (i.e. consistent with Sage) e(U', V') value"
-    );
-    println!("e(X', V') = e(U', V')^x = {}", eXV);
-    println!("e(X', -U') = e(U', V')^y = {}", eXmU);
-    println!("e(Y', V') = e(U', V')^w = {}", eYV);
-    println!("e(Y', -U') = e(U', V')^z = {}", eYmU);
-    println!();
-    println!("x = {}", x);
-    println!("y = {}", y);
-    println!("w = {}", w);
-    println!("z = {}", z);
-    println!();
-
     /* Decrypt message using one-time pad derived from shared secret */
 
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
@@ -550,15 +519,29 @@ where
         .mul_into(&mut Y_aux_curve, &V, y.as_le_bytes(), y.nbits());
     ciphertext
         .shared_end_curve
-        .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
+        .add_into(&mut XY_aux_curve, &X_aux_curve, &Y_aux_curve);
+
+    // [q] * X_AB'
+    ciphertext.shared_end_curve.mul_into(
+        &mut U_aux_curve,
+        &XY_aux_curve,
+        prv_key.q.as_le_bytes(),
+        prv_key.q.nbits(),
+    );
+    // [2^(a-2) - q] * X_AB'
     ciphertext.shared_end_curve.mul_into(
         &mut V_aux_curve,
-        &U_aux_curve,
+        &XY_aux_curve,
         dual_factor.as_le_bytes(),
         dual_factor.nbits(),
     );
+    // Choose the appropriate one of the above points depending on whether
+    // e(U',V') = e(U,V)^q or e(U',V') = e(U,V)^(2^(a-2) - q)
+    UV_aux_curve = U_aux_curve;
+    UV_aux_curve.set_cond(&V_aux_curve, !eUV_aux_is_eUV_power_q);
+
     let X_AB = ciphertext.shared_end_curve.mul(
-        &V_aux_curve,
+        &UV_aux_curve,
         prv_key.delta.as_le_bytes(),
         prv_key.delta.nbits(),
     );
@@ -571,15 +554,29 @@ where
         .mul_into(&mut Y_aux_curve, &V, z.as_le_bytes(), z.nbits());
     ciphertext
         .shared_end_curve
-        .add_into(&mut U_aux_curve, &X_aux_curve, &Y_aux_curve);
+        .add_into(&mut XY_aux_curve, &X_aux_curve, &Y_aux_curve);
+
+    // [q] * Y_AB'
+    ciphertext.shared_end_curve.mul_into(
+        &mut U_aux_curve,
+        &XY_aux_curve,
+        prv_key.q.as_le_bytes(),
+        prv_key.q.nbits(),
+    );
+    // [2^(a-2) - q] * Y_AB'
     ciphertext.shared_end_curve.mul_into(
         &mut V_aux_curve,
-        &U_aux_curve,
+        &XY_aux_curve,
         dual_factor.as_le_bytes(),
         dual_factor.nbits(),
     );
+    // Choose the appropriate one of the above points depending on whether
+    // e(U',V') = e(U,V)^q or e(U',V') = e(U,V)^(2^(a-2) - q)
+    UV_aux_curve = U_aux_curve;
+    UV_aux_curve.set_cond(&V_aux_curve, !eUV_aux_is_eUV_power_q);
+
     let Y_AB = ciphertext.shared_end_curve.mul(
-        &V_aux_curve,
+        &UV_aux_curve,
         prv_key.delta.as_le_bytes(),
         prv_key.delta.nbits(),
     );

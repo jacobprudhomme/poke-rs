@@ -5,13 +5,13 @@ use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
 pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     generator: &Fp2,
     value: &Fp2,
-    order: usize,
+    p: usize,
 ) -> (usize, u32) {
     let mut retval = FAILURE_RETVAL;
 
     let mut element = Fp2::ONE;
     let mut result = 0;
-    for i in 0..order {
+    for i in 0..p {
         let found_log = value.equals(&element);
         result |= i & (((found_log as usize) << 32) | found_log as usize);
         retval |= found_log;
@@ -149,7 +149,10 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     (partial_sum, retval)
 }
 
-pub fn solve_dlp_order_five_explicit<Fp2: Fp2Trait>(subgroup: &[Fp2; 5], value: &Fp2) -> (u8, u32) {
+pub fn solve_dlp_order_five_explicit_subgroup<Fp2: Fp2Trait>(
+    subgroup: &[Fp2; 5],
+    value: &Fp2,
+) -> (u8, u32) {
     let mut retval = FAILURE_RETVAL;
     let mut result = 0;
 
@@ -161,7 +164,7 @@ pub fn solve_dlp_order_five_explicit<Fp2: Fp2Trait>(subgroup: &[Fp2; 5], value: 
 
     (result, retval)
 }
-pub fn solve_dlp_order_power_of_five_explicit<Fp2: Fp2Trait>(
+pub fn solve_dlp_order_power_of_five_explicit_subgroup<Fp2: Fp2Trait>(
     subgroup: &[Fp2; 5],
     value: &Fp2,
     e: usize,
@@ -191,8 +194,8 @@ pub fn solve_dlp_order_power_of_five_explicit<Fp2: Fp2Trait>(
             p_to_the_e_basis[e - i - 1].nbits(),
         );
 
-        let (x, ok) = solve_dlp_order_five_explicit(&prime_order_subgroup, &u);
         partial_solutions.push(x);
+        let (x, ok) = solve_dlp_order_five_explicit_subgroup(&prime_order_subgroup, &u);
         partial_sum = &partial_sum + &((x as u64) * &p_to_the_e_basis[i]);
         retval &= ok;
     }

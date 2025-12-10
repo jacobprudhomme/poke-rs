@@ -6,7 +6,7 @@ use isogeny::elliptic::{basis::BasisX, projective_point::Point};
 use poke::{
     bn::BigNum,
     dlp::{
-        solve_dlp_order_power_of_five, solve_dlp_order_power_of_five_explicit,
+        solve_dlp_order_power_of_five, solve_dlp_order_power_of_five_explicit_subgroup,
         solve_dlp_small_prime_power_order,
     },
     params::{poke_i, poke_iii, poke_v},
@@ -194,12 +194,12 @@ fn power_of_five_specialized_method_explicit_subgroup<Fp2: Fp2Trait>(
         pub_params.five_torsion_order.nbits(),
     );
 
-    let (x, _) = solve_dlp_order_power_of_five_explicit(
+    let (x, _) = solve_dlp_order_power_of_five_explicit_subgroup(
         &prime_order_subgroup,
         &covariant_pairing,
         pub_params.five_torsion_exp,
     );
-    let (y, _) = solve_dlp_order_power_of_five_explicit(
+    let (y, _) = solve_dlp_order_power_of_five_explicit_subgroup(
         &prime_order_subgroup,
         &contravariant_pairing,
         pub_params.five_torsion_exp,

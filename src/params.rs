@@ -132,6 +132,10 @@ pub mod poke_i {
             &PointX::from_x_coord(&XY_X),
         );
 
+        let five_adic_basis = (0..=FIVE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(5, exp))
+            .collect::<Vec<_>>();
+
         PublicParams {
             starting_curve: Curve::new(&PokeFieldI::from_i32(0)),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
@@ -146,6 +150,7 @@ pub mod poke_i {
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
+            five_adic_basis,
         }
     }
 }
@@ -334,6 +339,10 @@ pub mod poke_iii {
             &PointX::from_x_coord(&XY_X),
         );
 
+        let five_adic_basis = (0..=FIVE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(5, exp))
+            .collect::<Vec<_>>();
+
         PublicParams {
             starting_curve: Curve::new(&PokeFieldIII::from_i32(0)),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
@@ -348,6 +357,7 @@ pub mod poke_iii {
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
+            five_adic_basis,
         }
     }
 }
@@ -547,6 +557,10 @@ pub mod poke_v {
             &PointX::from_x_coord(&XY_X),
         );
 
+        let five_adic_basis = (0..=FIVE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(5, exp))
+            .collect::<Vec<_>>();
+
         PublicParams {
             starting_curve: Curve::new(&PokeFieldV::from_i32(0)),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
@@ -561,6 +575,7 @@ pub mod poke_v {
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
+            five_adic_basis,
         }
     }
 }

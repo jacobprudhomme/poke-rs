@@ -36,6 +36,7 @@ pub struct PublicParams<Fp2: Fp2Trait> {
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
     pub five_torsion_basis: BasisX<Fp2>,
+    pub five_adic_basis: Vec<BigNum>,
 }
 
 // FIXME: represent scalars as their LE byte arrays and bitsize. Removes external dependency on num-bigint
@@ -497,15 +498,37 @@ where
     );
 
     // Solve discrete logarithm between pairings to obtain expression of X' in terms of <U',V'>
-    let (x, ok) = solve_dlp_small_prime_power_order(&eUV_aux, &eXV, 5, pub_params.five_torsion_exp);
+    let (x, ok) = solve_dlp_small_prime_power_order(
+        &eUV_aux,
+        &eXV,
+        5,
+        pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
+    );
     retval &= ok;
-    let (y, ok) =
-        solve_dlp_small_prime_power_order(&eUV_aux, &eXmU, 5, pub_params.five_torsion_exp);
+    let (y, ok) = solve_dlp_small_prime_power_order(
+        &eUV_aux,
+        &eXmU,
+        5,
+        pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
+    );
     retval &= ok;
-    let (w, ok) = solve_dlp_small_prime_power_order(&eUV_aux, &eYV, 5, pub_params.five_torsion_exp);
+    let (w, ok) = solve_dlp_small_prime_power_order(
+        &eUV_aux,
+        &eYV,
+        5,
+        pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
+    );
     retval &= ok;
-    let (z, ok) =
-        solve_dlp_small_prime_power_order(&eUV_aux, &eYmU, 5, pub_params.five_torsion_exp);
+    let (z, ok) = solve_dlp_small_prime_power_order(
+        &eUV_aux,
+        &eYmU,
+        5,
+        pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
+    );
     retval &= ok;
 
     /* Decrypt message using one-time pad derived from shared secret */

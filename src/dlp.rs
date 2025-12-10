@@ -29,16 +29,13 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
     value: &Fp2,
     p: usize,
     e: usize,
+    p_adic_basis: &[BigNum],
 ) -> (BigNum, u32) {
     let mut retval = SUCCESS_RETVAL;
 
-    let p_to_the_e_basis = (0..=e)
-        .map(|exp| BigNum::from_prime_power(p, exp))
-        .collect::<Vec<_>>();
-
     let prime_order_subgroup_generator = generator.pow(
-        p_to_the_e_basis[e - 1].as_le_bytes(),
-        p_to_the_e_basis[e - 1].nbits(),
+        p_adic_basis[e - 1].as_le_bytes(),
+        p_adic_basis[e - 1].nbits(),
     );
     assert_eq!(
         prime_order_subgroup_generator.equals(&Fp2::ONE),
@@ -55,12 +52,12 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
                 .pow(partial_sum.as_le_bytes(), partial_sum.nbits())
                 .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
-            p_to_the_e_basis[e - i - 1].as_le_bytes(),
-            p_to_the_e_basis[e - i - 1].nbits(),
+            p_adic_basis[e - i - 1].as_le_bytes(),
+            p_adic_basis[e - i - 1].nbits(),
         );
 
         let (x, ok) = solve_dlp_small_prime_order(&prime_order_subgroup_generator, &u, p);
-        partial_sum = &partial_sum + &((x as u64) * &p_to_the_e_basis[i]);
+        partial_sum = &partial_sum + &((x as u64) * &p_adic_basis[i]);
         retval &= ok;
     }
 
@@ -109,16 +106,13 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
     generator: &Fp2,
     value: &Fp2,
     e: usize,
+    five_adic_basis: &[BigNum],
 ) -> (BigNum, u32) {
     let mut retval = SUCCESS_RETVAL;
 
-    let p_to_the_e_basis = (0..=e)
-        .map(|exp| BigNum::from_prime_power(5, exp))
-        .collect::<Vec<_>>();
-
     let prime_order_subgroup_generator = generator.pow(
-        p_to_the_e_basis[e - 1].as_le_bytes(),
-        p_to_the_e_basis[e - 1].nbits(),
+        five_adic_basis[e - 1].as_le_bytes(),
+        five_adic_basis[e - 1].nbits(),
     );
     assert_eq!(
         prime_order_subgroup_generator.equals(&Fp2::ONE),
@@ -134,12 +128,12 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
                 .pow(partial_sum.as_le_bytes(), partial_sum.nbits())
                 .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
-            p_to_the_e_basis[e - i - 1].as_le_bytes(),
-            p_to_the_e_basis[e - i - 1].nbits(),
+            five_adic_basis[e - i - 1].as_le_bytes(),
+            five_adic_basis[e - i - 1].nbits(),
         );
 
         let (x, ok) = solve_dlp_order_five(&prime_order_subgroup_generator, &u);
-        partial_sum = &partial_sum + &((x as u64) * &p_to_the_e_basis[i]);
+        partial_sum = &partial_sum + &((x as u64) * &five_adic_basis[i]);
         retval &= ok;
     }
 
@@ -165,17 +159,14 @@ pub fn solve_dlp_order_power_of_five_explicit_subgroup<Fp2: Fp2Trait>(
     subgroup: &[Fp2; 5],
     value: &Fp2,
     e: usize,
+    five_adic_basis: &[BigNum],
 ) -> (BigNum, u32) {
     let mut retval = SUCCESS_RETVAL;
 
-    let p_to_the_e_basis = (0..=e)
-        .map(|exp| BigNum::from_prime_power(5, exp))
-        .collect::<Vec<_>>();
-
     let prime_order_subgroup = subgroup.map(|element| {
         element.pow(
-            p_to_the_e_basis[e - 1].as_le_bytes(),
-            p_to_the_e_basis[e - 1].nbits(),
+            five_adic_basis[e - 1].as_le_bytes(),
+            five_adic_basis[e - 1].nbits(),
         )
     });
 
@@ -186,12 +177,12 @@ pub fn solve_dlp_order_power_of_five_explicit_subgroup<Fp2: Fp2Trait>(
                 .pow(partial_sum.as_le_bytes(), partial_sum.nbits())
                 .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
-            p_to_the_e_basis[e - i - 1].as_le_bytes(),
-            p_to_the_e_basis[e - i - 1].nbits(),
+            five_adic_basis[e - i - 1].as_le_bytes(),
+            five_adic_basis[e - i - 1].nbits(),
         );
 
         let (x, ok) = solve_dlp_order_five_explicit_subgroup(&prime_order_subgroup, &u);
-        partial_sum = &partial_sum + &((x as u64) * &p_to_the_e_basis[i]);
+        partial_sum = &partial_sum + &((x as u64) * &five_adic_basis[i]);
         retval &= ok;
     }
 
@@ -200,9 +191,12 @@ pub fn solve_dlp_order_power_of_five_explicit_subgroup<Fp2: Fp2Trait>(
 
 #[cfg(test)]
 mod tests {
+    use core::array;
+
     use rstest::rstest;
 
     use super::{SUCCESS_RETVAL, solve_dlp_small_prime_power_order};
+    use crate::bn::BigNum;
 
     // p = 2 * 3^3 * 5^3 * 7^4 * 113 * 379 * 503 * 52837 + 1, such that |p| > 64 bits and Fp^2 has a multiplicative subgroup of order 5^3
     const P: [u64; 2] = [0x0000000000000c3f, 0x0000000000000001];
@@ -210,6 +204,8 @@ mod tests {
 
     #[rstest]
     fn test_simple_dlp() {
+        let five_adic_basis: [BigNum; 4] = array::from_fn(|exp| BigNum::from_prime_power(5, exp));
+
         // Generates the order-5^3 subgroup
         let generator = Fp2::const_decode_no_check(
             &[47, 47, 195, 76, 26, 17, 18, 144, 0],
@@ -227,14 +223,17 @@ mod tests {
             "Generator doesn't have order 5^3"
         );
 
-        let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 5, 3);
+        let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 5, 3, &five_adic_basis);
 
         assert_eq!(ok, SUCCESS_RETVAL);
         assert_eq!(x.as_le_bytes(), &[7]);
         assert_eq!(x.nbits(), 3);
     }
+
     #[rstest]
     fn test_complex_dlp() {
+        let seven_adic_basis: [BigNum; 5] = array::from_fn(|exp| BigNum::from_prime_power(7, exp));
+
         // Generates the order-7^4 subgroup
         let generator = Fp2::const_decode_no_check(
             &[82, 1, 230, 158, 56, 88, 5, 102, 0],
@@ -252,7 +251,8 @@ mod tests {
             "Generator doesn't have order 7^4"
         );
 
-        let (x, ok) = solve_dlp_small_prime_power_order(&generator, &value, 7, 4);
+        let (x, ok) =
+            solve_dlp_small_prime_power_order(&generator, &value, 7, 4, &seven_adic_basis);
 
         assert_eq!(ok, SUCCESS_RETVAL);
         assert_eq!(x.as_le_bytes(), &[255, 1]);

@@ -77,12 +77,14 @@ fn generic_method<Fp2: Fp2Trait>(
         &covariant_pairing,
         5,
         pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
     );
     let (y, _) = solve_dlp_small_prime_power_order(
         basis_pairing,
         &contravariant_pairing,
         5,
         pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
     );
 
     (x, y)
@@ -119,11 +121,13 @@ fn power_of_five_specialized_method<Fp2: Fp2Trait>(
         basis_pairing,
         &covariant_pairing,
         pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
     );
     let (y, _) = solve_dlp_order_power_of_five(
         basis_pairing,
         &contravariant_pairing,
         pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
     );
 
     (x, y)
@@ -198,11 +202,13 @@ fn power_of_five_specialized_method_explicit_subgroup<Fp2: Fp2Trait>(
         &prime_order_subgroup,
         &covariant_pairing,
         pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
     );
     let (y, _) = solve_dlp_order_power_of_five_explicit_subgroup(
         &prime_order_subgroup,
         &contravariant_pairing,
         pub_params.five_torsion_exp,
+        &pub_params.five_adic_basis,
     );
 
     (x, y)

@@ -86,13 +86,13 @@ pub fn solve_dlp_order_five<Fp2: Fp2Trait>(generator: &Fp2, value: &Fp2) -> (u8,
     result |= 2 & (found_log as u8);
     retval |= found_log;
 
-    element2.set_invert();
+    element2.set_conjugate();
 
     let found_log = value.equals(&element2);
     result |= 3 & (found_log as u8);
     retval |= found_log;
 
-    element.set_invert();
+    element.set_conjugate();
 
     let found_log = value.equals(&element);
     result |= 4 & (found_log as u8);

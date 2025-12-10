@@ -8,9 +8,12 @@ use poke::{
 use rand::RngCore;
 
 fn poke(c: &mut Criterion) {
-    let params = params::poke_i::get_params();
-    let pub_key = example_keypairs::poke_i::get_pub_key();
-    let prv_key = example_keypairs::poke_i::get_prv_key();
+    let params_i = params::poke_i::get_params();
+    let pub_key_i = example_keypairs::poke_i::get_pub_key();
+    let prv_key_i = example_keypairs::poke_i::get_prv_key();
+    let params_v = params::poke_v::get_params();
+    let pub_key_v = example_keypairs::poke_v::get_pub_key();
+    let prv_key_v = example_keypairs::poke_v::get_prv_key();
 
     let mut rng = rand::rng();
     let mut message = [0; 128];
@@ -19,16 +22,25 @@ fn poke(c: &mut Criterion) {
     let mut encryption_group = c.benchmark_group("Encryption");
     encryption_group.bench_function("POKÉ level I", |b| {
         b.iter(|| {
-            encrypt(&params, &pub_key, &message);
+            encrypt(&params_i, &pub_key_i, &message);
+        })
+    });
+    encryption_group.bench_function("POKÉ level V", |b| {
+        b.iter(|| {
+            encrypt(&params_v, &pub_key_v, &message);
         })
     });
     encryption_group.finish();
 
-    let (ct, _) = encrypt(&params, &pub_key, &message);
+    let (ct_i, _) = encrypt(&params_i, &pub_key_i, &message);
+    let (ct_v, _) = encrypt(&params_v, &pub_key_v, &message);
 
     let mut decryption_group = c.benchmark_group("Decryption");
     decryption_group.bench_function("POKÉ level I", |b| {
-        b.iter(|| decrypt(&params, &prv_key, &ct));
+        b.iter(|| decrypt(&params_i, &prv_key_i, &ct_i));
+    });
+    decryption_group.bench_function("POKÉ level V", |b| {
+        b.iter(|| decrypt(&params_v, &prv_key_v, &ct_v));
     });
     decryption_group.finish();
 }

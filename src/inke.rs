@@ -14,7 +14,6 @@ use crate::{
     SUCCESS_RETVAL,
     bn::BigNum,
     rand::{sample_random_element_mod, sample_random_unit_mod},
-    utilities::invert_element_mod,
 };
 
 pub struct PublicParams<Fp2: Fp2Trait> {
@@ -66,7 +65,8 @@ where
     let r = sample_random_element_mod(&pub_params.three_torsion_order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let (omega, omega_inv) = sample_random_unit_mod(&pub_params.effective_two_torsion_order);
+    let omega1 = sample_random_unit_mod(2, &pub_params.effective_two_torsion_order);
+    let omega2 = sample_random_unit_mod(2, &pub_params.effective_two_torsion_order);
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 
@@ -98,8 +98,8 @@ where
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
     retval &= kernel_has_right_order;
 
-    let masked_P_B = codomain_curve.mul(&P_B, omega.as_le_bytes(), omega.nbits());
-    let masked_Q_B = codomain_curve.mul(&Q_B, omega_inv.as_le_bytes(), omega_inv.nbits());
+    let masked_P_B = codomain_curve.mul(&P_B, omega1.as_le_bytes(), omega1.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, omega2.as_le_bytes(), omega2.nbits());
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
 
@@ -122,8 +122,8 @@ where
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
     retval &= kernel_has_right_order;
 
-    let masked_P_AB = shared_end_curve.mul(&P_AB, omega.as_le_bytes(), omega.nbits());
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega_inv.as_le_bytes(), omega_inv.nbits());
+    let masked_P_AB = shared_end_curve.mul(&P_AB, omega1.as_le_bytes(), omega1.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega2.as_le_bytes(), omega2.nbits());
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
 
@@ -173,41 +173,30 @@ where
 {
     let mut retval = SUCCESS_RETVAL;
 
-    // Invert secret scalars, to neutralize their action on masked points we receive
-    // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
-    let alpha_inv = invert_element_mod(&prv_key.alpha, &pub_params.effective_two_torsion_order);
-    let beta_inv = invert_element_mod(&prv_key.beta, &pub_params.effective_two_torsion_order);
-
-    // Neutralize action of our own secret scalars on the masked 2^a-torsion basis for E_AB
-    let (P_AB, Q_AB) = ciphertext
-        .shared_end_curve
-        .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
-    let unmasked_P_AB =
-        ciphertext
-            .shared_end_curve
-            .mul(&P_AB, alpha_inv.as_le_bytes(), alpha_inv.nbits());
-    let unmasked_Q_AB =
-        ciphertext
-            .shared_end_curve
-            .mul(&Q_AB, beta_inv.as_le_bytes(), beta_inv.nbits());
-
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let (P_B, Q_B) = ciphertext
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
-    let mut deg_P_B =
-        ciphertext
-            .codomain_curve
-            .mul(&P_B, prv_key.q.as_le_bytes(), prv_key.q.nbits());
-    deg_P_B.set_neg();
-    let mut deg_Q_B =
-        ciphertext
-            .codomain_curve
-            .mul(&Q_B, prv_key.q.as_le_bytes(), prv_key.q.nbits());
-    deg_Q_B.set_neg();
 
-    let P1P2 = ProductPoint::new(&deg_P_B, &unmasked_P_AB);
-    let Q1Q2 = ProductPoint::new(&deg_Q_B, &unmasked_Q_AB);
+    let alpha_q = &prv_key.alpha * &prv_key.q;
+    let mut scaled_P_B =
+        ciphertext
+            .codomain_curve
+            .mul(&P_B, alpha_q.as_le_bytes(), alpha_q.nbits());
+    scaled_P_B.set_neg();
+
+    let beta_q = &prv_key.beta * &prv_key.q;
+    let mut scaled_Q_B = ciphertext
+        .codomain_curve
+        .mul(&Q_B, beta_q.as_le_bytes(), beta_q.nbits());
+    scaled_Q_B.set_neg();
+
+    let (P_AB, Q_AB) = ciphertext
+        .shared_end_curve
+        .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
+
+    let P1P2 = ProductPoint::new(&scaled_P_B, &P_AB);
+    let Q1Q2 = ProductPoint::new(&scaled_Q_B, &Q_AB);
 
     // Compute codomain curve pair of Phi', which contains the shared secret curve
     let domain = EllipticProduct::new(&ciphertext.codomain_curve, &ciphertext.shared_end_curve);

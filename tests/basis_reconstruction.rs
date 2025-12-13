@@ -18,7 +18,10 @@ fn params() -> PublicParams<PokeFieldI> {
 
 #[fixture]
 fn scalars(params: PublicParams<PokeFieldI>) -> (BigNum, BigNum) {
-    sample_random_unit_mod(&params.full_two_torsion_order)
+    let s1 = sample_random_unit_mod(2, &params.full_two_torsion_order);
+    let s2 = sample_random_unit_mod(2, &params.full_two_torsion_order);
+
+    (s1, s2)
 }
 
 fn method1(

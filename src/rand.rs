@@ -16,39 +16,28 @@ pub fn sample_random_element_mod(modulus: &BigNum) -> BigNum {
     // BigNum::new(&[1])
 }
 
-pub fn sample_random_unit_mod(modulus: &BigNum) -> (BigNum, BigNum) {
+pub fn sample_random_unit_mod(modulus_base: u8, modulus: &BigNum) -> BigNum {
     let mut rng = old_rand::thread_rng();
 
     // Keep generating elements until we find an invertible one
     let modulus = BigUint::from_bytes_le(modulus.as_le_bytes());
-    let mut element = rng.gen_biguint_below(&modulus);
-    let mut inverse = element.modinv(&modulus);
-    while let None = inverse {
-        element = rng.gen_biguint_below(&modulus);
-        inverse = element.modinv(&modulus);
+    let mut unit = rng.gen_biguint_below(&modulus);
+    while &unit % BigUint::from(modulus_base) == BigUint::ZERO {
+        unit = rng.gen_biguint_below(&modulus);
     }
-    let Some(inverse) = inverse else {
-        unreachable!("At this point, we are ensured to have an invertible element");
-    };
 
-    let element = BigNum::new(&element.to_u64_digits());
-    // let element = BigNum::new(&[1]);
+    let unit = BigNum::new(&unit.to_u64_digits());
+    // let unit = BigNum::new(&[1]);
 
-    let inverse = BigNum::new(&inverse.to_u64_digits());
-    // let inverse = BigNum::new(&[1]);
-
-    (element, inverse)
+    unit
 }
 
 // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
-pub fn sample_random_invertible_matrix_mod(
-    modulus_base: &BigNum,
-    modulus: &BigNum,
-) -> [[BigNum; 2]; 2] {
+pub fn sample_random_invertible_matrix_mod(modulus_base: u8, modulus: &BigNum) -> [[BigNum; 2]; 2] {
     let mut rng = old_rand::thread_rng();
 
     let ONE = BigUint::from(1u8);
-    let modulus_base = BigUint::from_bytes_le(modulus_base.as_le_bytes());
+    let modulus_base = BigUint::from(modulus_base);
     let modulus = BigUint::from_bytes_le(modulus.as_le_bytes());
 
     // Randomly generate the first 3 elements
@@ -66,12 +55,8 @@ pub fn sample_random_invertible_matrix_mod(
     // TODO: is this valid? I would assume the operations between 3 random numbers also gives a random number. Prove this
     let cross_term = (&modulus - ((&matrix[0][1] * &matrix[1][0]) % &modulus)) % &modulus;
     let mut element = rng.gen_biguint_below(&modulus);
-    let mut det_inverse =
-        ((&cross_term + (&matrix[0][0] * &element) % &modulus) % &modulus).modinv(&modulus);
-    while let None = det_inverse {
+    while (&cross_term + (&matrix[0][0] * &element) % &modulus) % &modulus_base == BigUint::ZERO {
         element = rng.gen_biguint_below(&modulus);
-        det_inverse =
-            ((&cross_term + (&matrix[0][0] * &element) % &modulus) % &modulus).modinv(&modulus);
     }
     matrix[1][1] = element;
 
@@ -85,16 +70,18 @@ pub fn sample_random_invertible_matrix_mod(
 // Randomly find a basis of the given torsion subgroup on the given curve
 pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
     curve: &Curve<Fp2>,
+    torsion_subgroup_order_base: u8,
     torsion_subgroup_order: &BigNum,
     order_cofactor: &BigNum,
 ) -> (Point<Fp2>, Point<Fp2>, Fp2) {
     let mut rng = rand::rng();
 
-    let FIVE = BigUint::from(5u8);
+    let torsion_subgroup_order_base = BigUint::from(torsion_subgroup_order_base);
 
     // TODO: include in paper WHY we can just divide p^e by p once to obtain a check that the point has exactly the order we need
     let reduced_torsion_subgroup_order =
-        &BigUint::from_bytes_le(torsion_subgroup_order.as_le_bytes()) / &FIVE;
+        &BigUint::from_bytes_le(torsion_subgroup_order.as_le_bytes())
+            / &torsion_subgroup_order_base;
     let reduced_torsion_subgroup_order =
         BigNum::new(&reduced_torsion_subgroup_order.to_u64_digits());
 
@@ -174,8 +161,8 @@ pub fn sample_random_torsion_basis<Fp2: Fp2Trait>(
         // TODO: is this check necessary? Because of the fact that the group might have order m*n
         if eUV_saturated
             .pow(
-                &FIVE.to_bytes_le(),
-                FIVE.bits()
+                &torsion_subgroup_order_base.to_bytes_le(),
+                torsion_subgroup_order_base.bits()
                     .try_into()
                     .expect("Size in bits of constant 5 is too big to fit in a usize (we do not ever expect this to happen)"),
             )

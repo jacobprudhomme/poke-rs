@@ -10,7 +10,6 @@ pub mod inke;
 pub mod params;
 pub mod poke;
 pub mod rand;
-mod utilities;
 
 pub const SUCCESS_RETVAL: u32 = u32::MAX;
 pub const FAILURE_RETVAL: u32 = u32::MIN;

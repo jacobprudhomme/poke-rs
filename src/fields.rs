@@ -133,7 +133,7 @@ mod tests {
         use super::super::{POKE_III_MODULUS, PokeFieldIII, PokeFieldIIIBase};
 
         fp2::define_fp_tests!(PokeFieldIIIBase);
-        fp2::define_fp2_tests!(PokeFieldIII, POKE_III_MODULUS, 5);
+        fp2::define_fp2_tests!(PokeFieldIII, POKE_III_MODULUS, 6);
     }
 
     mod poke_v {
@@ -147,7 +147,7 @@ mod tests {
         use super::super::{INKE_I_MODULUS, InkeFieldI, InkeFieldIBase};
 
         fp2::define_fp_tests!(InkeFieldIBase);
-        fp2::define_fp2_tests!(InkeFieldI, INKE_I_MODULUS, 5);
+        fp2::define_fp2_tests!(InkeFieldI, INKE_I_MODULUS, 2);
     }
 
     mod inke_iii {
@@ -161,6 +161,6 @@ mod tests {
         use super::super::{INKE_V_MODULUS, InkeFieldV, InkeFieldVBase};
 
         fp2::define_fp_tests!(InkeFieldVBase);
-        fp2::define_fp2_tests!(InkeFieldV, INKE_V_MODULUS, 5);
+        fp2::define_fp2_tests!(InkeFieldV, INKE_V_MODULUS, 2);
     }
 }

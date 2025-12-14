@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point},
+    elliptic::{basis::BasisX, curve::Curve, projective_point::Point},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 use num_bigint::BigUint;
@@ -129,13 +129,11 @@ where
 
     // let masked_two_torsion_basis_EB =
     //     BasisX::from_points(&masked_xP_B, &masked_xQ_B, &masked_PQ_B.to_pointx());
-    let mut masked_two_torsion_basis_EB = [
-        masked_P_B.to_pointx(),
-        masked_Q_B.to_pointx(),
-        masked_PQ_B.to_pointx(),
-    ];
-    PointX::batch_normalise(&mut masked_two_torsion_basis_EB);
-    let masked_two_torsion_basis_EB = BasisX::from_slice(&masked_two_torsion_basis_EB);
+    let masked_two_torsion_basis_EB = BasisX::from_points(
+        &masked_P_B.to_pointx(),
+        &masked_Q_B.to_pointx(),
+        &masked_PQ_B.to_pointx(),
+    );
 
     // Apply sender's secret isogeny to 5^c-torsion basis to obtain basis image points (X_B, Y_B)
     let mut five_torsion_basis_EB = pub_params.five_torsion_basis.to_array();
@@ -181,13 +179,11 @@ where
 
     // let masked_five_torsion_basis_EB =
     //     BasisX::from_points(&masked_xX_B, &masked_xY_B, &masked_XY_B.to_pointx());
-    let mut masked_five_torsion_basis_EB = [
-        masked_X_B.to_pointx(),
-        masked_Y_B.to_pointx(),
-        masked_XY_B.to_pointx(),
-    ];
-    PointX::batch_normalise(&mut masked_five_torsion_basis_EB);
-    let masked_five_torsion_basis_EB = BasisX::from_slice(&masked_five_torsion_basis_EB);
+    let masked_five_torsion_basis_EB = BasisX::from_points(
+        &masked_X_B.to_pointx(),
+        &masked_Y_B.to_pointx(),
+        &masked_XY_B.to_pointx(),
+    );
 
     assert_eq!(
         codomain_curve
@@ -222,13 +218,11 @@ where
 
     // let masked_two_torsion_basis_EAB =
     //     BasisX::from_points(&masked_xP_AB, &masked_xQ_AB, &masked_PQ_AB.to_pointx());
-    let mut masked_two_torsion_basis_EAB = [
-        masked_P_AB.to_pointx(),
-        masked_Q_AB.to_pointx(),
-        masked_PQ_AB.to_pointx(),
-    ];
-    PointX::batch_normalise(&mut masked_two_torsion_basis_EAB);
-    let masked_two_torsion_basis_EAB = BasisX::from_slice(&masked_two_torsion_basis_EAB);
+    let masked_two_torsion_basis_EAB = BasisX::from_points(
+        &masked_P_AB.to_pointx(),
+        &masked_Q_AB.to_pointx(),
+        &masked_PQ_AB.to_pointx(),
+    );
 
     // Apply sender's secret parallel isogeny to receiver's masked 5^c-torsion basis image points to obtain shared secret (X_AB, Y_AB)
     let mut five_torsion_basis_EAB = pub_key.masked_five_torsion_basis_img.to_array();

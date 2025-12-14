@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve, point::PointX},
+    elliptic::{basis::BasisX, curve::Curve},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 use sha3::{
@@ -103,13 +103,11 @@ where
 
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
 
-    let mut masked_two_torsion_basis_EB = [
-        masked_P_B.to_pointx(),
-        masked_Q_B.to_pointx(),
-        masked_PQ_B.to_pointx(),
-    ];
-    PointX::batch_normalise(&mut masked_two_torsion_basis_EB);
-    let masked_two_torsion_basis_EB = BasisX::from_slice(&masked_two_torsion_basis_EB);
+    let masked_two_torsion_basis_EB = BasisX::from_points(
+        &masked_P_B.to_pointx(),
+        &masked_Q_B.to_pointx(),
+        &masked_PQ_B.to_pointx(),
+    );
 
     // Apply sender's secret parallel isogeny to receiver's masked 2^a-torsion basis image points to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB)
     let mut two_torsion_basis_EAB = pub_key.masked_two_torsion_basis_img.to_array();
@@ -127,13 +125,11 @@ where
 
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
 
-    let mut masked_two_torsion_basis_EAB = [
-        masked_P_AB.to_pointx(),
-        masked_Q_AB.to_pointx(),
-        masked_PQ_AB.to_pointx(),
-    ];
-    PointX::batch_normalise(&mut masked_two_torsion_basis_EAB);
-    let masked_two_torsion_basis_EAB = BasisX::from_slice(&masked_two_torsion_basis_EAB);
+    let masked_two_torsion_basis_EAB = BasisX::from_points(
+        &masked_P_AB.to_pointx(),
+        &masked_Q_AB.to_pointx(),
+        &masked_PQ_AB.to_pointx(),
+    );
 
     // Compute codomain of sender's secret intermediate parallel isogeny to obtain shared secret curve
     let (secret_curve, _) = pub_key.intermediate_curve.three_isogeny_chain(

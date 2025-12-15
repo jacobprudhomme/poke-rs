@@ -13,7 +13,7 @@ use sha3::{
 use crate::{
     SUCCESS_RETVAL,
     bn::BigNum,
-    rand::{sample_random_element_mod, sample_random_unit_mod},
+    rand::{sample_random_element_mod, sample_random_unit_mod_prime_power},
 };
 
 pub struct PublicParams<Fp2: Fp2Trait> {
@@ -65,8 +65,8 @@ where
     let r = sample_random_element_mod(&pub_params.three_torsion_order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let omega1 = sample_random_unit_mod(2, &pub_params.effective_two_torsion_order);
-    let omega2 = sample_random_unit_mod(2, &pub_params.effective_two_torsion_order);
+    let omega1 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
+    let omega2 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 

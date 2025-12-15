@@ -16,8 +16,8 @@ use crate::{
     bn::BigNum,
     dlp::solve_dlp_small_prime_power_order,
     rand::{
-        sample_random_element_mod, sample_random_invertible_matrix_mod,
-        sample_random_torsion_basis, sample_random_unit_mod,
+        sample_random_element_mod, sample_random_invertible_matrix_mod_prime_power,
+        sample_random_torsion_basis_order_prime_power, sample_random_unit_mod_prime_power,
     },
 };
 
@@ -82,11 +82,11 @@ where
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
     // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
-    let omega1 = sample_random_unit_mod(2, &pub_params.effective_two_torsion_order);
-    let omega2 = sample_random_unit_mod(2, &pub_params.effective_two_torsion_order);
+    let omega1 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
+    let omega2 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
-    let D = sample_random_invertible_matrix_mod(5, &pub_params.five_torsion_order);
+    let D = sample_random_invertible_matrix_mod_prime_power(5, &pub_params.five_torsion_order);
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 
@@ -101,7 +101,6 @@ where
         r.as_le_bytes(),
         r.nbits(),
     );
-
 
     // Apply sender's secret isogeny to 2^a-torsion basis to obtain their codomain curve E_B and basis image points (P_B, Q_B)
     let mut two_torsion_basis_EB = pub_params.two_torsion_basis.to_array();
@@ -359,7 +358,7 @@ where
     retval &= ok;
 
     // Generate random basis of the 5^c-torsion on E_AB
-    let (U, V, eUV_AB) = sample_random_torsion_basis(
+    let (U, V, eUV_AB) = sample_random_torsion_basis_order_prime_power(
         &ciphertext.shared_end_curve,
         5,
         &pub_params.five_torsion_order,

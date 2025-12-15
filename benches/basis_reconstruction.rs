@@ -3,14 +3,14 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use isogeny::elliptic::basis::BasisX;
 use num_bigint::BigUint;
-use poke::{bn::BigNum, params::poke_i, rand::sample_random_unit_mod};
+use poke::{bn::BigNum, params::poke_i, rand::sample_random_unit_mod_prime_power};
 
 fn scalar_multiplication_then_basis_reconstruction(c: &mut Criterion) {
     let params = poke_i::get_params();
 
     // Generate scalars by which to multiply basis points
-    let s1 = sample_random_unit_mod(2, &params.full_two_torsion_order);
-    let s2 = sample_random_unit_mod(2, &params.full_two_torsion_order);
+    let s1 = sample_random_unit_mod_prime_power(2, &params.full_two_torsion_order);
+    let s2 = sample_random_unit_mod_prime_power(2, &params.full_two_torsion_order);
 
     // Benchmark the different methods to reconstruct an x-only basis after multiplying the 2 points in it
     let mut group = c.benchmark_group("Multiply then reconstruct basis/POKÉ level I");

@@ -7,7 +7,7 @@ use poke::{
     fields::{PokeFieldI, PokeFieldIBase},
     params::poke_i,
     poke::PublicParams,
-    rand::sample_random_unit_mod,
+    rand::sample_random_unit_mod_prime_power,
 };
 use rstest::{fixture, rstest};
 
@@ -18,8 +18,8 @@ fn params() -> PublicParams<PokeFieldI> {
 
 #[fixture]
 fn scalars(params: PublicParams<PokeFieldI>) -> (BigNum, BigNum) {
-    let s1 = sample_random_unit_mod(2, &params.full_two_torsion_order);
-    let s2 = sample_random_unit_mod(2, &params.full_two_torsion_order);
+    let s1 = sample_random_unit_mod_prime_power(2, &params.full_two_torsion_order);
+    let s2 = sample_random_unit_mod_prime_power(2, &params.full_two_torsion_order);
 
     (s1, s2)
 }

@@ -13,37 +13,6 @@ use poke::{
     },
 };
 
-// Formula 1 (same scalar):
-// Start with BasisX
-// Do multiplication of P,Q by the same scalar
-// Recover BasisX'
-
-// Formula 2 (different scalar):
-// Start with BasisX
-// Do multiplication of P,Q by different scalars
-// Recover BasisX'
-
-// Formula 3 (scalar matrix):
-// Start with BasisX
-// Do multiplication of P,Q by a scalar matrix
-// Recover BasisX'
-
-// Methods:
-// - Full operations:
-//   - Lift BasisX to P,Q
-//     - lift_basis; OR
-//     - lift_basis_normalized
-//   - Do P'=MULT(P),Q'=MULT(Q)
-//   - Do PQ'=P'-Q'
-//   - Construct BasisX'
-// - x-only operations:
-//   - [Only for same scalar] Just simple x-only multiplication on all points in the basis
-//   - [Only for same scalar] Just simple x-only multiplication on x(P), x(P-Q), but then use projective_difference to obtain x(Q)
-//   - [Only for different scalars] Use xdiff_add to obtain x(P+Q), giving us a basis for P,-Q, then use ladder_biscalar
-//   - [Only for scalar matrix] Direct ladder_biscalar
-//   - [Only for different scalars (?)] Negate the 2nd scalar as a number, then do ladder_biscalar
-//   - [Only for different scalars (?)] Multiply 2nd scalar by inverse of 1st scalar, then do three_point_ladder on basis obtained using same scalar, and this number
-
 fn multiply_basis_by_scalars<Fp2: Fp2Trait>(
     curve: &Curve<Fp2>,
     basis: &(Point<Fp2>, Point<Fp2>),
@@ -95,17 +64,17 @@ fn multiply_xonly_basis_by_same_scalar_xmul<Fp2: Fp2Trait>(
     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
 }
 
-fn multiply_xonly_basis_by_same_scalar_projective_difference<Fp2: Fp2Trait>(
-    curve: &Curve<Fp2>,
-    basis: &BasisX<Fp2>,
-    s: &BigNum,
-) -> BasisX<Fp2> {
-    let masked_xP = curve.xmul(&basis.P, s.as_le_bytes(), s.nbits());
-    let masked_xPQ = curve.xmul(&basis.PQ, s.as_le_bytes(), s.nbits());
-    let masked_xQ = curve.projective_difference(&masked_xP, &masked_xPQ);
+// fn multiply_xonly_basis_by_same_scalar_projective_difference<Fp2: Fp2Trait>(
+//     curve: &Curve<Fp2>,
+//     basis: &BasisX<Fp2>,
+//     s: &BigNum,
+// ) -> BasisX<Fp2> {
+//     let masked_xP = curve.xmul(&basis.P, s.as_le_bytes(), s.nbits());
+//     let masked_xPQ = curve.xmul(&basis.PQ, s.as_le_bytes(), s.nbits());
+//     let masked_xQ = curve.projective_difference(&masked_xP, &masked_xPQ);
 
-    BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
-}
+//     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
+// }
 
 fn multiply_xonly_basis_by_scalars_flipped_Q_basis<Fp2: Fp2Trait>(
     curve: &Curve<Fp2>,
@@ -391,39 +360,39 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     });
     xmul_group.finish();
 
-    let mut projective_difference_group =
-        c.benchmark_group("Method 4: x-only point multiplication and projective difference");
-    projective_difference_group.bench_function("POKÉ level I", |b| {
-        b.iter(|| {
-            let basis = BasisX::from_points(&xP_i, &xQ_i, &xPQ_i);
-            multiply_xonly_basis_by_same_scalar_projective_difference(
-                &params_i.starting_curve,
-                &basis,
-                &s_i,
-            )
-        })
-    });
-    projective_difference_group.bench_function("POKÉ level III", |b| {
-        b.iter(|| {
-            let basis = BasisX::from_points(&xP_iii, &xQ_iii, &xPQ_iii);
-            multiply_xonly_basis_by_same_scalar_projective_difference(
-                &params_iii.starting_curve,
-                &basis,
-                &s_iii,
-            )
-        })
-    });
-    projective_difference_group.bench_function("POKÉ level V", |b| {
-        b.iter(|| {
-            let basis = BasisX::from_points(&xP_v, &xQ_v, &xPQ_v);
-            multiply_xonly_basis_by_same_scalar_projective_difference(
-                &params_v.starting_curve,
-                &basis,
-                &s_v,
-            )
-        })
-    });
-    projective_difference_group.finish();
+    // let mut projective_difference_group =
+    //     c.benchmark_group("Method 4: x-only point multiplication and projective difference");
+    // projective_difference_group.bench_function("POKÉ level I", |b| {
+    //     b.iter(|| {
+    //         let basis = BasisX::from_points(&xP_i, &xQ_i, &xPQ_i);
+    //         multiply_xonly_basis_by_same_scalar_projective_difference(
+    //             &params_i.starting_curve,
+    //             &basis,
+    //             &s_i,
+    //         )
+    //     })
+    // });
+    // projective_difference_group.bench_function("POKÉ level III", |b| {
+    //     b.iter(|| {
+    //         let basis = BasisX::from_points(&xP_iii, &xQ_iii, &xPQ_iii);
+    //         multiply_xonly_basis_by_same_scalar_projective_difference(
+    //             &params_iii.starting_curve,
+    //             &basis,
+    //             &s_iii,
+    //         )
+    //     })
+    // });
+    // projective_difference_group.bench_function("POKÉ level V", |b| {
+    //     b.iter(|| {
+    //         let basis = BasisX::from_points(&xP_v, &xQ_v, &xPQ_v);
+    //         multiply_xonly_basis_by_same_scalar_projective_difference(
+    //             &params_v.starting_curve,
+    //             &basis,
+    //             &s_v,
+    //         )
+    //     })
+    // });
+    // projective_difference_group.finish();
 }
 
 fn mask_basis_by_different_scalars(c: &mut Criterion) {

@@ -191,11 +191,11 @@ where
         .shared_end_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EAB);
 
+    let domain = EllipticProduct::new(&ciphertext.codomain_curve, &ciphertext.shared_end_curve);
     let P1P2 = ProductPoint::new(&scaled_P_B, &P_AB);
     let Q1Q2 = ProductPoint::new(&scaled_Q_B, &Q_AB);
 
     // Compute codomain curve pair of Phi', which contains the shared secret curve
-    let domain = EllipticProduct::new(&ciphertext.codomain_curve, &ciphertext.shared_end_curve);
     let (aux_curves, _, ok) =
         domain.elliptic_product_isogeny(&P1P2, &Q1Q2, pub_params.effective_two_torsion_exp, &[]);
     retval &= ok;

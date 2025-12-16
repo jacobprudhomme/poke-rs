@@ -114,47 +114,22 @@ where
         pub_params.three_torsion_exp,
         &mut torsion_bases_EB,
     );
-    // let [P_B, Q_B, ..] = &two_torsion_basis_EB;
+    retval &= kernel_has_right_order;
+
     let two_torsion_basis_EB = BasisX::from_slice(&torsion_bases_EB[..3]);
     let five_torsion_basis_EB = BasisX::from_slice(&torsion_bases_EB[3..]);
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
     let (X_B, Y_B) = codomain_curve.lift_basis(&five_torsion_basis_EB);
-    retval &= kernel_has_right_order;
 
-    // let masked_xP_B = codomain_curve.xmul(P_B, &omega, omega_bitsize);
-    // let masked_xQ_B = codomain_curve.xmul(Q_B, &omega_inv, omega_inv_bitsize);
     let masked_P_B = codomain_curve.mul(&P_B, omega1.as_le_bytes(), omega1.nbits());
     let masked_Q_B = codomain_curve.mul(&Q_B, omega2.as_le_bytes(), omega2.nbits());
-
-    // let (masked_P_B, ok) = codomain_curve.lift_pointx(&masked_xP_B);
-    // retval &= ok;
-    // let (masked_Q_B, ok) = codomain_curve.lift_pointx(&masked_xQ_B);
-    // retval &= ok;
-
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
-
-    // let masked_two_torsion_basis_EB =
-    //     BasisX::from_points(&masked_xP_B, &masked_xQ_B, &masked_PQ_B.to_pointx());
     let masked_two_torsion_basis_EB = BasisX::from_points(
         &masked_P_B.to_pointx(),
         &masked_Q_B.to_pointx(),
         &masked_PQ_B.to_pointx(),
     );
 
-    // let masked_xX_B = codomain_curve_verif.ladder_biscalar(
-    //     &five_torsion_basis_EB,
-    //     &D[(0, 0)],
-    //     &D[(0, 1)],
-    //     D_bitsize[(0, 0)],
-    //     D_bitsize[(0, 1)],
-    // );
-    // let masked_xY_B = codomain_curve_verif.ladder_biscalar(
-    //     &five_torsion_basis_EB,
-    //     &D[(1, 0)],
-    //     &D[(1, 1)],
-    //     D_bitsize[(1, 0)],
-    //     D_bitsize[(1, 1)],
-    // );
     let masked_X_B = codomain_curve.add(
         &codomain_curve.mul(&X_B, D[0][0].as_le_bytes(), D[0][0].nbits()),
         &codomain_curve.mul(&Y_B, D[0][1].as_le_bytes(), D[0][1].nbits()),
@@ -163,16 +138,7 @@ where
         &codomain_curve.mul(&X_B, D[1][0].as_le_bytes(), D[1][0].nbits()),
         &codomain_curve.mul(&Y_B, D[1][1].as_le_bytes(), D[1][1].nbits()),
     );
-
-    // let (masked_X_B, ok) = codomain_curve_verif.lift_pointx(&masked_xX_B);
-    // retval &= ok;
-    // let (masked_Y_B, ok) = codomain_curve_verif.lift_pointx(&masked_xY_B);
-    // retval &= ok;
-
     let masked_XY_B = codomain_curve.sub(&masked_X_B, &masked_Y_B);
-
-    // let masked_five_torsion_basis_EB =
-    //     BasisX::from_points(&masked_xX_B, &masked_xY_B, &masked_XY_B.to_pointx());
     let masked_five_torsion_basis_EB = BasisX::from_points(
         &masked_X_B.to_pointx(),
         &masked_Y_B.to_pointx(),
@@ -192,69 +158,39 @@ where
         pub_params.three_torsion_exp,
         &mut torsion_bases_EAB,
     );
-    // let [xP_AB, xQ_AB, ..] = &two_torsion_basis_EAB;
+    retval &= kernel_has_right_order;
+
     let two_torsion_basis_EAB = BasisX::from_slice(&torsion_bases_EAB[..3]);
     let five_torsion_basis_EAB = BasisX::from_slice(&torsion_bases_EAB[3..]);
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
-    let (X_AB, Y_AB) = shared_end_curve.lift_basis(&five_torsion_basis_EAB);
-    retval &= kernel_has_right_order;
 
-    // let masked_xP_AB = shared_end_curve.xmul(xP_AB, &omega, omega_bitsize);
-    // let masked_xQ_AB = shared_end_curve.xmul(xQ_AB, &omega_inv, omega_inv_bitsize);
     let masked_P_AB = shared_end_curve.mul(&P_AB, omega1.as_le_bytes(), omega1.nbits());
     let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega2.as_le_bytes(), omega2.nbits());
-
-    // let (masked_P_AB, ok) = shared_end_curve.lift_pointx(&masked_xP_AB);
-    // retval &= ok;
-    // let (masked_Q_AB, ok) = shared_end_curve.lift_pointx(&masked_xQ_AB);
-    // retval &= ok;
-
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
-
-    // let masked_two_torsion_basis_EAB =
-    //     BasisX::from_points(&masked_xP_AB, &masked_xQ_AB, &masked_PQ_AB.to_pointx());
     let masked_two_torsion_basis_EAB = BasisX::from_points(
         &masked_P_AB.to_pointx(),
         &masked_Q_AB.to_pointx(),
         &masked_PQ_AB.to_pointx(),
     );
 
-    // let masked_xX_AB = shared_end_curve_verif.ladder_biscalar(
-    //     &shared_secret,
-    //     &D[(0, 0)],
-    //     &D[(0, 1)],
-    //     D_bitsize[(0, 0)],
-    //     D_bitsize[(0, 1)],
-    // );
-    // let masked_xY_AB = shared_end_curve_verif.ladder_biscalar(
-    //     &shared_secret,
-    //     &D[(1, 0)],
-    //     &D[(1, 1)],
-    //     D_bitsize[(1, 0)],
-    //     D_bitsize[(1, 1)],
-    // );
-    let masked_X_AB = shared_end_curve.add(
-        &shared_end_curve.mul(&X_AB, D[0][0].as_le_bytes(), D[0][0].nbits()),
-        &shared_end_curve.mul(&Y_AB, D[0][1].as_le_bytes(), D[0][1].nbits()),
+    let masked_xX_AB = shared_end_curve.ladder_biscalar(
+        &five_torsion_basis_EAB,
+        D[0][0].as_le_bytes(),
+        D[0][1].as_le_bytes(),
+        D[0][0].nbits(),
+        D[0][1].nbits(),
     );
-    let masked_Y_AB = shared_end_curve.add(
-        &shared_end_curve.mul(&X_AB, D[1][0].as_le_bytes(), D[1][0].nbits()),
-        &shared_end_curve.mul(&Y_AB, D[1][1].as_le_bytes(), D[1][1].nbits()),
+    let masked_xY_AB = shared_end_curve.ladder_biscalar(
+        &five_torsion_basis_EAB,
+        D[1][0].as_le_bytes(),
+        D[1][1].as_le_bytes(),
+        D[1][0].nbits(),
+        D[1][1].nbits(),
     );
-
-    // let (masked_X_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xX_AB);
-    // retval &= ok;
-    // let (masked_Y_AB, ok) = shared_end_curve_verif.lift_pointx(&masked_xY_AB);
-    // retval &= ok;
-
-    // let masked_XY_AB = shared_end_curve_verif.sub(&masked_X_AB, &masked_Y_AB);
-
-    // let shared_secret =
-    //     BasisX::from_points(&masked_xX_AB, &masked_xY_AB, &masked_XY_AB.to_pointx());
 
     let mut kdf = Shake256::default();
-    kdf.update(&masked_X_AB.to_pointx().x().encode());
-    kdf.update(&masked_Y_AB.to_pointx().x().encode());
+    kdf.update(&masked_xX_AB.x().encode());
+    kdf.update(&masked_xY_AB.x().encode());
     let mut one_time_pad = kdf.finalize_xof();
     let mut encrypted_message = vec![0u8; message.len()];
     one_time_pad.read(&mut encrypted_message);
@@ -392,7 +328,6 @@ where
     let eUV_power_q = eUV_AB.pow(prv_key.q.as_le_bytes(), prv_key.q.nbits());
     let eUV_aux_is_eUV_power_q = eUV_aux.equals(&eUV_power_q);
 
-    // FIXME: none of the subsequent pairings are correct! This breaks everything!
     // I suspect a discrepancy between Sage's Weil pairing and the one here
     let eXV = aux_curve.weil_pairing(
         &X_aux_curve.to_pointx().x(),

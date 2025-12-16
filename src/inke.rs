@@ -94,15 +94,14 @@ where
         pub_params.three_torsion_exp,
         &mut two_torsion_basis_EB,
     );
+    retval &= kernel_has_right_order;
+
     let two_torsion_basis_EB = BasisX::from_slice(&two_torsion_basis_EB);
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
-    retval &= kernel_has_right_order;
 
     let masked_P_B = codomain_curve.mul(&P_B, omega1.as_le_bytes(), omega1.nbits());
     let masked_Q_B = codomain_curve.mul(&Q_B, omega2.as_le_bytes(), omega2.nbits());
-
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
-
     let masked_two_torsion_basis_EB = BasisX::from_points(
         &masked_P_B.to_pointx(),
         &masked_Q_B.to_pointx(),
@@ -116,15 +115,14 @@ where
         pub_params.three_torsion_exp,
         &mut two_torsion_basis_EAB,
     );
+    retval &= kernel_has_right_order;
+
     let two_torsion_basis_EAB = BasisX::from_slice(&two_torsion_basis_EAB);
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
-    retval &= kernel_has_right_order;
 
     let masked_P_AB = shared_end_curve.mul(&P_AB, omega1.as_le_bytes(), omega1.nbits());
     let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega2.as_le_bytes(), omega2.nbits());
-
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
-
     let masked_two_torsion_basis_EAB = BasisX::from_points(
         &masked_P_AB.to_pointx(),
         &masked_Q_AB.to_pointx(),

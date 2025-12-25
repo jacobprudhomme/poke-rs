@@ -5,7 +5,7 @@ use core::{
 use std::ops::{AddAssign, MulAssign};
 
 use isogeny::utilities::bn::{
-    bn_add_vartime, bn_bit_length_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
+    bn_add_vartime, bn_bit_length_vartime, bn_from_le_bytes, bn_mul_by_u64_vartime, bn_mul_vartime,
     factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
 use num_bigint::BigUint;
@@ -30,6 +30,22 @@ fn le_bytes_to_le_words(bytes: &[u8]) -> Vec<u64> {
         .collect()
 }
 
+fn le_words_to_le_bytes(le_words: &[u64]) -> (Vec<u8>, usize) {
+    let mut le_bytes = le_words
+        .iter()
+        .flat_map(|word| word.to_le_bytes())
+        .collect::<Vec<_>>();
+    while le_bytes.len() > 1
+        && let Some(&last_byte) = le_bytes.last()
+        && last_byte == 0
+    {
+        le_bytes.pop();
+    }
+    let bitlen = bn_bit_length_vartime(le_words);
+
+    (le_bytes, bitlen)
+}
+
 // WARN: all of these functions are vartime
 impl BigNum {
     pub fn zero() -> Self {
@@ -40,17 +56,7 @@ impl BigNum {
     }
 
     pub fn new(le_words: &[u64]) -> Self {
-        let mut le_bytes = le_words
-            .iter()
-            .flat_map(|word| word.to_le_bytes())
-            .collect::<Vec<_>>();
-        while le_bytes.len() > 1
-            && let Some(&last_byte) = le_bytes.last()
-            && last_byte == 0
-        {
-            le_bytes.pop();
-        }
-        let bitlen = bn_bit_length_vartime(le_words);
+        let (le_bytes, bitlen) = le_words_to_le_bytes(le_words);
 
         Self {
             repr: le_bytes,
@@ -79,7 +85,7 @@ impl BigNum {
     }
 
     pub fn to_le_words(&self) -> Vec<u64> {
-        le_bytes_to_le_words(&self.repr)
+        bn_from_le_bytes(&self.repr, self.bitlen)
     }
 
     pub fn nbits(&self) -> usize {

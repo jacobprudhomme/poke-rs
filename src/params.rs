@@ -109,6 +109,8 @@ pub mod poke_i {
     const FIVE_TORSION_EXP: usize = 18;
 
     pub fn get_params() -> PublicParams<PokeFieldI> {
+        let cofactor = BigNum::one();
+
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let two_torsion_basis = BasisX::from_points(
@@ -125,7 +127,7 @@ pub mod poke_i {
         );
 
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order;
+        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order * &cofactor;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -311,6 +313,8 @@ pub mod poke_iii {
     const FIVE_TORSION_EXP: usize = 28;
 
     pub fn get_params() -> PublicParams<PokeFieldIII> {
+        let cofactor = BigNum::from_prime_power(7, 2);
+
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let two_torsion_basis = BasisX::from_points(
@@ -332,7 +336,7 @@ pub mod poke_iii {
         );
 
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = &(49 * &full_two_torsion_order) * &three_torsion_order;
+        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order * &cofactor;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -534,6 +538,8 @@ pub mod poke_v {
     const FIVE_TORSION_EXP: usize = 36;
 
     pub fn get_params() -> PublicParams<PokeFieldV> {
+        let cofactor = BigNum::from_prime(547);
+
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let two_torsion_basis = BasisX::from_points(
@@ -550,7 +556,7 @@ pub mod poke_v {
         );
 
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = &(547 * &full_two_torsion_order) * &three_torsion_order;
+        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order * &cofactor;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),

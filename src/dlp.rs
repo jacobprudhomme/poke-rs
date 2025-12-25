@@ -57,7 +57,7 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait>(
         );
 
         let (x, ok) = solve_dlp_small_prime_order(&prime_order_subgroup_generator, &u, p);
-        partial_sum = &partial_sum + &((x as u64) * &p_adic_basis[i]);
+        partial_sum += (x as u64) * &p_adic_basis[i];
         retval &= ok;
     }
 
@@ -133,7 +133,7 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait>(
         );
 
         let (x, ok) = solve_dlp_order_five(&prime_order_subgroup_generator, &u);
-        partial_sum = &partial_sum + &((x as u64) * &five_adic_basis[i]);
+        partial_sum += (x as u64) * &five_adic_basis[i];
         retval &= ok;
     }
 
@@ -182,7 +182,7 @@ pub fn solve_dlp_order_power_of_five_explicit_subgroup<Fp2: Fp2Trait>(
         );
 
         let (x, ok) = solve_dlp_order_five_explicit_subgroup(&prime_order_subgroup, &u);
-        partial_sum = &partial_sum + &((x as u64) * &five_adic_basis[i]);
+        partial_sum += (x as u64) * &five_adic_basis[i];
         retval &= ok;
     }
 

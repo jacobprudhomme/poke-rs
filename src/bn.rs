@@ -55,6 +55,13 @@ impl BigNum {
         }
     }
 
+    pub fn one() -> Self {
+        Self {
+            repr: vec![1],
+            bitlen: 1,
+        }
+    }
+
     pub fn new(le_words: &[u64]) -> Self {
         let (le_bytes, bitlen) = le_words_to_le_bytes(le_words);
 

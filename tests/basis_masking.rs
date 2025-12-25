@@ -137,7 +137,7 @@ fn multiply_xonly_basis_by_scalars_using_invert_first_scalar<Fp2: Fp2Trait>(
             .modinv(&BigUint::from_bytes_le(modulus.as_le_bytes()))
             .unwrap();
     let s1_inv_neg = BigNum::new(&s1_inv_neg.to_u64_digits());
-    let s1_inv_neg_s2 = &s1_inv_neg * s2;
+    let s1_inv_neg_s2 = s1_inv_neg * s2;
 
     let masked_xP = curve.xmul(&basis.P, s1.as_le_bytes(), s1.nbits());
     let masked_xQ = curve.xmul(&basis.Q, s2.as_le_bytes(), s2.nbits());

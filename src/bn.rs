@@ -2,6 +2,7 @@ use core::{
     fmt,
     ops::{Add, Mul},
 };
+use std::ops::{AddAssign, MulAssign};
 
 use isogeny::utilities::bn::{
     bn_add_vartime, bn_bit_length_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
@@ -86,11 +87,49 @@ impl BigNum {
     }
 }
 
-impl Add for &BigNum {
+impl Add<&BigNum> for &BigNum {
     type Output = BigNum;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: &BigNum) -> Self::Output {
         BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl Add<BigNum> for &BigNum {
+    type Output = BigNum;
+
+    fn add(self, rhs: BigNum) -> Self::Output {
+        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl Add<&BigNum> for BigNum {
+    type Output = BigNum;
+
+    fn add(self, rhs: &BigNum) -> Self::Output {
+        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl Add<BigNum> for BigNum {
+    type Output = BigNum;
+
+    fn add(self, rhs: BigNum) -> Self::Output {
+        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl AddAssign<&BigNum> for BigNum {
+    fn add_assign(&mut self, rhs: &BigNum) {
+        let le_words = bn_add_vartime(&self.to_le_words(), &rhs.to_le_words());
+        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
+    }
+}
+
+impl AddAssign<BigNum> for BigNum {
+    fn add_assign(&mut self, rhs: BigNum) {
+        let le_words = bn_add_vartime(&self.to_le_words(), &rhs.to_le_words());
+        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
     }
 }
 
@@ -98,6 +137,14 @@ impl Mul<&BigNum> for u64 {
     type Output = BigNum;
 
     fn mul(self, rhs: &BigNum) -> Self::Output {
+        BigNum::new(&bn_mul_by_u64_vartime(&rhs.to_le_words(), self))
+    }
+}
+
+impl Mul<BigNum> for u64 {
+    type Output = BigNum;
+
+    fn mul(self, rhs: BigNum) -> Self::Output {
         BigNum::new(&bn_mul_by_u64_vartime(&rhs.to_le_words(), self))
     }
 }
@@ -110,11 +157,57 @@ impl Mul<u64> for &BigNum {
     }
 }
 
+impl Mul<u64> for BigNum {
+    type Output = BigNum;
+
+    fn mul(self, rhs: u64) -> Self::Output {
+        BigNum::new(&bn_mul_by_u64_vartime(&self.to_le_words(), rhs))
+    }
+}
+
 impl Mul<&BigNum> for &BigNum {
     type Output = BigNum;
 
     fn mul(self, rhs: &BigNum) -> Self::Output {
         BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl Mul<BigNum> for &BigNum {
+    type Output = BigNum;
+
+    fn mul(self, rhs: BigNum) -> Self::Output {
+        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl Mul<&BigNum> for BigNum {
+    type Output = BigNum;
+
+    fn mul(self, rhs: &BigNum) -> Self::Output {
+        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl Mul<BigNum> for BigNum {
+    type Output = BigNum;
+
+    fn mul(self, rhs: BigNum) -> Self::Output {
+        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    }
+}
+
+impl MulAssign<&BigNum> for BigNum {
+    fn mul_assign(&mut self, rhs: &BigNum) {
+        let le_words = bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words());
+        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
+    }
+}
+
+impl MulAssign<BigNum> for BigNum {
+    fn mul_assign(&mut self, rhs: BigNum) {
+        let le_words = bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words());
+        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
     }
 }
 

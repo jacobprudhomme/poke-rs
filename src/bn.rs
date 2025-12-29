@@ -1,11 +1,11 @@
 use core::{
-    cmp, fmt,
+    fmt,
     ops::{Add, AddAssign, Mul, MulAssign},
 };
 
 use isogeny::utilities::bn::{
-    bn_add_vartime, bn_bit_length_vartime, bn_from_le_bytes, bn_mul_by_u64_vartime, bn_mul_vartime,
-    factorisation_to_bn_vartime, prime_power_to_bn_vartime,
+    bn_add_vartime, bn_bit_length_vartime, bn_from_le_bytes_vartime, bn_mul_by_u64_vartime,
+    bn_mul_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
 use num_bigint::BigUint;
 
@@ -91,7 +91,7 @@ impl BigNum {
     }
 
     pub fn to_le_words(&self) -> Vec<u64> {
-        bn_from_le_bytes(&self.repr, self.bitlen)
+        bn_from_le_bytes_vartime(&self.repr, self.bitlen)
     }
 
     pub fn nbits(&self) -> usize {

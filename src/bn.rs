@@ -1,8 +1,7 @@
 use core::{
-    fmt,
-    ops::{Add, Mul},
+    cmp, fmt,
+    ops::{Add, AddAssign, Mul, MulAssign},
 };
-use std::ops::{AddAssign, MulAssign};
 
 use isogeny::utilities::bn::{
     bn_add_vartime, bn_bit_length_vartime, bn_from_le_bytes, bn_mul_by_u64_vartime, bn_mul_vartime,

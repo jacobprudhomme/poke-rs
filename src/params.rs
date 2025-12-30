@@ -139,7 +139,7 @@ pub mod poke_i {
             .collect::<Vec<_>>();
 
         PublicParams {
-            starting_curve: Curve::new(&PokeFieldI::from_i32(0)),
+            starting_curve: Curve::new(&PokeFieldI::ZERO),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
@@ -158,8 +158,6 @@ pub mod poke_i {
 }
 
 pub mod poke_iii {
-    use num_bigint::BigUint;
-
     use super::*;
     use crate::{
         fields::{PokeFieldIII, PokeFieldIIIBase},
@@ -323,12 +321,7 @@ pub mod poke_iii {
             &PointX::from_x_coord(&PQ_X),
         );
 
-        // FIXME: There seems to be a bug in isogeny::utilities::bn::prime_power_to_bn_vartime()
-        let three_torsion_order = BigNum::new(
-            &BigUint::from(3u8)
-                .pow(THREE_TORSION_EXP as u32)
-                .to_u64_digits(),
-        );
+        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
@@ -348,7 +341,7 @@ pub mod poke_iii {
             .collect::<Vec<_>>();
 
         PublicParams {
-            starting_curve: Curve::new(&PokeFieldIII::from_i32(0)),
+            starting_curve: Curve::new(&PokeFieldIII::ZERO),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
@@ -568,7 +561,7 @@ pub mod poke_v {
             .collect::<Vec<_>>();
 
         PublicParams {
-            starting_curve: Curve::new(&PokeFieldV::from_i32(0)),
+            starting_curve: Curve::new(&PokeFieldV::ZERO),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
@@ -675,7 +668,7 @@ pub mod inke_i {
         );
 
         PublicParams {
-            starting_curve: Curve::new(&InkeFieldI::from_i32(0)),
+            starting_curve: Curve::new(&InkeFieldI::ZERO),
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
             three_torsion_exp: THREE_TORSION_EXP,

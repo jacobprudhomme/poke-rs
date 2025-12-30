@@ -13,14 +13,14 @@ use poke::{
     },
 };
 
-fn multiply_basis_by_scalars<Fp2: Fp2Trait>(
+fn multiply_basis_by_scalars<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &(Point<Fp2>, Point<Fp2>),
-    s1: &BigNum,
-    s2: &BigNum,
+    s1: &BigNum<NUM_WORDS>,
+    s2: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
-    let masked_P = curve.mul(&basis.0, s1.as_le_bytes(), s1.nbits());
-    let masked_Q = curve.mul(&basis.1, s2.as_le_bytes(), s2.nbits());
+    let masked_P = curve.mul(&basis.0, &s1.to_le_bytes(), s1.nbits());
+    let masked_Q = curve.mul(&basis.1, &s2.to_le_bytes(), s2.nbits());
     let masked_PQ = curve.sub(&masked_P, &masked_Q);
 
     BasisX::from_points(
@@ -30,18 +30,18 @@ fn multiply_basis_by_scalars<Fp2: Fp2Trait>(
     )
 }
 
-fn multiply_basis_by_scalar_matrix<Fp2: Fp2Trait>(
+fn multiply_basis_by_scalar_matrix<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &(Point<Fp2>, Point<Fp2>),
-    S: &[[BigNum; 2]; 2],
+    S: &[[BigNum<NUM_WORDS>; 2]; 2],
 ) -> BasisX<Fp2> {
     let masked_P = curve.add(
-        &curve.mul(&basis.0, S[0][0].as_le_bytes(), S[0][0].nbits()),
-        &curve.mul(&basis.1, S[0][1].as_le_bytes(), S[0][1].nbits()),
+        &curve.mul(&basis.0, &S[0][0].to_le_bytes(), S[0][0].nbits()),
+        &curve.mul(&basis.1, &S[0][1].to_le_bytes(), S[0][1].nbits()),
     );
     let masked_Q = curve.add(
-        &curve.mul(&basis.0, S[1][0].as_le_bytes(), S[1][0].nbits()),
-        &curve.mul(&basis.1, S[1][1].as_le_bytes(), S[1][1].nbits()),
+        &curve.mul(&basis.0, &S[1][0].to_le_bytes(), S[1][0].nbits()),
+        &curve.mul(&basis.1, &S[1][1].to_le_bytes(), S[1][1].nbits()),
     );
     let masked_PQ = curve.sub(&masked_P, &masked_Q);
 
@@ -52,45 +52,48 @@ fn multiply_basis_by_scalar_matrix<Fp2: Fp2Trait>(
     )
 }
 
-fn multiply_xonly_basis_by_same_scalar_xmul<Fp2: Fp2Trait>(
+fn multiply_xonly_basis_by_same_scalar_xmul<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,
-    s: &BigNum,
+    s: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
-    let masked_xP = curve.xmul(&basis.P, s.as_le_bytes(), s.nbits());
-    let masked_xQ = curve.xmul(&basis.Q, s.as_le_bytes(), s.nbits());
-    let masked_xPQ = curve.xmul(&basis.PQ, s.as_le_bytes(), s.nbits());
+    let masked_xP = curve.xmul(&basis.P, &s.to_le_bytes(), s.nbits());
+    let masked_xQ = curve.xmul(&basis.Q, &s.to_le_bytes(), s.nbits());
+    let masked_xPQ = curve.xmul(&basis.PQ, &s.to_le_bytes(), s.nbits());
 
     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
 }
 
-// fn multiply_xonly_basis_by_same_scalar_projective_difference<Fp2: Fp2Trait>(
+// fn multiply_xonly_basis_by_same_scalar_projective_difference<
+//     Fp2: Fp2Trait,
+//     const NUM_WORDS: usize,
+// >(
 //     curve: &Curve<Fp2>,
 //     basis: &BasisX<Fp2>,
-//     s: &BigNum,
+//     s: &BigNum<NUM_WORDS>,
 // ) -> BasisX<Fp2> {
-//     let masked_xP = curve.xmul(&basis.P, s.as_le_bytes(), s.nbits());
-//     let masked_xPQ = curve.xmul(&basis.PQ, s.as_le_bytes(), s.nbits());
+//     let masked_xP = curve.xmul(&basis.P, &s.to_le_bytes(), s.nbits());
+//     let masked_xPQ = curve.xmul(&basis.PQ, &s.to_le_bytes(), s.nbits());
 //     let masked_xQ = curve.projective_difference(&masked_xP, &masked_xPQ);
 
 //     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
 // }
 
-fn multiply_xonly_basis_by_scalars_flipped_Q_basis<Fp2: Fp2Trait>(
+fn multiply_xonly_basis_by_scalars_flipped_Q_basis<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,
-    s1: &BigNum,
-    s2: &BigNum,
+    s1: &BigNum<NUM_WORDS>,
+    s2: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
     let xPpQ = Curve::<Fp2>::xdiff_add(&basis.P, &basis.Q, &basis.PQ);
     let basis_flipped_Q = BasisX::from_points(&basis.P, &basis.Q, &xPpQ);
 
-    let masked_xP = curve.xmul(&basis.P, s1.as_le_bytes(), s1.nbits());
-    let masked_xQ = curve.xmul(&basis.Q, s2.as_le_bytes(), s2.nbits());
+    let masked_xP = curve.xmul(&basis.P, &s1.to_le_bytes(), s1.nbits());
+    let masked_xQ = curve.xmul(&basis.Q, &s2.to_le_bytes(), s2.nbits());
     let masked_xPQ = curve.ladder_biscalar(
         &basis_flipped_Q,
-        s1.as_le_bytes(),
-        s2.as_le_bytes(),
+        &s1.to_le_bytes(),
+        &s2.to_le_bytes(),
         s1.nbits(),
         s2.nbits(),
     );
@@ -98,23 +101,23 @@ fn multiply_xonly_basis_by_scalars_flipped_Q_basis<Fp2: Fp2Trait>(
     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
 }
 
-fn multiply_xonly_basis_by_scalars_negate_second_scalar<Fp2: Fp2Trait>(
+fn multiply_xonly_basis_by_scalars_negate_second_scalar<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,
-    s1: &BigNum,
-    s2: &BigNum,
-    modulus: &BigNum,
+    s1: &BigNum<NUM_WORDS>,
+    s2: &BigNum<NUM_WORDS>,
+    modulus: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
     let s2_neg =
-        BigUint::from_bytes_le(modulus.as_le_bytes()) - BigUint::from_bytes_le(s2.as_le_bytes());
-    let s2_neg = BigNum::new(&s2_neg.to_u64_digits());
+        BigUint::from_bytes_le(&modulus.to_le_bytes()) - BigUint::from_bytes_le(&s2.to_le_bytes());
+    let s2_neg = BigNum::<NUM_WORDS>::new(&s2_neg.to_u64_digits());
 
-    let masked_xP = curve.xmul(&basis.P, s1.as_le_bytes(), s1.nbits());
-    let masked_xQ = curve.xmul(&basis.Q, s2.as_le_bytes(), s2.nbits());
+    let masked_xP = curve.xmul(&basis.P, &s1.to_le_bytes(), s1.nbits());
+    let masked_xQ = curve.xmul(&basis.Q, &s2.to_le_bytes(), s2.nbits());
     let masked_xPQ = curve.ladder_biscalar(
         &basis,
-        s1.as_le_bytes(),
-        s2_neg.as_le_bytes(),
+        &s1.to_le_bytes(),
+        &s2_neg.to_le_bytes(),
         s1.nbits(),
         s2_neg.nbits(),
     );
@@ -122,70 +125,76 @@ fn multiply_xonly_basis_by_scalars_negate_second_scalar<Fp2: Fp2Trait>(
     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
 }
 
-fn multiply_xonly_basis_by_scalars_using_invert_first_scalar<Fp2: Fp2Trait>(
+fn multiply_xonly_basis_by_scalars_using_invert_first_scalar<
+    Fp2: Fp2Trait,
+    const NUM_WORDS: usize,
+>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,
-    s1: &BigNum,
-    s2: &BigNum,
-    modulus: &BigNum,
+    s1: &BigNum<NUM_WORDS>,
+    s2: &BigNum<NUM_WORDS>,
+    modulus: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
     // SAFETY: we expect units as input, just as in the protocol
-    let s1_inv_neg = BigUint::from_bytes_le(modulus.as_le_bytes())
-        - BigUint::from_bytes_le(s1.as_le_bytes())
-            .modinv(&BigUint::from_bytes_le(modulus.as_le_bytes()))
+    let s1_inv_neg = BigUint::from_bytes_le(&modulus.to_le_bytes())
+        - BigUint::from_bytes_le(&s1.to_le_bytes())
+            .modinv(&BigUint::from_bytes_le(&modulus.to_le_bytes()))
             .unwrap();
     let s1_inv_neg = BigNum::new(&s1_inv_neg.to_u64_digits());
     let s1_inv_neg_s2 = s1_inv_neg * s2;
 
-    let masked_xP = curve.xmul(&basis.P, s1.as_le_bytes(), s1.nbits());
-    let masked_xQ = curve.xmul(&basis.Q, s2.as_le_bytes(), s2.nbits());
+    let masked_xP = curve.xmul(&basis.P, &s1.to_le_bytes(), s1.nbits());
+    let masked_xQ = curve.xmul(&basis.Q, &s2.to_le_bytes(), s2.nbits());
 
-    let scaled_xQ = curve.xmul(&basis.Q, s1.as_le_bytes(), s1.nbits());
-    let scaled_xPQ = curve.xmul(&basis.PQ, s1.as_le_bytes(), s1.nbits());
+    let scaled_xQ = curve.xmul(&basis.Q, &s1.to_le_bytes(), s1.nbits());
+    let scaled_xPQ = curve.xmul(&basis.PQ, &s1.to_le_bytes(), s1.nbits());
     let scaled_basis = BasisX::from_points(&masked_xP, &scaled_xQ, &scaled_xPQ);
 
     let masked_xPQ = curve.three_point_ladder(
         &scaled_basis,
-        s1_inv_neg_s2.as_le_bytes(),
+        &s1_inv_neg_s2.to_le_bytes(),
         s1_inv_neg_s2.nbits(),
     );
 
     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
 }
 
-fn multiply_xonly_basis_by_scalar_matrix_scalar_difference<Fp2: Fp2Trait>(
+fn multiply_xonly_basis_by_scalar_matrix_scalar_difference<
+    Fp2: Fp2Trait,
+    const NUM_WORDS: usize,
+>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,
-    S: &[[BigNum; 2]; 2],
-    modulus: &BigNum,
+    S: &[[BigNum<NUM_WORDS>; 2]; 2],
+    modulus: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
-    let s_diff1 = BigUint::from_bytes_le(S[0][0].as_le_bytes())
-        + (BigUint::from_bytes_le(modulus.as_le_bytes())
-            - BigUint::from_bytes_le(S[1][0].as_le_bytes()));
-    let s_diff2 = BigUint::from_bytes_le(S[0][1].as_le_bytes())
-        + (BigUint::from_bytes_le(modulus.as_le_bytes())
-            - BigUint::from_bytes_le(S[1][1].as_le_bytes()));
-    let s_diff1 = BigNum::new(&s_diff1.to_u64_digits());
-    let s_diff2 = BigNum::new(&s_diff2.to_u64_digits());
+    let s_diff1 = BigUint::from_bytes_le(&S[0][0].to_le_bytes())
+        + (BigUint::from_bytes_le(&modulus.to_le_bytes())
+            - BigUint::from_bytes_le(&S[1][0].to_le_bytes()));
+    let s_diff2 = BigUint::from_bytes_le(&S[0][1].to_le_bytes())
+        + (BigUint::from_bytes_le(&modulus.to_le_bytes())
+            - BigUint::from_bytes_le(&S[1][1].to_le_bytes()));
+    let s_diff1 = BigNum::<NUM_WORDS>::new(&s_diff1.to_u64_digits());
+    let s_diff2 = BigNum::<NUM_WORDS>::new(&s_diff2.to_u64_digits());
 
     let masked_xP = curve.ladder_biscalar(
         basis,
-        S[0][0].as_le_bytes(),
-        S[0][1].as_le_bytes(),
+        &S[0][0].to_le_bytes(),
+        &S[0][1].to_le_bytes(),
         S[0][0].nbits(),
         S[0][1].nbits(),
     );
     let masked_xQ = curve.ladder_biscalar(
         basis,
-        S[1][0].as_le_bytes(),
-        S[1][1].as_le_bytes(),
+        &S[1][0].to_le_bytes(),
+        &S[1][1].to_le_bytes(),
         S[1][0].nbits(),
         S[1][1].nbits(),
     );
     let masked_xPQ = curve.ladder_biscalar(
         basis,
-        s_diff1.as_le_bytes(),
-        s_diff2.as_le_bytes(),
+        &s_diff1.to_le_bytes(),
+        &s_diff2.to_le_bytes(),
         s_diff1.nbits(),
         s_diff2.nbits(),
     );
@@ -193,39 +202,39 @@ fn multiply_xonly_basis_by_scalar_matrix_scalar_difference<Fp2: Fp2Trait>(
     BasisX::from_points(&masked_xP, &masked_xQ, &masked_xPQ)
 }
 
-fn special_case_multiply_basis_by_scalar_matrix<Fp2: Fp2Trait>(
+fn special_case_multiply_basis_by_scalar_matrix<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &(Point<Fp2>, Point<Fp2>),
-    S: &[[BigNum; 2]; 2],
+    S: &[[BigNum<NUM_WORDS>; 2]; 2],
 ) -> (PointX<Fp2>, PointX<Fp2>) {
     let masked_P = curve.add(
-        &curve.mul(&basis.0, S[0][0].as_le_bytes(), S[0][0].nbits()),
-        &curve.mul(&basis.1, S[0][1].as_le_bytes(), S[0][1].nbits()),
+        &curve.mul(&basis.0, &S[0][0].to_le_bytes(), S[0][0].nbits()),
+        &curve.mul(&basis.1, &S[0][1].to_le_bytes(), S[0][1].nbits()),
     );
     let masked_Q = curve.add(
-        &curve.mul(&basis.0, S[1][0].as_le_bytes(), S[1][0].nbits()),
-        &curve.mul(&basis.1, S[1][1].as_le_bytes(), S[1][1].nbits()),
+        &curve.mul(&basis.0, &S[1][0].to_le_bytes(), S[1][0].nbits()),
+        &curve.mul(&basis.1, &S[1][1].to_le_bytes(), S[1][1].nbits()),
     );
 
     (masked_P.to_pointx(), masked_Q.to_pointx())
 }
 
-fn special_case_multiply_xonly_basis_by_scalar_matrix<Fp2: Fp2Trait>(
+fn special_case_multiply_xonly_basis_by_scalar_matrix<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,
-    S: &[[BigNum; 2]; 2],
+    S: &[[BigNum<NUM_WORDS>; 2]; 2],
 ) -> (PointX<Fp2>, PointX<Fp2>) {
     let masked_xP = curve.ladder_biscalar(
         basis,
-        S[0][0].as_le_bytes(),
-        S[0][1].as_le_bytes(),
+        &S[0][0].to_le_bytes(),
+        &S[0][1].to_le_bytes(),
         S[0][0].nbits(),
         S[0][1].nbits(),
     );
     let masked_xQ = curve.ladder_biscalar(
         basis,
-        S[1][0].as_le_bytes(),
-        S[1][1].as_le_bytes(),
+        &S[1][0].to_le_bytes(),
+        &S[1][1].to_le_bytes(),
         S[1][0].nbits(),
         S[1][1].nbits(),
     );
@@ -245,12 +254,20 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let s_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = &params_i.full_two_torsion_order * &params_i.five_torsion_order;
-    let cofactor_iii = &params_iii.full_two_torsion_order
-        * &params_iii.five_torsion_order
-        * BigNum::from_prime_power(7, 2);
-    let cofactor_v =
-        &params_v.full_two_torsion_order * &params_v.five_torsion_order * BigNum::from_prime(547);
+    let cofactor_i = BigNum::<3>::from_prime_factors(&[
+        (2, params_i.full_two_torsion_exp),
+        (5, params_i.five_torsion_exp),
+    ]);
+    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
+        (2, params_iii.full_two_torsion_exp),
+        (5, params_iii.five_torsion_exp),
+        (7, 2),
+    ]);
+    let cofactor_v = BigNum::<6>::from_prime_factors(&[
+        (2, params_v.full_two_torsion_exp),
+        (5, params_v.five_torsion_exp),
+        (547, 1),
+    ]);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(
@@ -411,12 +428,20 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let s2_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = &params_i.full_two_torsion_order * &params_i.five_torsion_order;
-    let cofactor_iii = &params_iii.full_two_torsion_order
-        * &params_iii.five_torsion_order
-        * BigNum::from_prime_power(7, 2);
-    let cofactor_v =
-        &params_v.full_two_torsion_order * &params_v.five_torsion_order * BigNum::from_prime(547);
+    let cofactor_i = BigNum::<3>::from_prime_factors(&[
+        (2, params_i.full_two_torsion_exp),
+        (5, params_i.five_torsion_exp),
+    ]);
+    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
+        (2, params_iii.full_two_torsion_exp),
+        (5, params_iii.five_torsion_exp),
+        (7, 2),
+    ]);
+    let cofactor_v = BigNum::<6>::from_prime_factors(&[
+        (2, params_v.full_two_torsion_exp),
+        (5, params_v.five_torsion_exp),
+        (547, 1),
+    ]);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(
@@ -634,12 +659,20 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = &params_i.full_two_torsion_order * &params_i.five_torsion_order;
-    let cofactor_iii = &params_iii.full_two_torsion_order
-        * &params_iii.five_torsion_order
-        * BigNum::from_prime_power(7, 2);
-    let cofactor_v =
-        &params_v.full_two_torsion_order * &params_v.five_torsion_order * BigNum::from_prime(547);
+    let cofactor_i = BigNum::<3>::from_prime_factors(&[
+        (2, params_i.full_two_torsion_exp),
+        (5, params_i.five_torsion_exp),
+    ]);
+    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
+        (2, params_iii.full_two_torsion_exp),
+        (5, params_iii.five_torsion_exp),
+        (7, 2),
+    ]);
+    let cofactor_v = BigNum::<6>::from_prime_factors(&[
+        (2, params_v.full_two_torsion_exp),
+        (5, params_v.five_torsion_exp),
+        (547, 1),
+    ]);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(
@@ -779,12 +812,20 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = &params_i.full_two_torsion_order * &params_i.five_torsion_order;
-    let cofactor_iii = &params_iii.full_two_torsion_order
-        * &params_iii.five_torsion_order
-        * BigNum::from_prime_power(7, 2);
-    let cofactor_v =
-        &params_v.full_two_torsion_order * &params_v.five_torsion_order * BigNum::from_prime(547);
+    let cofactor_i = BigNum::<3>::from_prime_factors(&[
+        (2, params_i.full_two_torsion_exp),
+        (5, params_i.five_torsion_exp),
+    ]);
+    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
+        (2, params_iii.full_two_torsion_exp),
+        (5, params_iii.five_torsion_exp),
+        (7, 2),
+    ]);
+    let cofactor_v = BigNum::<6>::from_prime_factors(&[
+        (2, params_v.full_two_torsion_exp),
+        (5, params_v.five_torsion_exp),
+        (547, 1),
+    ]);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(

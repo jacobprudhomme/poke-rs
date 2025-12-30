@@ -14,7 +14,23 @@ use rstest::rstest;
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn starting_curve_has_j_invariant_1728<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
+fn starting_curve_has_j_invariant_1728<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    #[case] params: PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
+) {
     assert_eq!(
         params
             .starting_curve
@@ -29,13 +45,29 @@ fn starting_curve_has_j_invariant_1728<Fp2: Fp2Trait>(#[case] params: PublicPara
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn torsion_basis_points_have_correct_order<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
-    let reduced_three_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.three_torsion_order.as_le_bytes()) / BigUint::from(3u8))
+fn torsion_basis_points_have_correct_order<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    #[case] params: PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
+) {
+    let reduced_three_torsion_order = BigNum::<NUM_WORDS_3>::new(
+        &(BigUint::from_bytes_le(&params.three_torsion_order.to_le_bytes()) / BigUint::from(3u8))
             .to_u64_digits(),
     );
-    let reduced_five_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.five_torsion_order.as_le_bytes()) / BigUint::from(5u8))
+    let reduced_five_torsion_order = BigNum::<NUM_WORDS_5>::new(
+        &(BigUint::from_bytes_le(&params.five_torsion_order.to_le_bytes()) / BigUint::from(5u8))
             .to_u64_digits(),
     );
 
@@ -66,17 +98,17 @@ fn torsion_basis_points_have_correct_order<Fp2: Fp2Trait>(#[case] params: Public
     // Ensure [3^b] * (R, S, R - S) = O, and [3^b - 1] * (R, S, R - S) != O
     let xR_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.P,
-        reduced_three_torsion_order.as_le_bytes(),
+        &reduced_three_torsion_order.to_le_bytes(),
         reduced_three_torsion_order.nbits(),
     );
     let xS_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.Q,
-        reduced_three_torsion_order.as_le_bytes(),
+        &reduced_three_torsion_order.to_le_bytes(),
         reduced_three_torsion_order.nbits(),
     );
     let xRS_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.PQ,
-        reduced_three_torsion_order.as_le_bytes(),
+        &reduced_three_torsion_order.to_le_bytes(),
         reduced_three_torsion_order.nbits(),
     );
     assert_eq!(xR_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -85,17 +117,17 @@ fn torsion_basis_points_have_correct_order<Fp2: Fp2Trait>(#[case] params: Public
 
     let xR_times_order = params.starting_curve.xmul(
         &params.three_torsion_basis.P,
-        params.three_torsion_order.as_le_bytes(),
+        &params.three_torsion_order.to_le_bytes(),
         params.three_torsion_order.nbits(),
     );
     let xS_times_order = params.starting_curve.xmul(
         &params.three_torsion_basis.Q,
-        params.three_torsion_order.as_le_bytes(),
+        &params.three_torsion_order.to_le_bytes(),
         params.three_torsion_order.nbits(),
     );
     let xRS_times_order = params.starting_curve.xmul(
         &params.three_torsion_basis.PQ,
-        params.three_torsion_order.as_le_bytes(),
+        &params.three_torsion_order.to_le_bytes(),
         params.three_torsion_order.nbits(),
     );
     assert_eq!(xR_times_order.is_zero(), SUCCESS_RETVAL);
@@ -105,17 +137,17 @@ fn torsion_basis_points_have_correct_order<Fp2: Fp2Trait>(#[case] params: Public
     // Ensure [5^c] * (X, Y, X - Y) = O and [5^c - 1] * (X, Y, X - Y) != O
     let xX_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.P,
-        reduced_five_torsion_order.as_le_bytes(),
+        &reduced_five_torsion_order.to_le_bytes(),
         reduced_five_torsion_order.nbits(),
     );
     let xY_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.Q,
-        reduced_five_torsion_order.as_le_bytes(),
+        &reduced_five_torsion_order.to_le_bytes(),
         reduced_five_torsion_order.nbits(),
     );
     let xXY_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.PQ,
-        reduced_five_torsion_order.as_le_bytes(),
+        &reduced_five_torsion_order.to_le_bytes(),
         reduced_five_torsion_order.nbits(),
     );
     assert_eq!(xX_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -124,17 +156,17 @@ fn torsion_basis_points_have_correct_order<Fp2: Fp2Trait>(#[case] params: Public
 
     let xX_times_order = params.starting_curve.xmul(
         &params.five_torsion_basis.P,
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     let xY_times_order = params.starting_curve.xmul(
         &params.five_torsion_basis.Q,
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     let xXY_times_order = params.starting_curve.xmul(
         &params.five_torsion_basis.PQ,
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     assert_eq!(xX_times_order.is_zero(), SUCCESS_RETVAL);
@@ -146,7 +178,23 @@ fn torsion_basis_points_have_correct_order<Fp2: Fp2Trait>(#[case] params: Public
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn torsion_basis_points_are_on_curve<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
+fn torsion_basis_points_are_on_curve<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    #[case] params: PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
+) {
     // Check (P, Q, P - Q), a basis of the 2^a-torsion
     assert_eq!(
         params
@@ -221,17 +269,34 @@ fn torsion_basis_points_are_on_curve<Fp2: Fp2Trait>(#[case] params: PublicParams
 #[case::poke_level_i(poke_i::get_params())]
 #[case::poke_level_iii(poke_iii::get_params())]
 #[case::poke_level_v(poke_v::get_params())]
-fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: PublicParams<Fp2>) {
-    let reduced_full_two_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.full_two_torsion_order.as_le_bytes()) / BigUint::from(2u8))
+fn torsion_basis_points_are_linearly_independent<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    #[case] params: PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
+) {
+    let reduced_full_two_torsion_order = BigNum::<NUM_WORDS_2>::new(
+        &(BigUint::from_bytes_le(&params.full_two_torsion_order.to_le_bytes())
+            / BigUint::from(2u8))
+        .to_u64_digits(),
+    );
+    let reduced_three_torsion_order = BigNum::<NUM_WORDS_3>::new(
+        &(BigUint::from_bytes_le(&params.three_torsion_order.to_le_bytes()) / BigUint::from(3u8))
             .to_u64_digits(),
     );
-    let reduced_three_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.three_torsion_order.as_le_bytes()) / BigUint::from(3u8))
-            .to_u64_digits(),
-    );
-    let reduced_five_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.five_torsion_order.as_le_bytes()) / BigUint::from(5u8))
+    let reduced_five_torsion_order = BigNum::<NUM_WORDS_5>::new(
+        &(BigUint::from_bytes_le(&params.five_torsion_order.to_le_bytes()) / BigUint::from(5u8))
             .to_u64_digits(),
     );
 
@@ -244,7 +309,7 @@ fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: 
     );
     assert_eq!(
         pair.pow(
-            reduced_full_two_torsion_order.as_le_bytes(),
+            &reduced_full_two_torsion_order.to_le_bytes(),
             reduced_full_two_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -252,7 +317,7 @@ fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: 
     );
     assert_eq!(
         pair.pow(
-            params.full_two_torsion_order.as_le_bytes(),
+            &params.full_two_torsion_order.to_le_bytes(),
             params.full_two_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -264,12 +329,12 @@ fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: 
         &params.three_torsion_basis.P.x(),
         &params.three_torsion_basis.Q.x(),
         &params.three_torsion_basis.PQ.x(),
-        params.three_torsion_order.as_le_bytes(),
+        &params.three_torsion_order.to_le_bytes(),
         params.three_torsion_order.nbits(),
     );
     assert_eq!(
         pair.pow(
-            reduced_three_torsion_order.as_le_bytes(),
+            &reduced_three_torsion_order.to_le_bytes(),
             reduced_three_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -277,7 +342,7 @@ fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: 
     );
     assert_eq!(
         pair.pow(
-            params.three_torsion_order.as_le_bytes(),
+            &params.three_torsion_order.to_le_bytes(),
             params.three_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -289,12 +354,12 @@ fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: 
         &params.five_torsion_basis.P.x(),
         &params.five_torsion_basis.Q.x(),
         &params.five_torsion_basis.PQ.x(),
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     assert_eq!(
         pair.pow(
-            reduced_five_torsion_order.as_le_bytes(),
+            &reduced_five_torsion_order.to_le_bytes(),
             reduced_five_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -302,7 +367,7 @@ fn torsion_basis_points_are_linearly_independent<Fp2: Fp2Trait>(#[case] params: 
     );
     assert_eq!(
         pair.pow(
-            params.five_torsion_order.as_le_bytes(),
+            &params.five_torsion_order.to_le_bytes(),
             params.five_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),

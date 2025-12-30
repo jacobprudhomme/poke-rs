@@ -21,29 +21,36 @@ use crate::{
     },
 };
 
-pub struct PublicParams<Fp2: Fp2Trait> {
+pub struct PublicParams<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+> {
     pub starting_curve: Curve<Fp2>,
-    pub full_two_torsion_order: BigNum,
+    pub full_two_torsion_order: BigNum<NUM_WORDS_2>,
     pub full_two_torsion_exp: usize,
-    pub effective_two_torsion_order: BigNum,
+    pub effective_two_torsion_order: BigNum<NUM_WORDS_2>,
     pub effective_two_torsion_exp: usize,
-    pub three_torsion_order: BigNum,
+    pub three_torsion_order: BigNum<NUM_WORDS_3>,
     pub three_torsion_exp: usize,
-    pub five_torsion_order: BigNum,
+    pub five_torsion_order: BigNum<NUM_WORDS_5>,
     pub five_torsion_exp: usize,
-    pub five_torsion_cofactor: BigNum,
+    pub five_torsion_cofactor: BigNum<NUM_WORDS_COF>,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
     pub five_torsion_basis: BasisX<Fp2>,
-    pub five_adic_basis: Vec<BigNum>,
+    pub five_adic_basis: Vec<BigNum<NUM_WORDS_5>>,
 }
 
 // FIXME: represent scalars as their LE byte arrays and bitsize. Removes external dependency on num-bigint
-pub struct PrvKey<Fp2: Fp2Trait> {
-    pub q: BigNum,
-    pub alpha: BigNum,
-    pub beta: BigNum,
-    pub delta: BigNum,
+pub struct PrvKey<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_5: usize> {
+    pub q: BigNum<NUM_WORDS_2>,
+    pub alpha: BigNum<NUM_WORDS_2>,
+    pub beta: BigNum<NUM_WORDS_2>,
+    pub delta: BigNum<NUM_WORDS_5>,
     pub _field: PhantomData<Fp2>,
 }
 
@@ -63,8 +70,22 @@ pub struct Ciphertext<Fp2: Fp2Trait> {
     pub encrypted_message: Vec<u8>,
 }
 
-pub fn encrypt<Fp2: Fp2Trait>(
-    pub_params: &PublicParams<Fp2>,
+pub fn encrypt<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
     pub_key: &PubKey<Fp2>,
     message: &[u8],
 ) -> (Ciphertext<Fp2>, u32)
@@ -93,12 +114,12 @@ where
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>) and psi' (<R_A + [r] S_A>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
-        r.as_le_bytes(),
+        &r.to_le_bytes(),
         r.nbits(),
     );
     let psi_prime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
-        r.as_le_bytes(),
+        &r.to_le_bytes(),
         r.nbits(),
     );
 
@@ -121,8 +142,8 @@ where
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
     let (X_B, Y_B) = codomain_curve.lift_basis(&five_torsion_basis_EB);
 
-    let masked_P_B = codomain_curve.mul(&P_B, omega1.as_le_bytes(), omega1.nbits());
-    let masked_Q_B = codomain_curve.mul(&Q_B, omega2.as_le_bytes(), omega2.nbits());
+    let masked_P_B = codomain_curve.mul(&P_B, &omega1.to_le_bytes(), omega1.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, &omega2.to_le_bytes(), omega2.nbits());
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
     let masked_two_torsion_basis_EB = BasisX::from_points(
         &masked_P_B.to_pointx(),
@@ -131,12 +152,12 @@ where
     );
 
     let masked_X_B = codomain_curve.add(
-        &codomain_curve.mul(&X_B, D[0][0].as_le_bytes(), D[0][0].nbits()),
-        &codomain_curve.mul(&Y_B, D[0][1].as_le_bytes(), D[0][1].nbits()),
+        &codomain_curve.mul(&X_B, &D[0][0].to_le_bytes(), D[0][0].nbits()),
+        &codomain_curve.mul(&Y_B, &D[0][1].to_le_bytes(), D[0][1].nbits()),
     );
     let masked_Y_B = codomain_curve.add(
-        &codomain_curve.mul(&X_B, D[1][0].as_le_bytes(), D[1][0].nbits()),
-        &codomain_curve.mul(&Y_B, D[1][1].as_le_bytes(), D[1][1].nbits()),
+        &codomain_curve.mul(&X_B, &D[1][0].to_le_bytes(), D[1][0].nbits()),
+        &codomain_curve.mul(&Y_B, &D[1][1].to_le_bytes(), D[1][1].nbits()),
     );
     let masked_XY_B = codomain_curve.sub(&masked_X_B, &masked_Y_B);
     let masked_five_torsion_basis_EB = BasisX::from_points(
@@ -164,8 +185,8 @@ where
     let five_torsion_basis_EAB = BasisX::from_slice(&torsion_bases_EAB[3..]);
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
 
-    let masked_P_AB = shared_end_curve.mul(&P_AB, omega1.as_le_bytes(), omega1.nbits());
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega2.as_le_bytes(), omega2.nbits());
+    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega1.to_le_bytes(), omega1.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega2.to_le_bytes(), omega2.nbits());
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
     let masked_two_torsion_basis_EAB = BasisX::from_points(
         &masked_P_AB.to_pointx(),
@@ -175,15 +196,15 @@ where
 
     let masked_xX_AB = shared_end_curve.ladder_biscalar(
         &five_torsion_basis_EAB,
-        D[0][0].as_le_bytes(),
-        D[0][1].as_le_bytes(),
+        &D[0][0].to_le_bytes(),
+        &D[0][1].to_le_bytes(),
         D[0][0].nbits(),
         D[0][1].nbits(),
     );
     let masked_xY_AB = shared_end_curve.ladder_biscalar(
         &five_torsion_basis_EAB,
-        D[1][0].as_le_bytes(),
-        D[1][1].as_le_bytes(),
+        &D[1][0].to_le_bytes(),
+        &D[1][1].to_le_bytes(),
         D[1][0].nbits(),
         D[1][1].nbits(),
     );
@@ -210,9 +231,23 @@ where
     (ct, retval)
 }
 
-pub fn decrypt<Fp2: Fp2Trait>(
-    pub_params: &PublicParams<Fp2>,
-    prv_key: &PrvKey<Fp2>,
+pub fn decrypt<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
+    prv_key: &PrvKey<Fp2, NUM_WORDS_2, NUM_WORDS_5>,
     ciphertext: &Ciphertext<Fp2>,
 ) -> (Vec<u8>, u32)
 where
@@ -221,9 +256,9 @@ where
     let mut retval = SUCCESS_RETVAL;
 
     // Factor that shows up in the application of the 2D-isogeny, from the dual that appears in the representation
-    let dual_factor = BigNum::new(
-        &(BigUint::from_bytes_le(pub_params.effective_two_torsion_order.as_le_bytes())
-            - BigUint::from_bytes_le(prv_key.q.as_le_bytes()))
+    let dual_factor = BigNum::<NUM_WORDS_2>::new(
+        &(BigUint::from_bytes_le(&pub_params.effective_two_torsion_order.to_le_bytes())
+            - BigUint::from_bytes_le(&prv_key.q.to_le_bytes()))
         .to_u64_digits(),
     );
 
@@ -232,17 +267,21 @@ where
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
 
+    // FIXME: This should involve modular reduction. It works without, because of the
+    // points' order, but modular reduction may be cheaper than additional multiplications
     let alpha_q = &prv_key.alpha * &prv_key.q;
     let mut scaled_P_B =
         ciphertext
             .codomain_curve
-            .mul(&P_B, alpha_q.as_le_bytes(), alpha_q.nbits());
+            .mul(&P_B, &alpha_q.to_le_bytes(), alpha_q.nbits());
     scaled_P_B.set_neg();
 
+    // FIXME: This should involve modular reduction. It works without, because of the
+    // points' order, but modular reduction may be cheaper than additional multiplications
     let beta_q = &prv_key.beta * &prv_key.q;
     let mut scaled_Q_B = ciphertext
         .codomain_curve
-        .mul(&Q_B, beta_q.as_le_bytes(), beta_q.nbits());
+        .mul(&Q_B, &beta_q.to_le_bytes(), beta_q.nbits());
     scaled_Q_B.set_neg();
 
     let (P_AB, Q_AB) = ciphertext
@@ -319,13 +358,13 @@ where
         &U_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &UV_aux_curve.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
     // Used to make a choice of scalar factor later
     // FIXME: if we're computing this in addition to the proper pairing, would it not be better to just
     // compute the pairing from the power of e(U,V) directly, and fix that in both keygen and decryption?
-    let eUV_power_q = eUV_AB.pow(prv_key.q.as_le_bytes(), prv_key.q.nbits());
+    let eUV_power_q = eUV_AB.pow(&prv_key.q.to_le_bytes(), prv_key.q.nbits());
     let eUV_aux_is_eUV_power_q = eUV_aux.equals(&eUV_power_q);
 
     // I suspect a discrepancy between Sage's Weil pairing and the one here
@@ -333,7 +372,7 @@ where
         &X_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &XV_aux_curve.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
 
@@ -342,7 +381,7 @@ where
         &X_aux_curve.to_pointx().x(),
         &mU_aux_curve.to_pointx().x(),
         &XmU_aux_curve.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
 
@@ -350,7 +389,7 @@ where
         &Y_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &YV_aux_curve.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
 
@@ -358,7 +397,7 @@ where
         &Y_aux_curve.to_pointx().x(),
         &mU_aux_curve.to_pointx().x(),
         &YmU_aux_curve.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
 
@@ -401,10 +440,10 @@ where
     // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, x.as_le_bytes(), x.nbits());
+        .mul_into(&mut X_aux_curve, &U, &x.to_le_bytes(), x.nbits());
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, y.as_le_bytes(), y.nbits());
+        .mul_into(&mut Y_aux_curve, &V, &y.to_le_bytes(), y.nbits());
     ciphertext
         .shared_end_curve
         .add_into(&mut XY_aux_curve, &X_aux_curve, &Y_aux_curve);
@@ -413,14 +452,14 @@ where
     ciphertext.shared_end_curve.mul_into(
         &mut U_aux_curve,
         &XY_aux_curve,
-        prv_key.q.as_le_bytes(),
+        &prv_key.q.to_le_bytes(),
         prv_key.q.nbits(),
     );
     // [2^(a-2) - q] * X_AB'
     ciphertext.shared_end_curve.mul_into(
         &mut V_aux_curve,
         &XY_aux_curve,
-        dual_factor.as_le_bytes(),
+        &dual_factor.to_le_bytes(),
         dual_factor.nbits(),
     );
     // Choose the appropriate one of the above points depending on whether
@@ -430,16 +469,16 @@ where
 
     let X_AB = ciphertext.shared_end_curve.mul(
         &UV_aux_curve,
-        prv_key.delta.as_le_bytes(),
+        &prv_key.delta.to_le_bytes(),
         prv_key.delta.nbits(),
     );
 
     ciphertext
         .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, w.as_le_bytes(), w.nbits());
+        .mul_into(&mut X_aux_curve, &U, &w.to_le_bytes(), w.nbits());
     ciphertext
         .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, z.as_le_bytes(), z.nbits());
+        .mul_into(&mut Y_aux_curve, &V, &z.to_le_bytes(), z.nbits());
     ciphertext
         .shared_end_curve
         .add_into(&mut XY_aux_curve, &X_aux_curve, &Y_aux_curve);
@@ -448,14 +487,14 @@ where
     ciphertext.shared_end_curve.mul_into(
         &mut U_aux_curve,
         &XY_aux_curve,
-        prv_key.q.as_le_bytes(),
+        &prv_key.q.to_le_bytes(),
         prv_key.q.nbits(),
     );
     // [2^(a-2) - q] * Y_AB'
     ciphertext.shared_end_curve.mul_into(
         &mut V_aux_curve,
         &XY_aux_curve,
-        dual_factor.as_le_bytes(),
+        &dual_factor.to_le_bytes(),
         dual_factor.nbits(),
     );
     // Choose the appropriate one of the above points depending on whether
@@ -465,7 +504,7 @@ where
 
     let Y_AB = ciphertext.shared_end_curve.mul(
         &UV_aux_curve,
-        prv_key.delta.as_le_bytes(),
+        &prv_key.delta.to_le_bytes(),
         prv_key.delta.nbits(),
     );
 

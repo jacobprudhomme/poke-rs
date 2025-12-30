@@ -30,8 +30,17 @@ fn encryption_test_data<Fp2: Fp2Trait>(
 }
 
 #[apply(encryption_test_data)]
-fn encryption_passes<Fp2: Fp2Trait>(params: PublicParams<Fp2>, pub_key: PubKey<Fp2>)
-where
+fn encryption_passes<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    params: PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>,
+    pub_key: PubKey<Fp2>,
+) where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
     let mut message = *MESSAGE;
@@ -42,8 +51,15 @@ where
 }
 
 #[apply(encryption_test_data)]
-fn message_and_ciphertext_have_same_length<Fp2: Fp2Trait>(
-    params: PublicParams<Fp2>,
+fn message_and_ciphertext_have_same_length<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    params: PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>,
     pub_key: PubKey<Fp2>,
 ) where
     [(); Fp2::ENCODED_LENGTH]: Sized,
@@ -56,18 +72,26 @@ fn message_and_ciphertext_have_same_length<Fp2: Fp2Trait>(
 }
 
 #[apply(encryption_test_data)]
-fn masked_image_points_have_correct_order<Fp2: Fp2Trait>(
-    params: PublicParams<Fp2>,
+fn masked_image_points_have_correct_order<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    params: PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>,
     pub_key: PubKey<Fp2>,
 ) where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
-    let reduced_full_two_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.full_two_torsion_order.as_le_bytes()) / BigUint::from(2u8))
-            .to_u64_digits(),
+    let reduced_full_two_torsion_order = BigNum::<NUM_WORDS_2>::new(
+        &(BigUint::from_bytes_le(&params.full_two_torsion_order.to_le_bytes())
+            / BigUint::from(2u8))
+        .to_u64_digits(),
     );
-    let reduced_five_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.five_torsion_order.as_le_bytes()) / BigUint::from(5u8))
+    let reduced_five_torsion_order = BigNum::<NUM_WORDS_5>::new(
+        &(BigUint::from_bytes_le(&params.five_torsion_order.to_le_bytes()) / BigUint::from(5u8))
             .to_u64_digits(),
     );
 
@@ -103,17 +127,17 @@ fn masked_image_points_have_correct_order<Fp2: Fp2Trait>(
     // Ensure [2^a] * (P_AB, Q_AB, P_AB - Q_AB) = O, and [2^a - 1] * (P_AB, Q_AB, P_AB - Q_AB) != O
     let xP_AB_times_one_less_than_order = ct.shared_end_curve.xmul(
         &ct.masked_two_torsion_basis_EAB.P,
-        reduced_full_two_torsion_order.as_le_bytes(),
+        &reduced_full_two_torsion_order.to_le_bytes(),
         reduced_full_two_torsion_order.nbits(),
     );
     let xQ_AB_times_one_less_than_order = ct.shared_end_curve.xmul(
         &ct.masked_two_torsion_basis_EAB.Q,
-        reduced_full_two_torsion_order.as_le_bytes(),
+        &reduced_full_two_torsion_order.to_le_bytes(),
         reduced_full_two_torsion_order.nbits(),
     );
     let xPQ_AB_times_one_less_than_order = ct.shared_end_curve.xmul(
         &ct.masked_two_torsion_basis_EAB.PQ,
-        reduced_full_two_torsion_order.as_le_bytes(),
+        &reduced_full_two_torsion_order.to_le_bytes(),
         reduced_full_two_torsion_order.nbits(),
     );
     assert_eq!(xP_AB_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -122,17 +146,17 @@ fn masked_image_points_have_correct_order<Fp2: Fp2Trait>(
 
     let xP_AB_times_order = ct.shared_end_curve.xmul(
         &ct.masked_two_torsion_basis_EAB.P,
-        params.full_two_torsion_order.as_le_bytes(),
+        &params.full_two_torsion_order.to_le_bytes(),
         params.full_two_torsion_order.nbits(),
     );
     let xQ_AB_times_order = ct.shared_end_curve.xmul(
         &ct.masked_two_torsion_basis_EAB.Q,
-        params.full_two_torsion_order.as_le_bytes(),
+        &params.full_two_torsion_order.to_le_bytes(),
         params.full_two_torsion_order.nbits(),
     );
     let xPQ_AB_times_order = ct.shared_end_curve.xmul(
         &ct.masked_two_torsion_basis_EAB.PQ,
-        params.full_two_torsion_order.as_le_bytes(),
+        &params.full_two_torsion_order.to_le_bytes(),
         params.full_two_torsion_order.nbits(),
     );
     assert_eq!(xP_AB_times_order.is_zero(), SUCCESS_RETVAL);
@@ -142,17 +166,17 @@ fn masked_image_points_have_correct_order<Fp2: Fp2Trait>(
     // Ensure [5^c] * (X_B, Y_B, X_B - Y_B) = O and [5^c - 1] * (X_B, Y_B, X_B - Y_B) != O
     let xX_times_one_less_than_order = ct.codomain_curve.xmul(
         &ct.masked_five_torsion_basis_EB.P,
-        reduced_five_torsion_order.as_le_bytes(),
+        &reduced_five_torsion_order.to_le_bytes(),
         reduced_five_torsion_order.nbits(),
     );
     let xY_times_one_less_than_order = ct.codomain_curve.xmul(
         &ct.masked_five_torsion_basis_EB.Q,
-        reduced_five_torsion_order.as_le_bytes(),
+        &reduced_five_torsion_order.to_le_bytes(),
         reduced_five_torsion_order.nbits(),
     );
     let xXY_times_one_less_than_order = ct.codomain_curve.xmul(
         &ct.masked_five_torsion_basis_EB.PQ,
-        reduced_five_torsion_order.as_le_bytes(),
+        &reduced_five_torsion_order.to_le_bytes(),
         reduced_five_torsion_order.nbits(),
     );
     assert_eq!(xX_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -161,17 +185,17 @@ fn masked_image_points_have_correct_order<Fp2: Fp2Trait>(
 
     let xX_times_order = ct.codomain_curve.xmul(
         &ct.masked_five_torsion_basis_EB.P,
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     let xY_times_order = ct.codomain_curve.xmul(
         &ct.masked_five_torsion_basis_EB.Q,
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     let xXY_times_order = ct.codomain_curve.xmul(
         &ct.masked_five_torsion_basis_EB.PQ,
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     assert_eq!(xX_times_order.is_zero(), SUCCESS_RETVAL);
@@ -180,8 +204,17 @@ fn masked_image_points_have_correct_order<Fp2: Fp2Trait>(
 }
 
 #[apply(encryption_test_data)]
-fn masked_image_points_are_on_curve<Fp2: Fp2Trait>(params: PublicParams<Fp2>, pub_key: PubKey<Fp2>)
-where
+fn masked_image_points_are_on_curve<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    params: PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>,
+    pub_key: PubKey<Fp2>,
+) where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
     let mut message = *MESSAGE;
@@ -250,18 +283,26 @@ where
 }
 
 #[apply(encryption_test_data)]
-fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
-    params: PublicParams<Fp2>,
+fn masked_image_points_are_linearly_independent<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    params: PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>,
     pub_key: PubKey<Fp2>,
 ) where
     [(); Fp2::ENCODED_LENGTH]: Sized,
 {
-    let reduced_full_two_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.full_two_torsion_order.as_le_bytes()) / BigUint::from(2u8))
-            .to_u64_digits(),
+    let reduced_full_two_torsion_order = BigNum::<NUM_WORDS_2>::new(
+        &(BigUint::from_bytes_le(&params.full_two_torsion_order.to_le_bytes())
+            / BigUint::from(2u8))
+        .to_u64_digits(),
     );
-    let reduced_five_torsion_order = BigNum::new(
-        &(BigUint::from_bytes_le(params.five_torsion_order.as_le_bytes()) / BigUint::from(5u8))
+    let reduced_five_torsion_order = BigNum::<NUM_WORDS_5>::new(
+        &(BigUint::from_bytes_le(&params.five_torsion_order.to_le_bytes()) / BigUint::from(5u8))
             .to_u64_digits(),
     );
 
@@ -278,7 +319,7 @@ fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
     );
     assert_eq!(
         pair.pow(
-            reduced_full_two_torsion_order.as_le_bytes(),
+            &reduced_full_two_torsion_order.to_le_bytes(),
             reduced_full_two_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -286,7 +327,7 @@ fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
     );
     assert_eq!(
         pair.pow(
-            params.full_two_torsion_order.as_le_bytes(),
+            &params.full_two_torsion_order.to_le_bytes(),
             params.full_two_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -298,12 +339,12 @@ fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
         &ct.masked_two_torsion_basis_EAB.P.x(),
         &ct.masked_two_torsion_basis_EAB.Q.x(),
         &ct.masked_two_torsion_basis_EAB.PQ.x(),
-        params.full_two_torsion_order.as_le_bytes(),
+        &params.full_two_torsion_order.to_le_bytes(),
         params.full_two_torsion_order.nbits(),
     );
     assert_eq!(
         pair.pow(
-            reduced_full_two_torsion_order.as_le_bytes(),
+            &reduced_full_two_torsion_order.to_le_bytes(),
             reduced_full_two_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -311,7 +352,7 @@ fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
     );
     assert_eq!(
         pair.pow(
-            params.full_two_torsion_order.as_le_bytes(),
+            &params.full_two_torsion_order.to_le_bytes(),
             params.full_two_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -323,12 +364,12 @@ fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
         &ct.masked_five_torsion_basis_EB.P.x(),
         &ct.masked_five_torsion_basis_EB.Q.x(),
         &ct.masked_five_torsion_basis_EB.PQ.x(),
-        params.five_torsion_order.as_le_bytes(),
+        &params.five_torsion_order.to_le_bytes(),
         params.five_torsion_order.nbits(),
     );
     assert_eq!(
         pair.pow(
-            reduced_five_torsion_order.as_le_bytes(),
+            &reduced_five_torsion_order.to_le_bytes(),
             reduced_five_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),
@@ -336,7 +377,7 @@ fn masked_image_points_are_linearly_independent<Fp2: Fp2Trait>(
     );
     assert_eq!(
         pair.pow(
-            params.five_torsion_order.as_le_bytes(),
+            &params.five_torsion_order.to_le_bytes(),
             params.five_torsion_order.nbits(),
         )
         .equals(&Fp2::ONE),

@@ -16,8 +16,22 @@ use poke::{
 
 // Sample a basis of the 5^c-torsion, along with the Weil pairing on it,
 // and a 3rd point we want to solve the discrete logarithm for
-fn generate_fp2_power_of_five_torsion_basis_and_lc_point<Fp2: Fp2Trait>(
-    pub_params: PublicParams<Fp2>,
+fn generate_fp2_power_of_five_torsion_basis_and_lc_point<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    pub_params: PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
 ) -> (BasisX<Fp2>, Fp2, Point<Fp2>) {
     // The Weil pairing of a basis of the n-torsion subgroup will be the generator of an order-n subgroup of Fp^2
     let (U, V, eUV) = sample_random_torsion_basis_order_prime_power(
@@ -33,10 +47,10 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<Fp2: Fp2Trait>(
 
     let W1 = pub_params
         .starting_curve
-        .mul(&U, x.as_le_bytes(), x.nbits());
+        .mul(&U, &x.to_le_bytes(), x.nbits());
     let W2 = pub_params
         .starting_curve
-        .mul(&V, y.as_le_bytes(), y.nbits());
+        .mul(&V, &y.to_le_bytes(), y.nbits());
     let W = pub_params.starting_curve.add(&W1, &W2);
 
     (
@@ -46,12 +60,26 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<Fp2: Fp2Trait>(
     )
 }
 
-fn generic_method<Fp2: Fp2Trait>(
-    pub_params: &PublicParams<Fp2>,
+fn generic_method<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
     basis: &BasisX<Fp2>,
     basis_pairing: &Fp2,
     point: &Point<Fp2>,
-) -> (BigNum, BigNum) {
+) -> (BigNum<NUM_WORDS_5>, BigNum<NUM_WORDS_5>) {
     let (mut mU, V) = pub_params.starting_curve.lift_basis(basis);
     mU.set_neg();
 
@@ -62,14 +90,14 @@ fn generic_method<Fp2: Fp2Trait>(
         &point.to_pointx().x(),
         &V.to_pointx().x(),
         &WV.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
     let contravariant_pairing = pub_params.starting_curve.weil_pairing(
         &point.to_pointx().x(),
         &mU.to_pointx().x(),
         &WmU.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
 
@@ -91,12 +119,26 @@ fn generic_method<Fp2: Fp2Trait>(
     (x, y)
 }
 
-fn power_of_five_specialized_method<Fp2: Fp2Trait>(
-    pub_params: &PublicParams<Fp2>,
+fn power_of_five_specialized_method<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
     basis: &BasisX<Fp2>,
     basis_pairing: &Fp2,
     point: &Point<Fp2>,
-) -> (BigNum, BigNum) {
+) -> (BigNum<NUM_WORDS_5>, BigNum<NUM_WORDS_5>) {
     let (mut mU, V) = pub_params.starting_curve.lift_basis(basis);
     mU.set_neg();
 
@@ -107,14 +149,14 @@ fn power_of_five_specialized_method<Fp2: Fp2Trait>(
         &point.to_pointx().x(),
         &V.to_pointx().x(),
         &WV.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
     let contravariant_pairing = pub_params.starting_curve.weil_pairing(
         &point.to_pointx().x(),
         &mU.to_pointx().x(),
         &WmU.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
 
@@ -134,12 +176,26 @@ fn power_of_five_specialized_method<Fp2: Fp2Trait>(
     (x, y)
 }
 
-fn power_of_five_specialized_method_explicit_subgroup<Fp2: Fp2Trait>(
-    pub_params: &PublicParams<Fp2>,
+fn power_of_five_specialized_method_explicit_subgroup<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_P: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_COF,
+        NUM_WORDS_P,
+    >,
     basis: &BasisX<Fp2>,
     basis_pairing: &Fp2,
     point: &Point<Fp2>,
-) -> (BigNum, BigNum) {
+) -> (BigNum<NUM_WORDS_5>, BigNum<NUM_WORDS_5>) {
     let (U, V) = pub_params.starting_curve.lift_basis(basis);
 
     // Compute all points needed to explicitly construct the order-5 subgroup generated by e(U, V)^(5^(c-1))
@@ -155,21 +211,21 @@ fn power_of_five_specialized_method_explicit_subgroup<Fp2: Fp2Trait>(
         &U.to_pointx().x(),
         &double_V.to_pointx().x(),
         &U2V.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
     let generator_cubed = pub_params.starting_curve.weil_pairing(
         &U.to_pointx().x(),
         &minus_double_V.to_pointx().x(),
         &Um2V.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
     let generator_to_four = pub_params.starting_curve.weil_pairing(
         &U.to_pointx().x(),
         &minus_V.to_pointx().x(),
         &UmV.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
     let prime_order_subgroup = [
@@ -188,14 +244,14 @@ fn power_of_five_specialized_method_explicit_subgroup<Fp2: Fp2Trait>(
         &point.to_pointx().x(),
         &V.to_pointx().x(),
         &WV.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
     let contravariant_pairing = pub_params.starting_curve.weil_pairing(
         &point.to_pointx().x(),
         &mU.to_pointx().x(),
         &WmU.to_pointx().x(),
-        pub_params.five_torsion_order.as_le_bytes(),
+        &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
 

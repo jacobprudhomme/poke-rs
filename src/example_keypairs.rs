@@ -188,7 +188,7 @@ pub mod poke_i {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<PokeFieldI> {
+    pub fn get_prv_key() -> PrvKey<PokeFieldI, 3, 1> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),
@@ -425,7 +425,7 @@ pub mod poke_iii {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<PokeFieldIII> {
+    pub fn get_prv_key() -> PrvKey<PokeFieldIII, 4, 2> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),
@@ -683,7 +683,7 @@ pub mod poke_v {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<PokeFieldV> {
+    pub fn get_prv_key() -> PrvKey<PokeFieldV, 5, 2> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),
@@ -903,7 +903,7 @@ pub mod inke_i {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<InkeFieldI> {
+    pub fn get_prv_key() -> PrvKey<InkeFieldI, 2> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),

@@ -6,42 +6,45 @@ use num_bigint::{BigUint, RandBigInt as _};
 
 use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
 
-pub fn sample_random_element_mod(modulus: &BigNum) -> BigNum {
+pub fn sample_random_element_mod<const NUM_WORDS_MOD: usize>(
+    modulus: &BigNum<NUM_WORDS_MOD>,
+) -> BigNum<NUM_WORDS_MOD> {
     let mut rng = old_rand::thread_rng();
 
-    let modulus = BigUint::from_bytes_le(modulus.as_le_bytes());
+    let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
     let element = rng.gen_biguint_below(&modulus);
 
     BigNum::new(&element.to_u64_digits())
     // BigNum::new(&[1])
 }
 
-pub fn sample_random_unit_mod_prime_power(modulus_base: u8, modulus: &BigNum) -> BigNum {
+pub fn sample_random_unit_mod_prime_power<const NUM_WORDS_MOD: usize>(
+    modulus_base: u8,
+    modulus: &BigNum<NUM_WORDS_MOD>,
+) -> BigNum<NUM_WORDS_MOD> {
     let mut rng = old_rand::thread_rng();
 
     // Keep generating elements until we find an invertible one
-    let modulus = BigUint::from_bytes_le(modulus.as_le_bytes());
+    let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
     let mut unit = rng.gen_biguint_below(&modulus);
     while &unit % BigUint::from(modulus_base) == BigUint::ZERO {
         unit = rng.gen_biguint_below(&modulus);
     }
 
-    let unit = BigNum::new(&unit.to_u64_digits());
     // let unit = BigNum::new(&[1]);
-
-    unit
+    BigNum::new(&unit.to_u64_digits())
 }
 
 // FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
-pub fn sample_random_invertible_matrix_mod_prime_power(
+pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usize>(
     modulus_base: u8,
-    modulus: &BigNum,
-) -> [[BigNum; 2]; 2] {
+    modulus: &BigNum<NUM_WORDS_MOD>,
+) -> [[BigNum<NUM_WORDS_MOD>; 2]; 2] {
     let mut rng = old_rand::thread_rng();
 
     let ONE = BigUint::from(1u8);
     let modulus_base = BigUint::from(modulus_base);
-    let modulus = BigUint::from_bytes_le(modulus.as_le_bytes());
+    let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
 
     // Randomly generate the first 3 elements
     let mut matrix: [[BigUint; 2]; 2] = array::from_fn(|_| [BigUint::ZERO; 2]);
@@ -71,11 +74,15 @@ pub fn sample_random_invertible_matrix_mod_prime_power(
 }
 
 // Randomly find a basis of the given torsion subgroup on the given curve
-pub fn sample_random_torsion_basis_order_prime_power<Fp2: Fp2Trait>(
+pub fn sample_random_torsion_basis_order_prime_power<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_TORSION: usize,
+    const NUM_WORDS_COF: usize,
+>(
     curve: &Curve<Fp2>,
     torsion_subgroup_order_base: u8,
-    torsion_subgroup_order: &BigNum,
-    order_cofactor: &BigNum,
+    torsion_subgroup_order: &BigNum<NUM_WORDS_TORSION>,
+    order_cofactor: &BigNum<NUM_WORDS_COF>,
 ) -> (Point<Fp2>, Point<Fp2>, Fp2) {
     let mut rng = rand::rng();
 
@@ -83,10 +90,10 @@ pub fn sample_random_torsion_basis_order_prime_power<Fp2: Fp2Trait>(
 
     // TODO: include in paper WHY we can just divide p^e by p once to obtain a check that the point has exactly the order we need
     let reduced_torsion_subgroup_order =
-        &BigUint::from_bytes_le(torsion_subgroup_order.as_le_bytes())
+        &BigUint::from_bytes_le(&torsion_subgroup_order.to_le_bytes())
             / &torsion_subgroup_order_base;
     let reduced_torsion_subgroup_order =
-        BigNum::new(&reduced_torsion_subgroup_order.to_u64_digits());
+        BigNum::<NUM_WORDS_TORSION>::new(&reduced_torsion_subgroup_order.to_u64_digits());
 
     // Generate a point of the desired order
     // FIXME: should I break the loop condition only at the very end, all conditions being tested at once?
@@ -98,7 +105,7 @@ pub fn sample_random_torsion_basis_order_prime_power<Fp2: Fp2Trait>(
         /* Check point is in the torsion subgroup */
 
         let U_in_torsion_subgroup =
-            curve.mul(&U, order_cofactor.as_le_bytes(), order_cofactor.nbits());
+            curve.mul(&U, &order_cofactor.to_le_bytes(), order_cofactor.nbits());
         // We don't want a point in the ((p + 1)/(pi)^(ei))-torsion
         if U_in_torsion_subgroup.is_zero() == SUCCESS_RETVAL {
             continue;
@@ -106,7 +113,7 @@ pub fn sample_random_torsion_basis_order_prime_power<Fp2: Fp2Trait>(
 
         let U_saturated = curve.mul(
             &U_in_torsion_subgroup,
-            reduced_torsion_subgroup_order.as_le_bytes(),
+            &reduced_torsion_subgroup_order.to_le_bytes(),
             reduced_torsion_subgroup_order.nbits(),
         );
         if U_saturated.is_zero() == SUCCESS_RETVAL {
@@ -124,7 +131,7 @@ pub fn sample_random_torsion_basis_order_prime_power<Fp2: Fp2Trait>(
         /* Check point is in the torsion subgroup */
 
         let V_in_torsion_subgroup =
-            curve.mul(&V, order_cofactor.as_le_bytes(), order_cofactor.nbits());
+            curve.mul(&V, &order_cofactor.to_le_bytes(), order_cofactor.nbits());
         // We don't want a point in the ((p + 1)/(pi)^(ei))-torsion
         if V_in_torsion_subgroup.is_zero() == SUCCESS_RETVAL {
             continue;
@@ -132,7 +139,7 @@ pub fn sample_random_torsion_basis_order_prime_power<Fp2: Fp2Trait>(
 
         let V_saturated = curve.mul(
             &V_in_torsion_subgroup,
-            reduced_torsion_subgroup_order.as_le_bytes(),
+            &reduced_torsion_subgroup_order.to_le_bytes(),
             reduced_torsion_subgroup_order.nbits(),
         );
         if V_saturated.is_zero() == SUCCESS_RETVAL {
@@ -150,12 +157,12 @@ pub fn sample_random_torsion_basis_order_prime_power<Fp2: Fp2Trait>(
             &U.to_pointx().x(),
             &V.to_pointx().x(),
             &UV.to_pointx().x(),
-            torsion_subgroup_order.as_le_bytes(),
+            &torsion_subgroup_order.to_le_bytes(),
             torsion_subgroup_order.nbits(),
         );
 
         let eUV_saturated = eUV.pow(
-            reduced_torsion_subgroup_order.as_le_bytes(),
+            &reduced_torsion_subgroup_order.to_le_bytes(),
             reduced_torsion_subgroup_order.nbits(),
         );
         if eUV_saturated.equals(&Fp2::ONE) == SUCCESS_RETVAL {

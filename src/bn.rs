@@ -1,17 +1,23 @@
 use core::{
-    fmt,
+    cmp, fmt,
     ops::{Add, AddAssign, Mul, MulAssign},
 };
 
 use isogeny::utilities::bn::{
-    bn_add_vartime, bn_bit_length_vartime, bn_from_le_bytes_vartime, bn_mul_by_u64_vartime,
-    bn_mul_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
+    bn_add_vartime, bn_bit_length_vartime, bn_lt_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
+    factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
 use num_bigint::BigUint;
 
 #[derive(Debug, PartialEq)]
-pub struct BigNum {
-    repr: Vec<u8>,
+pub struct BigNumArb {
+    repr: Vec<u64>,
+    bitlen: usize,
+}
+
+#[derive(Debug)]
+pub struct BigNum<const NUM_WORDS: usize> {
+    repr: [u64; NUM_WORDS],
     bitlen: usize,
 }
 
@@ -45,29 +51,56 @@ fn le_words_to_le_bytes(le_words: &[u64]) -> (Vec<u8>, usize) {
     (le_bytes, bitlen)
 }
 
+impl BigNumArb {
+    pub fn new(words: &[u64]) -> Self {
+        let bitlen = bn_bit_length_vartime(&words);
+
+        Self {
+            repr: words.to_owned(),
+            bitlen,
+        }
+    }
+
+    pub fn from_le_bytes(bytes: &[u8]) -> Self {
+        Self::new(&le_bytes_to_le_words(bytes))
+    }
+
+    pub fn as_le_words<'a>(&'a self) -> &'a [u64] {
+        &self.repr
+    }
+}
+
 // WARN: all of these functions are vartime
-impl BigNum {
+impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
     pub fn zero() -> Self {
         Self {
-            repr: vec![0],
+            repr: [0; NUM_WORDS],
             bitlen: 0,
         }
     }
 
     pub fn one() -> Self {
+        let mut words = [0; NUM_WORDS];
+        words[0] = 1;
+
         Self {
-            repr: vec![1],
+            repr: words,
             bitlen: 1,
         }
     }
 
-    pub fn new(le_words: &[u64]) -> Self {
-        let (le_bytes, bitlen) = le_words_to_le_bytes(le_words);
+    // WARN: 0-extends if le_words.len() < NUM_WORDS, truncates if le_words.len() > NUM_WORDS
+    pub fn new(words: &[u64]) -> Self {
+        let least_num_of_words = cmp::min(words.len(), NUM_WORDS);
 
-        Self {
-            repr: le_bytes,
-            bitlen,
-        }
+        let mut repr = [0u64; NUM_WORDS];
+        // SAFETY: Source and destination will necessarily be the same size, and the
+        // length of the copied slice is less than or equal to the length of both
+        repr[..least_num_of_words].copy_from_slice(&words[..least_num_of_words]);
+
+        let bitlen = bn_bit_length_vartime(&repr);
+
+        Self { repr, bitlen }
     }
 
     pub fn from_le_bytes(bytes: &[u8]) -> Self {
@@ -86,12 +119,12 @@ impl BigNum {
         Self::new(&factorisation_to_bn_vartime(prime_factorization))
     }
 
-    pub fn as_le_bytes<'a>(&'a self) -> &'a [u8] {
-        &self.repr
+    pub fn to_le_bytes(&self) -> Vec<u8> {
+        le_words_to_le_bytes(&self.repr).0
     }
 
-    pub fn to_le_words(&self) -> Vec<u64> {
-        bn_from_le_bytes_vartime(&self.repr, self.bitlen)
+    pub fn as_le_words<'a>(&'a self) -> &'a [u64] {
+        &self.repr
     }
 
     pub fn nbits(&self) -> usize {
@@ -99,133 +132,146 @@ impl BigNum {
     }
 }
 
-impl Add<&BigNum> for &BigNum {
-    type Output = BigNum;
+// WARN: Since addition is expected to have size max(lhs.len(), rhs.len()) + 1,
+// and multiplication is expected to have size lhs.len() + rhs.len(), all of the
+// following impls and can easily truncate the result. Use for results that are
+// expected to be within the appropriate word size.
 
-    fn add(self, rhs: &BigNum) -> Self::Output {
-        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+impl<const NUM_WORDS: usize> Add<&BigNum<NUM_WORDS>> for &BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
+
+    fn add(self, rhs: &BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_add_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl Add<BigNum> for &BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Add<BigNum<NUM_WORDS>> for &BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
-    fn add(self, rhs: BigNum) -> Self::Output {
-        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    fn add(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_add_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl Add<&BigNum> for BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Add<&BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
-    fn add(self, rhs: &BigNum) -> Self::Output {
-        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    fn add(self, rhs: &BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_add_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl Add<BigNum> for BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Add<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
-    fn add(self, rhs: BigNum) -> Self::Output {
-        BigNum::new(&bn_add_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    fn add(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_add_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl AddAssign<&BigNum> for BigNum {
-    fn add_assign(&mut self, rhs: &BigNum) {
-        let le_words = bn_add_vartime(&self.to_le_words(), &rhs.to_le_words());
-        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
+impl<const NUM_WORDS: usize> Mul<&BigNum<NUM_WORDS>> for u64 {
+    type Output = BigNum<NUM_WORDS>;
+
+    fn mul(self, rhs: &BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_mul_by_u64_vartime(&rhs.repr, self))
     }
 }
 
-impl AddAssign<BigNum> for BigNum {
-    fn add_assign(&mut self, rhs: BigNum) {
-        let le_words = bn_add_vartime(&self.to_le_words(), &rhs.to_le_words());
-        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
+impl<const NUM_WORDS: usize> Mul<BigNum<NUM_WORDS>> for u64 {
+    type Output = BigNum<NUM_WORDS>;
+
+    fn mul(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_mul_by_u64_vartime(&rhs.repr, self))
     }
 }
 
-impl Mul<&BigNum> for u64 {
-    type Output = BigNum;
-
-    fn mul(self, rhs: &BigNum) -> Self::Output {
-        BigNum::new(&bn_mul_by_u64_vartime(&rhs.to_le_words(), self))
-    }
-}
-
-impl Mul<BigNum> for u64 {
-    type Output = BigNum;
-
-    fn mul(self, rhs: BigNum) -> Self::Output {
-        BigNum::new(&bn_mul_by_u64_vartime(&rhs.to_le_words(), self))
-    }
-}
-
-impl Mul<u64> for &BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Mul<u64> for &BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
     fn mul(self, rhs: u64) -> Self::Output {
-        BigNum::new(&bn_mul_by_u64_vartime(&self.to_le_words(), rhs))
+        BigNum::new(&bn_mul_by_u64_vartime(&self.repr, rhs))
     }
 }
 
-impl Mul<u64> for BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Mul<u64> for BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
     fn mul(self, rhs: u64) -> Self::Output {
-        BigNum::new(&bn_mul_by_u64_vartime(&self.to_le_words(), rhs))
+        BigNum::new(&bn_mul_by_u64_vartime(&self.repr, rhs))
     }
 }
 
-impl Mul<&BigNum> for &BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Mul<&BigNum<NUM_WORDS>> for &BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
-    fn mul(self, rhs: &BigNum) -> Self::Output {
-        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    fn mul(self, rhs: &BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_mul_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl Mul<BigNum> for &BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Mul<BigNum<NUM_WORDS>> for &BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
-    fn mul(self, rhs: BigNum) -> Self::Output {
-        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    fn mul(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_mul_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl Mul<&BigNum> for BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Mul<&BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
-    fn mul(self, rhs: &BigNum) -> Self::Output {
-        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    fn mul(self, rhs: &BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_mul_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl Mul<BigNum> for BigNum {
-    type Output = BigNum;
+impl<const NUM_WORDS: usize> Mul<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
 
-    fn mul(self, rhs: BigNum) -> Self::Output {
-        BigNum::new(&bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words()))
+    fn mul(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
+        BigNum::new(&bn_mul_vartime(&self.repr, &rhs.repr))
     }
 }
 
-impl MulAssign<&BigNum> for BigNum {
-    fn mul_assign(&mut self, rhs: &BigNum) {
-        let le_words = bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words());
-        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
+impl<const NUM_WORDS: usize> AddAssign<&BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    fn add_assign(&mut self, rhs: &BigNum<NUM_WORDS>) {
+        let words = bn_add_vartime(&self.repr, &rhs.repr);
+        let bn = BigNum::new(&words);
+        self.repr = bn.repr;
+        self.bitlen = bn.bitlen;
     }
 }
 
-impl MulAssign<BigNum> for BigNum {
-    fn mul_assign(&mut self, rhs: BigNum) {
-        let le_words = bn_mul_vartime(&self.to_le_words(), &rhs.to_le_words());
-        (self.repr, self.bitlen) = le_words_to_le_bytes(&le_words);
+impl<const NUM_WORDS: usize> AddAssign<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    fn add_assign(&mut self, rhs: BigNum<NUM_WORDS>) {
+        let words = bn_add_vartime(&self.repr, &rhs.repr);
+        let bn = BigNum::new(&words);
+        self.repr = bn.repr;
+        self.bitlen = bn.bitlen;
     }
 }
 
-impl fmt::Display for BigNum {
+impl<const NUM_WORDS: usize> MulAssign<&BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    fn mul_assign(&mut self, rhs: &BigNum<NUM_WORDS>) {
+        let words = bn_mul_vartime(&self.repr, &rhs.repr);
+        let bn = BigNum::new(&words);
+        self.repr = bn.repr;
+        self.bitlen = bn.bitlen;
+    }
+}
+
+impl<const NUM_WORDS: usize> MulAssign<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    fn mul_assign(&mut self, rhs: BigNum<NUM_WORDS>) {
+        let words = bn_mul_vartime(&self.repr, &rhs.repr);
+        let bn = BigNum::new(&words);
+        self.repr = bn.repr;
+        self.bitlen = bn.bitlen;
+    }
+}
+
+impl<const NUM_WORDS: usize> fmt::Display for BigNum<NUM_WORDS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        BigUint::from_bytes_le(self.as_le_bytes()).fmt(f)
+        BigUint::from_bytes_le(&self.to_le_bytes()).fmt(f)
     }
 }
 
@@ -234,7 +280,7 @@ mod tests {
     use rand::RngCore as _;
     use rstest::rstest;
 
-    use super::BigNum;
+    use super::BigNumArb;
 
     #[rstest]
     fn word_bn_is_inverse_of_byte_bn() {
@@ -242,13 +288,10 @@ mod tests {
         let mut bn_bytes = vec![0u8; 43];
         rng.fill_bytes(&mut bn_bytes[..42]);
         bn_bytes[42] = 1;
-        let bn = BigNum {
-            repr: bn_bytes,
-            bitlen: 42 * 8 + 1,
-        };
 
-        let bn_words = bn.to_le_words();
-        let bn_bytes_roundtrip = BigNum::new(&bn_words);
+        let bn = BigNumArb::from_le_bytes(&bn_bytes);
+        let bn_words = bn.as_le_words();
+        let bn_bytes_roundtrip = BigNumArb::new(bn_words);
 
         assert_eq!(bn, bn_bytes_roundtrip);
     }
@@ -261,10 +304,10 @@ mod tests {
         for i in 43..48 {
             bn_bytes[i] = 0;
         }
-        let (_, bn_words, _) = unsafe { bn_bytes.align_to::<u64>() };
 
-        let bn = BigNum::new(&bn_words);
-        let bn_words_roundtrip = bn.to_le_words();
+        let (_, bn_words, _) = unsafe { bn_bytes.align_to::<u64>() };
+        let bn = BigNumArb::new(&bn_words);
+        let bn_words_roundtrip = bn.as_le_words();
 
         assert_eq!(bn_words, bn_words_roundtrip);
     }

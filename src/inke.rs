@@ -16,20 +16,20 @@ use crate::{
     rand::{sample_random_element_mod, sample_random_unit_mod_prime_power},
 };
 
-pub struct PublicParams<Fp2: Fp2Trait> {
+pub struct PublicParams<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_3: usize> {
     pub starting_curve: Curve<Fp2>,
-    pub effective_two_torsion_order: BigNum,
+    pub effective_two_torsion_order: BigNum<NUM_WORDS_2>,
     pub effective_two_torsion_exp: usize,
-    pub three_torsion_order: BigNum,
+    pub three_torsion_order: BigNum<NUM_WORDS_3>,
     pub three_torsion_exp: usize,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
 }
 
-pub struct PrvKey<Fp2: Fp2Trait> {
-    pub q: BigNum,
-    pub alpha: BigNum,
-    pub beta: BigNum,
+pub struct PrvKey<Fp2: Fp2Trait, const NUM_WORDS_2: usize> {
+    pub q: BigNum<NUM_WORDS_2>,
+    pub alpha: BigNum<NUM_WORDS_2>,
+    pub beta: BigNum<NUM_WORDS_2>,
     pub _field: PhantomData<Fp2>,
 }
 
@@ -49,8 +49,8 @@ pub struct Ciphertext<Fp2: Fp2Trait> {
     pub encrypted_message: Vec<u8>,
 }
 
-pub fn encrypt<Fp2: Fp2Trait>(
-    pub_params: &PublicParams<Fp2>,
+pub fn encrypt<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_3: usize>(
+    pub_params: &PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3>,
     pub_key: &PubKey<Fp2>,
     message: &[u8],
 ) -> (Ciphertext<Fp2>, u32)
@@ -73,17 +73,17 @@ where
     // Compute kernel for sender's parallel isogenies psi (<R_0 + [r] S_0>), psi' (<R_A + [r] S_A>) and psi'' (<R_A1 + [r] S_A1>)
     let psi_kernel = pub_params.starting_curve.three_point_ladder(
         &pub_params.three_torsion_basis,
-        r.as_le_bytes(),
+        &r.to_le_bytes(),
         r.nbits(),
     );
     let psi_prime_kernel = pub_key.intermediate_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img_intermediate,
-        r.as_le_bytes(),
+        &r.to_le_bytes(),
         r.nbits(),
     );
     let psi_dblprime_kernel = pub_key.codomain_curve.three_point_ladder(
         &pub_key.masked_three_torsion_basis_img,
-        r.as_le_bytes(),
+        &r.to_le_bytes(),
         r.nbits(),
     );
 
@@ -99,8 +99,8 @@ where
     let two_torsion_basis_EB = BasisX::from_slice(&two_torsion_basis_EB);
     let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
 
-    let masked_P_B = codomain_curve.mul(&P_B, omega1.as_le_bytes(), omega1.nbits());
-    let masked_Q_B = codomain_curve.mul(&Q_B, omega2.as_le_bytes(), omega2.nbits());
+    let masked_P_B = codomain_curve.mul(&P_B, &omega1.to_le_bytes(), omega1.nbits());
+    let masked_Q_B = codomain_curve.mul(&Q_B, &omega2.to_le_bytes(), omega2.nbits());
     let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
     let masked_two_torsion_basis_EB = BasisX::from_points(
         &masked_P_B.to_pointx(),
@@ -120,8 +120,8 @@ where
     let two_torsion_basis_EAB = BasisX::from_slice(&two_torsion_basis_EAB);
     let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
 
-    let masked_P_AB = shared_end_curve.mul(&P_AB, omega1.as_le_bytes(), omega1.nbits());
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, omega2.as_le_bytes(), omega2.nbits());
+    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega1.to_le_bytes(), omega1.nbits());
+    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega2.to_le_bytes(), omega2.nbits());
     let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
     let masked_two_torsion_basis_EAB = BasisX::from_points(
         &masked_P_AB.to_pointx(),
@@ -157,9 +157,9 @@ where
     (ct, retval)
 }
 
-pub fn decrypt<Fp2: Fp2Trait>(
-    pub_params: &PublicParams<Fp2>,
-    prv_key: &PrvKey<Fp2>,
+pub fn decrypt<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_3: usize>(
+    pub_params: &PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3>,
+    prv_key: &PrvKey<Fp2, NUM_WORDS_2>,
     ciphertext: &Ciphertext<Fp2>,
 ) -> (Vec<u8>, u32)
 where
@@ -172,17 +172,21 @@ where
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
 
+    // FIXME: This should involve modular reduction. It works without, because of the
+    // points' order, but modular reduction may be cheaper than additional multiplications
     let alpha_q = &prv_key.alpha * &prv_key.q;
     let mut scaled_P_B =
         ciphertext
             .codomain_curve
-            .mul(&P_B, alpha_q.as_le_bytes(), alpha_q.nbits());
+            .mul(&P_B, &alpha_q.to_le_bytes(), alpha_q.nbits());
     scaled_P_B.set_neg();
 
+    // FIXME: This should involve modular reduction. It works without, because of the
+    // points' order, but modular reduction may be cheaper than additional multiplications
     let beta_q = &prv_key.beta * &prv_key.q;
     let mut scaled_Q_B = ciphertext
         .codomain_curve
-        .mul(&Q_B, beta_q.as_le_bytes(), beta_q.nbits());
+        .mul(&Q_B, &beta_q.to_le_bytes(), beta_q.nbits());
     scaled_Q_B.set_neg();
 
     let (P_AB, Q_AB) = ciphertext

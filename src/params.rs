@@ -1,4 +1,3 @@
-use fp2::traits::Fp as _;
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
 
 use crate::bn::BigNum;
@@ -108,26 +107,32 @@ pub mod poke_i {
     const THREE_TORSION_EXP: usize = 164;
     const FIVE_TORSION_EXP: usize = 18;
 
-    pub fn get_params() -> PublicParams<PokeFieldI> {
-        let cofactor = BigNum::one();
+    const NUM_WORDS_2: usize = 3;
+    const NUM_WORDS_3: usize = 5;
+    const NUM_WORDS_5: usize = 1;
+    const NUM_WORDS_COF: usize = 7;
+    const NUM_WORDS_P: usize = 7;
 
+    pub fn get_params()
+    -> PublicParams<PokeFieldI, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>
+    {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
+        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
+        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
+        let five_torsion_cofactor =
+            BigNum::from_prime_factors(&[(2, FULL_TWO_TORSION_EXP), (3, THREE_TORSION_EXP)]);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
-
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
         );
-
-        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order * &cofactor;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -310,26 +315,35 @@ pub mod poke_iii {
     const THREE_TORSION_EXP: usize = 243;
     const FIVE_TORSION_EXP: usize = 28;
 
-    pub fn get_params() -> PublicParams<PokeFieldIII> {
-        let cofactor = BigNum::from_prime_power(7, 2);
+    const NUM_WORDS_2: usize = 4;
+    const NUM_WORDS_3: usize = 7;
+    const NUM_WORDS_5: usize = 2;
+    const NUM_WORDS_COF: usize = 10;
+    const NUM_WORDS_P: usize = 11;
 
+    pub fn get_params()
+    -> PublicParams<PokeFieldIII, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>
+    {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
+        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
+        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
+        let five_torsion_cofactor = BigNum::from_prime_factors(&[
+            (2, FULL_TWO_TORSION_EXP),
+            (3, THREE_TORSION_EXP),
+            (7, 2),
+        ]);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
-
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
         );
-
-        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order * &cofactor;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -530,26 +544,35 @@ pub mod poke_v {
     const THREE_TORSION_EXP: usize = 324;
     const FIVE_TORSION_EXP: usize = 36;
 
-    pub fn get_params() -> PublicParams<PokeFieldV> {
-        let cofactor = BigNum::from_prime(547);
+    const NUM_WORDS_2: usize = 5;
+    const NUM_WORDS_3: usize = 9;
+    const NUM_WORDS_5: usize = 2;
+    const NUM_WORDS_COF: usize = 13;
+    const NUM_WORDS_P: usize = 14;
 
+    pub fn get_params()
+    -> PublicParams<PokeFieldV, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>
+    {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
+        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
+        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
+        let five_torsion_cofactor = BigNum::from_prime_factors(&[
+            (2, FULL_TWO_TORSION_EXP),
+            (3, THREE_TORSION_EXP),
+            (547, 1),
+        ]);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
-
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
         );
-
-        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = &full_two_torsion_order * &three_torsion_order * &cofactor;
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
             &PointX::from_x_coord(&Y_X),
@@ -652,15 +675,18 @@ pub mod inke_i {
     const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
     const THREE_TORSION_EXP: usize = 162;
 
-    pub fn get_params() -> PublicParams<InkeFieldI> {
+    const NUM_WORDS_2: usize = 2;
+    const NUM_WORDS_3: usize = 5;
+
+    pub fn get_params() -> PublicParams<InkeFieldI, NUM_WORDS_2, NUM_WORDS_3> {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
-
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),

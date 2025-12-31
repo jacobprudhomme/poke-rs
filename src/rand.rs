@@ -33,7 +33,7 @@ pub fn sample_random_unit_mod_prime_power<const NUM_WORDS_MOD: usize>(
     BigNum::new(&unit.to_u64_digits())
 }
 
-// FIXME: implement proper sampling of this value (find algorithms to generate uniformly random determinant-1 matrices in SL_2(Z_(5^c)))
+// FIXME: Validate that this algorithm generates a uniformly random invertible matrices in SL_2(Z_(5^c))
 pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usize>(
     modulus_base: u8,
     modulus: &BigNum<NUM_WORDS_MOD>,

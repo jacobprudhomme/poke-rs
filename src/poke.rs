@@ -324,7 +324,7 @@ where
 
     /* Find change-of-basis matrix */
 
-    // Compute pairs of point subtractions for later computing the pairings between them
+    // Correct the pairs of image points to overall sign
     let mut X_aux_curve = torsion_bases_aux_curves[0].points().0;
     let mut Y_aux_curve = torsion_bases_aux_curves[1].points().0;
     let mut XY_aux_curve = torsion_bases_aux_curves[2].points().0;
@@ -345,6 +345,7 @@ where
             .equals(&UV_aux_curve.to_pointx()),
     );
 
+    // Compute pairs of point subtractions for later computing the pairings between them
     let XV_aux_curve = aux_curve.sub(&X_aux_curve, &V_aux_curve);
     let XmU_aux_curve = aux_curve.add(&X_aux_curve, &U_aux_curve);
 

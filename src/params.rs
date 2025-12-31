@@ -107,6 +107,7 @@ pub mod poke_i {
     const THREE_TORSION_EXP: usize = 164;
     const FIVE_TORSION_EXP: usize = 18;
 
+    // FIXME: Some improvements can maybe be made here by the fact that 2^127 fits into 2 words
     pub const NUM_WORDS_2: usize = 3;
     const NUM_WORDS_3: usize = 5;
     pub const NUM_WORDS_5: usize = 1;
@@ -318,6 +319,9 @@ pub mod poke_iii {
     const THREE_TORSION_EXP: usize = 243;
     const FIVE_TORSION_EXP: usize = 28;
 
+    // FIXME: Some improvements can maybe be made here by the fact that 2^190 fits into 3 words, and
+    // 2^192 can even be represented without the 4th word by some sort of flag (since all numbers
+    // (mod 2^192) will only take up 3 words)
     pub const NUM_WORDS_2: usize = 4;
     const NUM_WORDS_3: usize = 7;
     pub const NUM_WORDS_5: usize = 2;
@@ -547,6 +551,9 @@ pub mod poke_v {
     const THREE_TORSION_EXP: usize = 324;
     const FIVE_TORSION_EXP: usize = 36;
 
+    // FIXME: Some improvements can maybe be made here by the fact that 2^254 fits into 4 words, and
+    // 2^256 can even be represented without the 5th word by some sort of flag (since all numbers
+    // (mod 2^256) will only take up 4 words)
     pub const NUM_WORDS_2: usize = 5;
     const NUM_WORDS_3: usize = 9;
     pub const NUM_WORDS_5: usize = 2;
@@ -678,6 +685,9 @@ pub mod inke_i {
     const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
     const THREE_TORSION_EXP: usize = 162;
 
+    // FIXME: Some improvements can maybe be made here by the fact that 2^126 fits into 2 words, and
+    // 2^128 can even be represented without the 3rd word by some sort of flag (since all numbers
+    // (mod 2^128) will only take up 2 words)
     pub const NUM_WORDS_2: usize = 3;
     const NUM_WORDS_3: usize = 5;
 

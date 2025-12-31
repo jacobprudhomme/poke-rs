@@ -329,11 +329,9 @@ where
         &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
-
-    let mU_aux_curve = -U_aux_curve;
     let eXmU = aux_curve.weil_pairing(
         &X_aux_curve.to_pointx().x(),
-        &mU_aux_curve.to_pointx().x(),
+        &U_aux_curve.to_pointx().x(),
         &XmU_aux_curve.to_pointx().x(),
         &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
@@ -346,10 +344,9 @@ where
         &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),
     );
-
     let eYmU = aux_curve.weil_pairing(
         &Y_aux_curve.to_pointx().x(),
-        &mU_aux_curve.to_pointx().x(),
+        &U_aux_curve.to_pointx().x(),
         &YmU_aux_curve.to_pointx().x(),
         &pub_params.five_torsion_order.to_le_bytes(),
         pub_params.five_torsion_order.nbits(),

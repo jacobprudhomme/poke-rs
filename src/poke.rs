@@ -231,14 +231,12 @@ where
         .beta
         .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
 
-    let (mut scaled_P_B, mut scaled_Q_B) = mask_basisx_by_diagonal_scalars_points_only(
+    let (scaled_P_B, scaled_Q_B) = mask_basisx_by_diagonal_scalars_points_only(
         &ciphertext.codomain_curve,
         &ciphertext.masked_two_torsion_basis_EB,
         &alpha_q,
         &beta_q,
     );
-    scaled_P_B.set_neg();
-    scaled_Q_B.set_neg();
 
     let (P_AB, Q_AB) = ciphertext
         .shared_end_curve

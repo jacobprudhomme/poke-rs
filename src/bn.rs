@@ -5,7 +5,7 @@ use core::{
 use std::ops::Sub;
 
 use isogeny::utilities::bn::{
-    bn_add_vartime, bn_bit_length_vartime, bn_lt_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
+    bn_add_vartime, bn_bit_length_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
     bn_sub_into_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
 use num_bigint::BigUint;

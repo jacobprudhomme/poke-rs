@@ -121,7 +121,7 @@ pub mod poke_i {
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let cofactor = BigNum::one();
+        let cofactor = BigNum::<1>::one();
         let five_torsion_cofactor = full_two_torsion_order
             .widening_mul(&three_torsion_order)
             .widening_mul(&cofactor)
@@ -335,7 +335,7 @@ pub mod poke_iii {
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let cofactor = BigNum::from_prime_power(7, 2);
+        let cofactor = BigNum::<1>::from_prime_power(7, 2);
         let five_torsion_cofactor = full_two_torsion_order
             .widening_mul(&three_torsion_order)
             .widening_mul(&cofactor)
@@ -567,7 +567,7 @@ pub mod poke_v {
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let cofactor = BigNum::from_prime(547);
+        let cofactor = BigNum::<1>::from_prime(547);
         let five_torsion_cofactor = full_two_torsion_order
             .widening_mul(&three_torsion_order)
             .widening_mul(&cofactor)

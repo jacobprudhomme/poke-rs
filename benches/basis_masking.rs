@@ -257,17 +257,16 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let cofactor_i = params_i
         .full_two_torsion_order
         .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
         .truncate::<3>();
     let cofactor_iii = params_iii
         .full_two_torsion_order
         .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime_power(7, 2))
         .truncate::<5>();
     let cofactor_v = params_v
         .full_two_torsion_order
         .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime(547))
         .truncate::<6>();
 
     // Generate random bases of given order
@@ -432,17 +431,16 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let cofactor_i = params_i
         .full_two_torsion_order
         .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
         .truncate::<3>();
     let cofactor_iii = params_iii
         .full_two_torsion_order
         .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime_power(7, 2))
         .truncate::<5>();
     let cofactor_v = params_v
         .full_two_torsion_order
         .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime(547))
         .truncate::<6>();
 
     // Generate random bases of given order
@@ -664,17 +662,16 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let cofactor_i = params_i
         .full_two_torsion_order
         .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
         .truncate::<3>();
     let cofactor_iii = params_iii
         .full_two_torsion_order
         .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime_power(7, 2))
         .truncate::<5>();
     let cofactor_v = params_v
         .full_two_torsion_order
         .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime(547))
         .truncate::<6>();
 
     // Generate random bases of given order
@@ -818,17 +815,16 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let cofactor_i = params_i
         .full_two_torsion_order
         .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
         .truncate::<3>();
     let cofactor_iii = params_iii
         .full_two_torsion_order
         .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime_power(7, 2))
         .truncate::<5>();
     let cofactor_v = params_v
         .full_two_torsion_order
         .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
+        .widening_mul(&BigNum::<1>::from_prime(547))
         .truncate::<6>();
 
     // Generate random bases of given order

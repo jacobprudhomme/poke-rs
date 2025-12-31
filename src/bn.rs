@@ -1,5 +1,5 @@
 use core::{
-    cmp, fmt,
+    array, cmp, fmt,
     ops::{Add, AddAssign, Mul, MulAssign},
 };
 
@@ -70,7 +70,6 @@ impl BigNumArb {
     }
 }
 
-// WARN: all of these functions are vartime
 impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
     pub fn zero() -> Self {
         Self {
@@ -129,6 +128,23 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
 
     pub fn nbits(&self) -> usize {
         self.bitlen
+    }
+
+    pub fn widening_mul<const NUM_WORDS_RHS: usize>(
+        &self,
+        rhs: &BigNum<NUM_WORDS_RHS>,
+    ) -> BigNum<{ NUM_WORDS + NUM_WORDS_RHS }> {
+        BigNum::new(&bn_mul_vartime(&self.repr, &rhs.repr))
+    }
+
+    pub fn truncate<const NEW_NUM_WORDS: usize>(&self) -> BigNum<NEW_NUM_WORDS> {
+        let new_max_bitlen = NEW_NUM_WORDS * 64;
+        let bitlen = cmp::min(self.bitlen, new_max_bitlen);
+
+        BigNum {
+            repr: array::from_fn(|i| self.repr[i]),
+            bitlen,
+        }
     }
 }
 

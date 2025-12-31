@@ -120,8 +120,11 @@ pub mod poke_i {
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor =
-            BigNum::from_prime_factors(&[(2, FULL_TWO_TORSION_EXP), (3, THREE_TORSION_EXP)]);
+        let cofactor = BigNum::one();
+        let five_torsion_cofactor = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .widening_mul(&cofactor)
+            .truncate();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -328,11 +331,11 @@ pub mod poke_iii {
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = BigNum::from_prime_factors(&[
-            (2, FULL_TWO_TORSION_EXP),
-            (3, THREE_TORSION_EXP),
-            (7, 2),
-        ]);
+        let cofactor = BigNum::from_prime_power(7, 2);
+        let five_torsion_cofactor = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .widening_mul(&cofactor)
+            .truncate();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -557,11 +560,11 @@ pub mod poke_v {
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let five_torsion_cofactor = BigNum::from_prime_factors(&[
-            (2, FULL_TWO_TORSION_EXP),
-            (3, THREE_TORSION_EXP),
-            (547, 1),
-        ]);
+        let cofactor = BigNum::from_prime(547);
+        let five_torsion_cofactor = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .widening_mul(&cofactor)
+            .truncate();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),

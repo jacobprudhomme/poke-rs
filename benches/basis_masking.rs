@@ -254,20 +254,21 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let s_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = BigNum::<3>::from_prime_factors(&[
-        (2, params_i.full_two_torsion_exp),
-        (5, params_i.five_torsion_exp),
-    ]);
-    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
-        (2, params_iii.full_two_torsion_exp),
-        (5, params_iii.five_torsion_exp),
-        (7, 2),
-    ]);
-    let cofactor_v = BigNum::<6>::from_prime_factors(&[
-        (2, params_v.full_two_torsion_exp),
-        (5, params_v.five_torsion_exp),
-        (547, 1),
-    ]);
+    let cofactor_i = params_i
+        .full_two_torsion_order
+        .widening_mul(&params_i.five_torsion_order)
+        .widening_mul(&params_i.cofactor)
+        .truncate::<3>();
+    let cofactor_iii = params_iii
+        .full_two_torsion_order
+        .widening_mul(&params_iii.five_torsion_order)
+        .widening_mul(&params_iii.cofactor)
+        .truncate::<5>();
+    let cofactor_v = params_v
+        .full_two_torsion_order
+        .widening_mul(&params_v.five_torsion_order)
+        .widening_mul(&params_v.cofactor)
+        .truncate::<6>();
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(
@@ -428,20 +429,21 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let s2_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = BigNum::<3>::from_prime_factors(&[
-        (2, params_i.full_two_torsion_exp),
-        (5, params_i.five_torsion_exp),
-    ]);
-    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
-        (2, params_iii.full_two_torsion_exp),
-        (5, params_iii.five_torsion_exp),
-        (7, 2),
-    ]);
-    let cofactor_v = BigNum::<6>::from_prime_factors(&[
-        (2, params_v.full_two_torsion_exp),
-        (5, params_v.five_torsion_exp),
-        (547, 1),
-    ]);
+    let cofactor_i = params_i
+        .full_two_torsion_order
+        .widening_mul(&params_i.five_torsion_order)
+        .widening_mul(&params_i.cofactor)
+        .truncate::<3>();
+    let cofactor_iii = params_iii
+        .full_two_torsion_order
+        .widening_mul(&params_iii.five_torsion_order)
+        .widening_mul(&params_iii.cofactor)
+        .truncate::<5>();
+    let cofactor_v = params_v
+        .full_two_torsion_order
+        .widening_mul(&params_v.five_torsion_order)
+        .widening_mul(&params_v.cofactor)
+        .truncate::<6>();
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(
@@ -659,20 +661,21 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = BigNum::<3>::from_prime_factors(&[
-        (2, params_i.full_two_torsion_exp),
-        (5, params_i.five_torsion_exp),
-    ]);
-    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
-        (2, params_iii.full_two_torsion_exp),
-        (5, params_iii.five_torsion_exp),
-        (7, 2),
-    ]);
-    let cofactor_v = BigNum::<6>::from_prime_factors(&[
-        (2, params_v.full_two_torsion_exp),
-        (5, params_v.five_torsion_exp),
-        (547, 1),
-    ]);
+    let cofactor_i = params_i
+        .full_two_torsion_order
+        .widening_mul(&params_i.five_torsion_order)
+        .widening_mul(&params_i.cofactor)
+        .truncate::<3>();
+    let cofactor_iii = params_iii
+        .full_two_torsion_order
+        .widening_mul(&params_iii.five_torsion_order)
+        .widening_mul(&params_iii.cofactor)
+        .truncate::<5>();
+    let cofactor_v = params_v
+        .full_two_torsion_order
+        .widening_mul(&params_v.five_torsion_order)
+        .widening_mul(&params_v.cofactor)
+        .truncate::<6>();
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(
@@ -812,20 +815,21 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion_order);
 
     // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = BigNum::<3>::from_prime_factors(&[
-        (2, params_i.full_two_torsion_exp),
-        (5, params_i.five_torsion_exp),
-    ]);
-    let cofactor_iii = BigNum::<5>::from_prime_factors(&[
-        (2, params_iii.full_two_torsion_exp),
-        (5, params_iii.five_torsion_exp),
-        (7, 2),
-    ]);
-    let cofactor_v = BigNum::<6>::from_prime_factors(&[
-        (2, params_v.full_two_torsion_exp),
-        (5, params_v.five_torsion_exp),
-        (547, 1),
-    ]);
+    let cofactor_i = params_i
+        .full_two_torsion_order
+        .widening_mul(&params_i.five_torsion_order)
+        .widening_mul(&params_i.cofactor)
+        .truncate::<3>();
+    let cofactor_iii = params_iii
+        .full_two_torsion_order
+        .widening_mul(&params_iii.five_torsion_order)
+        .widening_mul(&params_iii.cofactor)
+        .truncate::<5>();
+    let cofactor_v = params_v
+        .full_two_torsion_order
+        .widening_mul(&params_v.five_torsion_order)
+        .widening_mul(&params_v.cofactor)
+        .truncate::<6>();
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis_order_prime_power(

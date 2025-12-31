@@ -80,7 +80,7 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
     }
 
     pub fn one() -> Self {
-        let mut words = [0; NUM_WORDS];
+        let mut words = [1; NUM_WORDS];
         words[0] = 1;
 
         Self {

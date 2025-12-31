@@ -13,6 +13,7 @@ use sha3::{
 use crate::{
     SUCCESS_RETVAL,
     bn::BigNum,
+    masking::{mask_basisx_by_diagonal_scalars, mask_basisx_by_diagonal_scalars_points_only},
     rand::{sample_random_element_mod, sample_random_unit_mod_prime_power},
 };
 
@@ -99,16 +100,8 @@ where
     retval &= kernel_has_right_order;
 
     let two_torsion_basis_EB = BasisX::from_slice(&two_torsion_basis_EB);
-    let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
-
-    let masked_P_B = codomain_curve.mul(&P_B, &omega1.to_le_bytes(), omega1.nbits());
-    let masked_Q_B = codomain_curve.mul(&Q_B, &omega2.to_le_bytes(), omega2.nbits());
-    let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
-    let masked_two_torsion_basis_EB = BasisX::from_points(
-        &masked_P_B.to_pointx(),
-        &masked_Q_B.to_pointx(),
-        &masked_PQ_B.to_pointx(),
-    );
+    let masked_two_torsion_basis_EB =
+        mask_basisx_by_diagonal_scalars(&codomain_curve, &two_torsion_basis_EB, &omega1, &omega2);
 
     // Apply sender's secret parallel isogeny to receiver's masked 2^a-torsion basis image points to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB)
     let mut two_torsion_basis_EAB = pub_key.masked_two_torsion_basis_img.to_array();
@@ -120,15 +113,11 @@ where
     retval &= kernel_has_right_order;
 
     let two_torsion_basis_EAB = BasisX::from_slice(&two_torsion_basis_EAB);
-    let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
-
-    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega1.to_le_bytes(), omega1.nbits());
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega2.to_le_bytes(), omega2.nbits());
-    let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
-    let masked_two_torsion_basis_EAB = BasisX::from_points(
-        &masked_P_AB.to_pointx(),
-        &masked_Q_AB.to_pointx(),
-        &masked_PQ_AB.to_pointx(),
+    let masked_two_torsion_basis_EAB = mask_basisx_by_diagonal_scalars(
+        &shared_end_curve,
+        &two_torsion_basis_EAB,
+        &omega1,
+        &omega2,
     );
 
     // Compute codomain of sender's secret intermediate parallel isogeny to obtain shared secret curve
@@ -170,25 +159,20 @@ where
     let mut retval = SUCCESS_RETVAL;
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
-    let (P_B, Q_B) = ciphertext
-        .codomain_curve
-        .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
-
     let alpha_q = prv_key
         .alpha
         .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
-    let mut scaled_P_B =
-        ciphertext
-            .codomain_curve
-            .mul(&P_B, &alpha_q.to_le_bytes(), alpha_q.nbits());
-    scaled_P_B.set_neg();
-
     let beta_q = prv_key
         .beta
         .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
-    let mut scaled_Q_B = ciphertext
-        .codomain_curve
-        .mul(&Q_B, &beta_q.to_le_bytes(), beta_q.nbits());
+
+    let (mut scaled_P_B, mut scaled_Q_B) = mask_basisx_by_diagonal_scalars_points_only(
+        &ciphertext.codomain_curve,
+        &ciphertext.masked_two_torsion_basis_EB,
+        &alpha_q,
+        &beta_q,
+    );
+    scaled_P_B.set_neg();
     scaled_Q_B.set_neg();
 
     let (P_AB, Q_AB) = ciphertext

@@ -15,6 +15,10 @@ use crate::{
     SUCCESS_RETVAL,
     bn::BigNum,
     dlp::solve_dlp_small_prime_power_order,
+    masking::{
+        mask_basisx_by_diagonal_scalars, mask_basisx_by_diagonal_scalars_points_only,
+        mask_basisx_by_scalar_matrix, mask_basisx_by_scalar_matrix_pointx_only,
+    },
     rand::{
         sample_random_element_mod, sample_random_invertible_matrix_mod_prime_power,
         sample_random_torsion_basis_order_prime_power, sample_random_unit_mod_prime_power,
@@ -137,33 +141,12 @@ where
     retval &= kernel_has_right_order;
 
     let two_torsion_basis_EB = BasisX::from_slice(&torsion_bases_EB[..3]);
+    let masked_two_torsion_basis_EB =
+        mask_basisx_by_diagonal_scalars(&codomain_curve, &two_torsion_basis_EB, &omega1, &omega2);
+
     let five_torsion_basis_EB = BasisX::from_slice(&torsion_bases_EB[3..]);
-    let (P_B, Q_B) = codomain_curve.lift_basis(&two_torsion_basis_EB);
-    let (X_B, Y_B) = codomain_curve.lift_basis(&five_torsion_basis_EB);
-
-    let masked_P_B = codomain_curve.mul(&P_B, &omega1.to_le_bytes(), omega1.nbits());
-    let masked_Q_B = codomain_curve.mul(&Q_B, &omega2.to_le_bytes(), omega2.nbits());
-    let masked_PQ_B = codomain_curve.sub(&masked_P_B, &masked_Q_B);
-    let masked_two_torsion_basis_EB = BasisX::from_points(
-        &masked_P_B.to_pointx(),
-        &masked_Q_B.to_pointx(),
-        &masked_PQ_B.to_pointx(),
-    );
-
-    let masked_X_B = codomain_curve.add(
-        &codomain_curve.mul(&X_B, &D[0][0].to_le_bytes(), D[0][0].nbits()),
-        &codomain_curve.mul(&Y_B, &D[0][1].to_le_bytes(), D[0][1].nbits()),
-    );
-    let masked_Y_B = codomain_curve.add(
-        &codomain_curve.mul(&X_B, &D[1][0].to_le_bytes(), D[1][0].nbits()),
-        &codomain_curve.mul(&Y_B, &D[1][1].to_le_bytes(), D[1][1].nbits()),
-    );
-    let masked_XY_B = codomain_curve.sub(&masked_X_B, &masked_Y_B);
-    let masked_five_torsion_basis_EB = BasisX::from_points(
-        &masked_X_B.to_pointx(),
-        &masked_Y_B.to_pointx(),
-        &masked_XY_B.to_pointx(),
-    );
+    let masked_five_torsion_basis_EB =
+        mask_basisx_by_scalar_matrix(&codomain_curve, &five_torsion_basis_EB, &D);
 
     // Apply sender's secret parallel isogeny to receiver's masked 2^a- and 5^c-torsion basis image points
     // to obtain shared curve E_AB and pushforward basis image points (P_AB, Q_AB), (X_AB, Y_AB)
@@ -181,32 +164,16 @@ where
     retval &= kernel_has_right_order;
 
     let two_torsion_basis_EAB = BasisX::from_slice(&torsion_bases_EAB[..3]);
+    let masked_two_torsion_basis_EAB = mask_basisx_by_diagonal_scalars(
+        &shared_end_curve,
+        &two_torsion_basis_EAB,
+        &omega1,
+        &omega2,
+    );
+
     let five_torsion_basis_EAB = BasisX::from_slice(&torsion_bases_EAB[3..]);
-    let (P_AB, Q_AB) = shared_end_curve.lift_basis(&two_torsion_basis_EAB);
-
-    let masked_P_AB = shared_end_curve.mul(&P_AB, &omega1.to_le_bytes(), omega1.nbits());
-    let masked_Q_AB = shared_end_curve.mul(&Q_AB, &omega2.to_le_bytes(), omega2.nbits());
-    let masked_PQ_AB = shared_end_curve.sub(&masked_P_AB, &masked_Q_AB);
-    let masked_two_torsion_basis_EAB = BasisX::from_points(
-        &masked_P_AB.to_pointx(),
-        &masked_Q_AB.to_pointx(),
-        &masked_PQ_AB.to_pointx(),
-    );
-
-    let masked_xX_AB = shared_end_curve.ladder_biscalar(
-        &five_torsion_basis_EAB,
-        &D[0][0].to_le_bytes(),
-        &D[0][1].to_le_bytes(),
-        D[0][0].nbits(),
-        D[0][1].nbits(),
-    );
-    let masked_xY_AB = shared_end_curve.ladder_biscalar(
-        &five_torsion_basis_EAB,
-        &D[1][0].to_le_bytes(),
-        &D[1][1].to_le_bytes(),
-        D[1][0].nbits(),
-        D[1][1].nbits(),
-    );
+    let (masked_xX_AB, masked_xY_AB) =
+        mask_basisx_by_scalar_matrix_pointx_only(&shared_end_curve, &five_torsion_basis_EAB, &D);
 
     let mut kdf = Shake256::default();
     kdf.update(&masked_xX_AB.x().encode());
@@ -262,25 +229,20 @@ where
     );
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
-    let (P_B, Q_B) = ciphertext
-        .codomain_curve
-        .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
-
     let alpha_q = prv_key
         .alpha
         .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
-    let mut scaled_P_B =
-        ciphertext
-            .codomain_curve
-            .mul(&P_B, &alpha_q.to_le_bytes(), alpha_q.nbits());
-    scaled_P_B.set_neg();
-
     let beta_q = prv_key
         .beta
         .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
-    let mut scaled_Q_B = ciphertext
-        .codomain_curve
-        .mul(&Q_B, &beta_q.to_le_bytes(), beta_q.nbits());
+
+    let (mut scaled_P_B, mut scaled_Q_B) = mask_basisx_by_diagonal_scalars_points_only(
+        &ciphertext.codomain_curve,
+        &ciphertext.masked_two_torsion_basis_EB,
+        &alpha_q,
+        &beta_q,
+    );
+    scaled_P_B.set_neg();
     scaled_Q_B.set_neg();
 
     let (P_AB, Q_AB) = ciphertext

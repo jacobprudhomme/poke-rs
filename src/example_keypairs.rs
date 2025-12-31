@@ -7,6 +7,7 @@ use crate::{SUCCESS_RETVAL, bn::BigNum};
 pub mod poke_i {
     use crate::{
         fields::{PokeFieldI, PokeFieldIBase},
+        params::poke_i::{NUM_WORDS_2, NUM_WORDS_5},
         poke::{PrvKey, PubKey},
     };
 
@@ -188,7 +189,7 @@ pub mod poke_i {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<PokeFieldI, 3, 1> {
+    pub fn get_prv_key() -> PrvKey<PokeFieldI, NUM_WORDS_2, NUM_WORDS_5> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),
@@ -202,6 +203,7 @@ pub mod poke_i {
 pub mod poke_iii {
     use crate::{
         fields::{PokeFieldIII, PokeFieldIIIBase},
+        params::poke_iii::{NUM_WORDS_2, NUM_WORDS_5},
         poke::{PrvKey, PubKey},
     };
 
@@ -425,7 +427,7 @@ pub mod poke_iii {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<PokeFieldIII, 4, 2> {
+    pub fn get_prv_key() -> PrvKey<PokeFieldIII, NUM_WORDS_2, NUM_WORDS_5> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),
@@ -439,6 +441,7 @@ pub mod poke_iii {
 pub mod poke_v {
     use crate::{
         fields::{PokeFieldV, PokeFieldVBase},
+        params::poke_v::{NUM_WORDS_2, NUM_WORDS_5},
         poke::{PrvKey, PubKey},
     };
 
@@ -683,7 +686,7 @@ pub mod poke_v {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<PokeFieldV, 5, 2> {
+    pub fn get_prv_key() -> PrvKey<PokeFieldV, NUM_WORDS_2, NUM_WORDS_5> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),
@@ -698,6 +701,7 @@ pub mod inke_i {
     use crate::{
         fields::{InkeFieldI, InkeFieldIBase},
         inke::{PrvKey, PubKey},
+        params::inke_i::NUM_WORDS_2,
     };
 
     use super::*;
@@ -903,7 +907,7 @@ pub mod inke_i {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<InkeFieldI, 3> {
+    pub fn get_prv_key() -> PrvKey<InkeFieldI, NUM_WORDS_2> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),

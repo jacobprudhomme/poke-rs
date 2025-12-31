@@ -107,9 +107,9 @@ pub mod poke_i {
     const THREE_TORSION_EXP: usize = 164;
     const FIVE_TORSION_EXP: usize = 18;
 
-    const NUM_WORDS_2: usize = 3;
+    pub const NUM_WORDS_2: usize = 3;
     const NUM_WORDS_3: usize = 5;
-    const NUM_WORDS_5: usize = 1;
+    pub const NUM_WORDS_5: usize = 1;
     const NUM_WORDS_COF: usize = 7;
     const NUM_WORDS_P: usize = 7;
 
@@ -318,9 +318,9 @@ pub mod poke_iii {
     const THREE_TORSION_EXP: usize = 243;
     const FIVE_TORSION_EXP: usize = 28;
 
-    const NUM_WORDS_2: usize = 4;
+    pub const NUM_WORDS_2: usize = 4;
     const NUM_WORDS_3: usize = 7;
-    const NUM_WORDS_5: usize = 2;
+    pub const NUM_WORDS_5: usize = 2;
     const NUM_WORDS_COF: usize = 10;
     const NUM_WORDS_P: usize = 11;
 
@@ -547,9 +547,9 @@ pub mod poke_v {
     const THREE_TORSION_EXP: usize = 324;
     const FIVE_TORSION_EXP: usize = 36;
 
-    const NUM_WORDS_2: usize = 5;
+    pub const NUM_WORDS_2: usize = 5;
     const NUM_WORDS_3: usize = 9;
-    const NUM_WORDS_5: usize = 2;
+    pub const NUM_WORDS_5: usize = 2;
     const NUM_WORDS_COF: usize = 13;
     const NUM_WORDS_P: usize = 14;
 
@@ -678,7 +678,7 @@ pub mod inke_i {
     const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
     const THREE_TORSION_EXP: usize = 162;
 
-    const NUM_WORDS_2: usize = 3;
+    pub const NUM_WORDS_2: usize = 3;
     const NUM_WORDS_3: usize = 5;
 
     pub fn get_params() -> PublicParams<InkeFieldI, NUM_WORDS_2, NUM_WORDS_3> {

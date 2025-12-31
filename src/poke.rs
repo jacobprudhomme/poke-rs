@@ -5,7 +5,6 @@ use isogeny::{
     elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
-use num_bigint::BigUint;
 use sha3::{
     Shake256,
     digest::{ExtendableOutput as _, Update as _, XofReader as _},
@@ -222,11 +221,7 @@ where
     let mut retval = SUCCESS_RETVAL;
 
     // Factor that shows up in the application of the 2D-isogeny, from the dual that appears in the representation
-    let dual_factor = BigNum::<NUM_WORDS_2>::new(
-        &(BigUint::from_bytes_le(&pub_params.effective_two_torsion_order.to_le_bytes())
-            - BigUint::from_bytes_le(&prv_key.q.to_le_bytes()))
-        .to_u64_digits(),
-    );
+    let dual_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
 
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let alpha_q = prv_key

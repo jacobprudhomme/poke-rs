@@ -2,10 +2,11 @@ use core::{
     array, cmp, fmt,
     ops::{Add, AddAssign, Mul, MulAssign},
 };
+use std::ops::Sub;
 
 use isogeny::utilities::bn::{
     bn_add_vartime, bn_bit_length_vartime, bn_lt_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
-    factorisation_to_bn_vartime, prime_power_to_bn_vartime,
+    bn_sub_into_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
 use num_bigint::BigUint;
 
@@ -182,6 +183,46 @@ impl<const NUM_WORDS: usize> Add<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
 
     fn add(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
         BigNum::new(&bn_add_vartime(&self.repr, &rhs.repr))
+    }
+}
+
+impl<const NUM_WORDS: usize> Sub<&BigNum<NUM_WORDS>> for &BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
+
+    fn sub(self, rhs: &BigNum<NUM_WORDS>) -> Self::Output {
+        let mut words = self.repr;
+        bn_sub_into_vartime(&mut words, &rhs.repr);
+        BigNum::new(&words)
+    }
+}
+
+impl<const NUM_WORDS: usize> Sub<BigNum<NUM_WORDS>> for &BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
+
+    fn sub(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
+        let mut words = self.repr;
+        bn_sub_into_vartime(&mut words, &rhs.repr);
+        BigNum::new(&words)
+    }
+}
+
+impl<const NUM_WORDS: usize> Sub<&BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
+
+    fn sub(self, rhs: &BigNum<NUM_WORDS>) -> Self::Output {
+        let mut words = self.repr;
+        bn_sub_into_vartime(&mut words, &rhs.repr);
+        BigNum::new(&words)
+    }
+}
+
+impl<const NUM_WORDS: usize> Sub<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    type Output = BigNum<NUM_WORDS>;
+
+    fn sub(self, rhs: BigNum<NUM_WORDS>) -> Self::Output {
+        let mut words = self.repr;
+        bn_sub_into_vartime(&mut words, &rhs.repr);
+        BigNum::new(&words)
     }
 }
 

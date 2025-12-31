@@ -903,7 +903,7 @@ pub mod inke_i {
         }
     }
 
-    pub fn get_prv_key() -> PrvKey<InkeFieldI, 2> {
+    pub fn get_prv_key() -> PrvKey<InkeFieldI, 3> {
         PrvKey {
             q: BigNum::from_le_bytes(&Q),
             alpha: BigNum::from_le_bytes(&ALPHA),

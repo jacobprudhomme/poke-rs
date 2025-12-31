@@ -18,6 +18,8 @@ use crate::{
 
 pub struct PublicParams<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_3: usize> {
     pub starting_curve: Curve<Fp2>,
+    pub full_two_torsion_order: BigNum<NUM_WORDS_2>,
+    pub full_two_torsion_exp: usize,
     pub effective_two_torsion_order: BigNum<NUM_WORDS_2>,
     pub effective_two_torsion_exp: usize,
     pub three_torsion_order: BigNum<NUM_WORDS_3>,
@@ -172,18 +174,18 @@ where
         .codomain_curve
         .lift_basis(&ciphertext.masked_two_torsion_basis_EB);
 
-    // FIXME: This should involve modular reduction. It works without, because of the
-    // points' order, but modular reduction may be cheaper than additional multiplications
-    let alpha_q = &prv_key.alpha * &prv_key.q;
+    let alpha_q = prv_key
+        .alpha
+        .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
     let mut scaled_P_B =
         ciphertext
             .codomain_curve
             .mul(&P_B, &alpha_q.to_le_bytes(), alpha_q.nbits());
     scaled_P_B.set_neg();
 
-    // FIXME: This should involve modular reduction. It works without, because of the
-    // points' order, but modular reduction may be cheaper than additional multiplications
-    let beta_q = &prv_key.beta * &prv_key.q;
+    let beta_q = prv_key
+        .beta
+        .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
     let mut scaled_Q_B = ciphertext
         .codomain_curve
         .mul(&Q_B, &beta_q.to_le_bytes(), beta_q.nbits());

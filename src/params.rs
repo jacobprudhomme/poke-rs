@@ -675,11 +675,12 @@ pub mod inke_i {
     const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
     const THREE_TORSION_EXP: usize = 162;
 
-    const NUM_WORDS_2: usize = 2;
+    const NUM_WORDS_2: usize = 3;
     const NUM_WORDS_3: usize = 5;
 
     pub fn get_params() -> PublicParams<InkeFieldI, NUM_WORDS_2, NUM_WORDS_3> {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
 
         let two_torsion_basis = BasisX::from_points(
@@ -695,6 +696,8 @@ pub mod inke_i {
 
         PublicParams {
             starting_curve: Curve::new(&InkeFieldI::ZERO),
+            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
+            full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
             three_torsion_exp: THREE_TORSION_EXP,

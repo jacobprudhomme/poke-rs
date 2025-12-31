@@ -7,6 +7,7 @@ pub mod dlp;
 pub mod example_keypairs;
 pub mod fields;
 pub mod inke;
+mod modular;
 pub mod params;
 pub mod poke;
 pub mod rand;

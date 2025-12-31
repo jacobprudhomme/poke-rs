@@ -45,7 +45,6 @@ pub struct PublicParams<
     pub five_adic_basis: Vec<BigNum<NUM_WORDS_5>>,
 }
 
-// FIXME: represent scalars as their LE byte arrays and bitsize. Removes external dependency on num-bigint
 pub struct PrvKey<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_5: usize> {
     pub q: BigNum<NUM_WORDS_2>,
     pub alpha: BigNum<NUM_WORDS_2>,
@@ -102,7 +101,7 @@ where
     let r = sample_random_element_mod(&pub_params.three_torsion_order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    // TODO: should this be full 2^a torsion, or effective 2^(a-2) torsion?
+    // FIXME: Should this be full 2^a torsion, or effective 2^(a-2) torsion?
     let omega1 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
     let omega2 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
 
@@ -363,11 +362,10 @@ where
     );
     // Used to make a choice of scalar factor later
     // FIXME: if we're computing this in addition to the proper pairing, would it not be better to just
-    // compute the pairing from the power of e(U,V) directly, and fix that in both keygen and decryption?
+    // compute the pairing from the power of e(U,V) directly, and fix the same power in both keygen and decryption?
     let eUV_power_q = eUV_AB.pow(&prv_key.q.to_le_bytes(), prv_key.q.nbits());
     let eUV_aux_is_eUV_power_q = eUV_aux.equals(&eUV_power_q);
 
-    // I suspect a discrepancy between Sage's Weil pairing and the one here
     let eXV = aux_curve.weil_pairing(
         &X_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),

@@ -23,7 +23,6 @@ pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     (result, retval)
 }
 
-// WARN: Vartime with respect to public parameters (the order of the 5^c-torsion subgroup)
 pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait, const NUM_WORDS_ORDER: usize>(
     generator: &Fp2,
     value: &Fp2,
@@ -50,7 +49,7 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait, const NUM_WORDS_ORDER: u
         let r = *value
             * generator
                 .pow(&partial_sum.to_le_bytes(), partial_sum.nbits())
-                .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
+                .invert(); // FIXME: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
             &p_adic_basis[e - i - 1].to_le_bytes(),
             p_adic_basis[e - i - 1].nbits(),
@@ -101,7 +100,6 @@ pub fn solve_dlp_order_five<Fp2: Fp2Trait>(generator: &Fp2, value: &Fp2) -> (u8,
     (result, retval)
 }
 
-// WARN: Vartime with respect to public parameters (the order of the 5^c-torsion subgroup)
 pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait, const NUM_WORDS_ORDER: usize>(
     generator: &Fp2,
     value: &Fp2,
@@ -126,7 +124,7 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait, const NUM_WORDS_ORDER: usize
         let r = *value
             * generator
                 .pow(&partial_sum.to_le_bytes(), partial_sum.nbits())
-                .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
+                .invert(); // FIXME: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
             &five_adic_basis[e - i - 1].to_le_bytes(),
             five_adic_basis[e - i - 1].nbits(),
@@ -178,7 +176,7 @@ pub fn solve_dlp_order_power_of_five_explicit_subgroup<
         let r = *value
             * subgroup[1]
                 .pow(&partial_sum.to_le_bytes(), partial_sum.nbits())
-                .invert(); // TODO: can't we use the (much faster) conjugate since we're in a cyclotomic group?
+                .invert(); // FIXME: can't we use the (much faster) conjugate since we're in a cyclotomic group?
         let u = r.pow(
             &five_adic_basis[e - i - 1].to_le_bytes(),
             five_adic_basis[e - i - 1].nbits(),

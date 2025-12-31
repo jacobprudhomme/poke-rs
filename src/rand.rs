@@ -15,7 +15,6 @@ pub fn sample_random_element_mod<const NUM_WORDS_MOD: usize>(
     let element = rng.gen_biguint_below(&modulus);
 
     BigNum::new(&element.to_u64_digits())
-    // BigNum::new(&[1])
 }
 
 pub fn sample_random_unit_mod_prime_power<const NUM_WORDS_MOD: usize>(
@@ -31,7 +30,6 @@ pub fn sample_random_unit_mod_prime_power<const NUM_WORDS_MOD: usize>(
         unit = rng.gen_biguint_below(&modulus);
     }
 
-    // let unit = BigNum::new(&[1]);
     BigNum::new(&unit.to_u64_digits())
 }
 
@@ -58,7 +56,7 @@ pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usiz
     }
 
     // Select the 4th element to have gcd(det(D), 5^c) == 1
-    // TODO: is this valid? I would assume the operations between 3 random numbers also gives a random number. Prove this
+    // FIXME: Is this valid? I would assume the operations between 3 random numbers also gives a random number. Prove this
     let cross_term = (&modulus - ((&matrix[0][1] * &matrix[1][0]) % &modulus)) % &modulus;
     let mut element = rng.gen_biguint_below(&modulus);
     while (&cross_term + (&matrix[0][0] * &element) % &modulus) % &modulus_base == BigUint::ZERO {
@@ -67,10 +65,6 @@ pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usiz
     matrix[1][1] = element;
 
     matrix.map(|row| row.map(|element| BigNum::new(&element.to_u64_digits())))
-    // [
-    //     [BigNum::new(&[1]), BigNum::zero()],
-    //     [BigNum::zero(), BigNum::new(&[1])],
-    // ]
 }
 
 // Randomly find a basis of the given torsion subgroup on the given curve
@@ -88,7 +82,6 @@ pub fn sample_random_torsion_basis_order_prime_power<
 
     let torsion_subgroup_order_base = BigUint::from(torsion_subgroup_order_base);
 
-    // TODO: include in paper WHY we can just divide p^e by p once to obtain a check that the point has exactly the order we need
     let reduced_torsion_subgroup_order =
         &BigUint::from_bytes_le(&torsion_subgroup_order.to_le_bytes())
             / &torsion_subgroup_order_base;
@@ -151,8 +144,6 @@ pub fn sample_random_torsion_basis_order_prime_power<
 
         /* Check point is linearly independent to U */
 
-        // FIXME: why the heck does this Weil pairing not produce the same as what Sage does??
-        // In the hardcoded example below, it produces the square of what Sage does, for example
         let eUV = curve.weil_pairing(
             &U.to_pointx().x(),
             &V.to_pointx().x(),
@@ -168,7 +159,7 @@ pub fn sample_random_torsion_basis_order_prime_power<
         if eUV_saturated.equals(&Fp2::ONE) == SUCCESS_RETVAL {
             continue;
         }
-        // TODO: is this check necessary? Because of the fact that the group might have order m*n
+        // FIXME: Is this check necessary? Because of the fact that the group might have order m*n
         if eUV_saturated
             .pow(
                 &torsion_subgroup_order_base.to_bytes_le(),

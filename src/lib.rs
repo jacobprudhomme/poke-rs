@@ -3,6 +3,7 @@
 #![feature(generic_const_exprs)]
 
 pub mod bn;
+mod dimtwo;
 pub mod dlp;
 pub mod example_keypairs;
 pub mod fields;

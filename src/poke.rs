@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point},
+    elliptic::{basis::BasisX, curve::Curve, point::PointX},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 use sha3::{
@@ -13,14 +13,15 @@ use sha3::{
 use crate::{
     SUCCESS_RETVAL,
     bn::BigNum,
-    dlp::solve_dlp_small_prime_power_order,
+    dimtwo::eval_2d_two_isogeny_chain_on_prime_power_torsion_basis,
     masking::{
-        mask_basisx_by_diagonal_scalars, mask_basisx_by_diagonal_scalars_points_only,
-        mask_basisx_by_scalar_matrix, mask_basisx_by_scalar_matrix_pointx_only,
+        mask_basis_by_same_scalar, mask_basisx_by_diagonal_scalars,
+        mask_basisx_by_diagonal_scalars_points_only, mask_basisx_by_scalar_matrix,
+        mask_basisx_by_scalar_matrix_pointx_only,
     },
     rand::{
         sample_random_element_mod, sample_random_invertible_matrix_mod_prime_power,
-        sample_random_torsion_basis_order_prime_power, sample_random_unit_mod_prime_power,
+        sample_random_unit_mod_prime_power,
     },
 };
 
@@ -220,10 +221,8 @@ where
 {
     let mut retval = SUCCESS_RETVAL;
 
-    // Factor that shows up in the application of the 2D-isogeny, from the dual that appears in the representation
-    let dual_factor = &pub_params.effective_two_torsion_order - &prv_key.q;
+    /* Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>) */
 
-    // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let alpha_q = prv_key
         .alpha
         .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
@@ -246,217 +245,27 @@ where
     let P1P2 = ProductPoint::new(&scaled_P_B, &P_AB);
     let Q1Q2 = ProductPoint::new(&scaled_Q_B, &Q_AB);
 
-    let (X_B, Y_B) = ciphertext
-        .codomain_curve
-        .lift_basis(&ciphertext.masked_five_torsion_basis_EB);
-    let XY_B = ciphertext.codomain_curve.sub(&X_B, &Y_B);
+    /* Derive shared secret from image points and use them to decrypt message */
 
-    // Generate random basis of the 5^c-torsion on E_AB
-    let (U, V, eUV_AB) = sample_random_torsion_basis_order_prime_power(
-        &ciphertext.shared_end_curve,
+    let (five_torsion_basis_img_EAB, ok) = eval_2d_two_isogeny_chain_on_prime_power_torsion_basis(
+        &domain,
+        (&P1P2, &Q1Q2),
+        pub_params.effective_two_torsion_exp,
+        &pub_params.effective_two_torsion_order,
+        &prv_key.q,
+        &ciphertext.masked_five_torsion_basis_EB,
         5,
+        pub_params.five_torsion_exp,
         &pub_params.five_torsion_order,
         &pub_params.five_torsion_cofactor,
-    );
-    let UV = ciphertext.shared_end_curve.sub(&U, &V);
-
-    // Compute Phi' on the masked 5^c-torsion for E_B and a random 5^c-torsion basis for E_AB
-    let (aux_curves, torsion_bases_aux_curves, ok) = domain.elliptic_product_isogeny(
-        &P1P2,
-        &Q1Q2,
-        pub_params.effective_two_torsion_exp,
-        &[
-            ProductPoint::new(&X_B, &Point::INFINITY),
-            ProductPoint::new(&Y_B, &Point::INFINITY),
-            ProductPoint::new(&XY_B, &Point::INFINITY),
-            ProductPoint::new(&Point::INFINITY, &U),
-            ProductPoint::new(&Point::INFINITY, &V),
-            ProductPoint::new(&Point::INFINITY, &UV),
-        ],
-    );
-    retval &= ok;
-    let aux_curve = aux_curves.curves().0;
-
-    /* Find change-of-basis matrix */
-
-    // Correct the pairs of image points to overall sign
-    let mut X_aux_curve = torsion_bases_aux_curves[0].points().0;
-    let mut Y_aux_curve = torsion_bases_aux_curves[1].points().0;
-    let mut XY_aux_curve = torsion_bases_aux_curves[2].points().0;
-    Y_aux_curve.set_condneg(
-        !aux_curve
-            .sub(&X_aux_curve, &Y_aux_curve)
-            .to_pointx()
-            .equals(&XY_aux_curve.to_pointx()),
-    );
-
-    let mut U_aux_curve = torsion_bases_aux_curves[3].points().0;
-    let mut V_aux_curve = torsion_bases_aux_curves[4].points().0;
-    let mut UV_aux_curve = torsion_bases_aux_curves[5].points().0;
-    V_aux_curve.set_condneg(
-        !aux_curve
-            .sub(&U_aux_curve, &V_aux_curve)
-            .to_pointx()
-            .equals(&UV_aux_curve.to_pointx()),
-    );
-
-    // Compute pairs of point subtractions for later computing the pairings between them
-    let XV_aux_curve = aux_curve.sub(&X_aux_curve, &V_aux_curve);
-    let XmU_aux_curve = aux_curve.add(&X_aux_curve, &U_aux_curve);
-
-    let YV_aux_curve = aux_curve.sub(&Y_aux_curve, &V_aux_curve);
-    let YmU_aux_curve = aux_curve.add(&Y_aux_curve, &U_aux_curve);
-
-    // Compute the pairings e(U, V), e(X, V) = e(U, V)^x and e(X, -U) = e(U, V)^y,
-    // e(Y, V) = e(U, V)^w and e(Y, -U) = e(U, V)^z
-    let eUV_aux = aux_curve.weil_pairing(
-        &U_aux_curve.to_pointx().x(),
-        &V_aux_curve.to_pointx().x(),
-        &UV_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
-    );
-    // Used to make a choice of scalar factor later
-    // FIXME: if we're computing this in addition to the proper pairing, would it not be better to just
-    // compute the pairing from the power of e(U,V) directly, and fix the same power in both keygen and decryption?
-    let eUV_power_q = eUV_AB.pow(&prv_key.q.to_le_bytes(), prv_key.q.nbits());
-    let eUV_aux_is_eUV_power_q = eUV_aux.equals(&eUV_power_q);
-
-    let eXV = aux_curve.weil_pairing(
-        &X_aux_curve.to_pointx().x(),
-        &V_aux_curve.to_pointx().x(),
-        &XV_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
-    );
-    let eXmU = aux_curve.weil_pairing(
-        &X_aux_curve.to_pointx().x(),
-        &U_aux_curve.to_pointx().x(),
-        &XmU_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
-    );
-
-    let eYV = aux_curve.weil_pairing(
-        &Y_aux_curve.to_pointx().x(),
-        &V_aux_curve.to_pointx().x(),
-        &YV_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
-    );
-    let eYmU = aux_curve.weil_pairing(
-        &Y_aux_curve.to_pointx().x(),
-        &U_aux_curve.to_pointx().x(),
-        &YmU_aux_curve.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
-    );
-
-    // Solve discrete logarithm between pairings to obtain expression of X' in terms of <U',V'>
-    let (x, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
-        &eXV,
-        5,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
-    );
-    retval &= ok;
-    let (y, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
-        &eXmU,
-        5,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
-    );
-    retval &= ok;
-    let (w, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
-        &eYV,
-        5,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
-    );
-    retval &= ok;
-    let (z, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
-        &eYmU,
-        5,
-        pub_params.five_torsion_exp,
         &pub_params.five_adic_basis,
     );
     retval &= ok;
 
-    /* Decrypt message using one-time pad derived from shared secret */
-
-    // Compute shared secret points (reusing temporary intermediate curve points as an optimization)
-    ciphertext
-        .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, &x.to_le_bytes(), x.nbits());
-    ciphertext
-        .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, &y.to_le_bytes(), y.nbits());
-    ciphertext
-        .shared_end_curve
-        .add_into(&mut XY_aux_curve, &X_aux_curve, &Y_aux_curve);
-
-    // [q] * X_AB'
-    ciphertext.shared_end_curve.mul_into(
-        &mut U_aux_curve,
-        &XY_aux_curve,
-        &prv_key.q.to_le_bytes(),
-        prv_key.q.nbits(),
-    );
-    // [2^(a-2) - q] * X_AB'
-    ciphertext.shared_end_curve.mul_into(
-        &mut V_aux_curve,
-        &XY_aux_curve,
-        &dual_factor.to_le_bytes(),
-        dual_factor.nbits(),
-    );
-    // Choose the appropriate one of the above points depending on whether
-    // e(U',V') = e(U,V)^q or e(U',V') = e(U,V)^(2^(a-2) - q)
-    UV_aux_curve = U_aux_curve;
-    UV_aux_curve.set_cond(&V_aux_curve, !eUV_aux_is_eUV_power_q);
-
-    let X_AB = ciphertext.shared_end_curve.mul(
-        &UV_aux_curve,
-        &prv_key.delta.to_le_bytes(),
-        prv_key.delta.nbits(),
-    );
-
-    ciphertext
-        .shared_end_curve
-        .mul_into(&mut X_aux_curve, &U, &w.to_le_bytes(), w.nbits());
-    ciphertext
-        .shared_end_curve
-        .mul_into(&mut Y_aux_curve, &V, &z.to_le_bytes(), z.nbits());
-    ciphertext
-        .shared_end_curve
-        .add_into(&mut XY_aux_curve, &X_aux_curve, &Y_aux_curve);
-
-    // [q] * Y_AB'
-    ciphertext.shared_end_curve.mul_into(
-        &mut U_aux_curve,
-        &XY_aux_curve,
-        &prv_key.q.to_le_bytes(),
-        prv_key.q.nbits(),
-    );
-    // [2^(a-2) - q] * Y_AB'
-    ciphertext.shared_end_curve.mul_into(
-        &mut V_aux_curve,
-        &XY_aux_curve,
-        &dual_factor.to_le_bytes(),
-        dual_factor.nbits(),
-    );
-    // Choose the appropriate one of the above points depending on whether
-    // e(U',V') = e(U,V)^q or e(U',V') = e(U,V)^(2^(a-2) - q)
-    UV_aux_curve = U_aux_curve;
-    UV_aux_curve.set_cond(&V_aux_curve, !eUV_aux_is_eUV_power_q);
-
-    let Y_AB = ciphertext.shared_end_curve.mul(
-        &UV_aux_curve,
-        &prv_key.delta.to_le_bytes(),
-        prv_key.delta.nbits(),
+    let (X_AB, Y_AB) = mask_basis_by_same_scalar(
+        &ciphertext.shared_end_curve,
+        &five_torsion_basis_img_EAB,
+        &prv_key.delta,
     );
 
     // Undo one-time pad of message

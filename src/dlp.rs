@@ -6,7 +6,7 @@ use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
 pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     generator: &Fp2,
     value: &Fp2,
-    p: usize,
+    p: u8,
 ) -> (u8, u32) {
     let mut retval = FAILURE_RETVAL;
 
@@ -14,7 +14,7 @@ pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     let mut result = 0;
     for i in 0..p {
         let found_log = value.equals(&element);
-        result |= (i as u8) & (found_log as u8);
+        result |= i & (found_log as u8);
         retval |= found_log;
 
         element *= *generator;
@@ -26,7 +26,7 @@ pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
 pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait, const NUM_WORDS_ORDER: usize>(
     generator: &Fp2,
     value: &Fp2,
-    p: usize,
+    p: u8,
     e: usize,
     p_adic_basis: &[BigNum<NUM_WORDS_ORDER>],
 ) -> (BigNum<NUM_WORDS_ORDER>, u32) {

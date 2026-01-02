@@ -3,6 +3,20 @@ use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_p
 
 use crate::bn::BigNum;
 
+pub fn mask_basis_by_same_scalar<Fp2: Fp2Trait, const NUM_WORDS: usize>(
+    curve: &Curve<Fp2>,
+    (P, Q): &(Point<Fp2>, Point<Fp2>),
+    scalar: &BigNum<NUM_WORDS>,
+) -> (Point<Fp2>, Point<Fp2>) {
+    let scalar_bitlen = scalar.nbits();
+    let scalar = scalar.to_le_bytes();
+
+    let masked_P = curve.mul(P, &scalar, scalar_bitlen);
+    let masked_Q = curve.mul(Q, &scalar, scalar_bitlen);
+
+    (masked_P, masked_Q)
+}
+
 pub fn mask_basisx_by_diagonal_scalars<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,

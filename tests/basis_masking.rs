@@ -251,7 +251,11 @@ fn all_methods_for_single_scalar_are_equal<
     const NUM_WORDS_2: usize,
     const NUM_WORDS_3: usize,
     const NUM_WORDS_5: usize,
-    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_23: usize,
+    const NUM_WORDS_25: usize,
+    const NUM_WORDS_35: usize,
+    const NUM_WORDS_235: usize,
+    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
 >(
     #[case] params: PublicParams<
@@ -259,7 +263,11 @@ fn all_methods_for_single_scalar_are_equal<
         NUM_WORDS_2,
         NUM_WORDS_3,
         NUM_WORDS_5,
-        NUM_WORDS_COF,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_235,
+        NUM_WORDS_5_COF,
         NUM_WORDS_P,
     >,
 ) {
@@ -329,7 +337,11 @@ fn all_methods_for_different_scalars_are_equal<
     const NUM_WORDS_2: usize,
     const NUM_WORDS_3: usize,
     const NUM_WORDS_5: usize,
-    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_23: usize,
+    const NUM_WORDS_25: usize,
+    const NUM_WORDS_35: usize,
+    const NUM_WORDS_235: usize,
+    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
 >(
     #[case] params: PublicParams<
@@ -337,7 +349,11 @@ fn all_methods_for_different_scalars_are_equal<
         NUM_WORDS_2,
         NUM_WORDS_3,
         NUM_WORDS_5,
-        NUM_WORDS_COF,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_235,
+        NUM_WORDS_5_COF,
         NUM_WORDS_P,
     >,
 ) {
@@ -415,7 +431,11 @@ fn all_methods_for_scalar_matrix_are_equal<
     const NUM_WORDS_2: usize,
     const NUM_WORDS_3: usize,
     const NUM_WORDS_5: usize,
-    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_23: usize,
+    const NUM_WORDS_25: usize,
+    const NUM_WORDS_35: usize,
+    const NUM_WORDS_235: usize,
+    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
 >(
     #[case] params: PublicParams<
@@ -423,7 +443,11 @@ fn all_methods_for_scalar_matrix_are_equal<
         NUM_WORDS_2,
         NUM_WORDS_3,
         NUM_WORDS_5,
-        NUM_WORDS_COF,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_235,
+        NUM_WORDS_5_COF,
         NUM_WORDS_P,
     >,
 ) {
@@ -480,7 +504,11 @@ fn all_methods_for_special_case_are_equal<
     const NUM_WORDS_2: usize,
     const NUM_WORDS_3: usize,
     const NUM_WORDS_5: usize,
-    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_23: usize,
+    const NUM_WORDS_25: usize,
+    const NUM_WORDS_35: usize,
+    const NUM_WORDS_235: usize,
+    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
 >(
     #[case] params: PublicParams<
@@ -488,7 +516,11 @@ fn all_methods_for_special_case_are_equal<
         NUM_WORDS_2,
         NUM_WORDS_3,
         NUM_WORDS_5,
-        NUM_WORDS_COF,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_235,
+        NUM_WORDS_5_COF,
         NUM_WORDS_P,
     >,
 ) {

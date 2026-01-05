@@ -1,6 +1,8 @@
 use fp2::traits::Fp2 as Fp2Trait;
 
-use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
+use crate::{
+    FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum, modular::crt_mod_powers_of_two_three_five,
+};
 
 // Works for primes < 256
 pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
@@ -61,6 +63,64 @@ pub fn solve_dlp_small_prime_power_order<Fp2: Fp2Trait, const NUM_WORDS_ORDER: u
     }
 
     (partial_sum, retval)
+}
+
+pub fn solve_dlp_order_powers_of_two_three_five<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_23: usize,
+    const NUM_WORDS_25: usize,
+    const NUM_WORDS_35: usize,
+    const NUM_WORDS_235: usize,
+>(
+    generator: &Fp2,
+    value: &Fp2,
+    es: (usize, usize, usize),
+    prime_power_orders: (
+        &BigNum<NUM_WORDS_2>,
+        &BigNum<NUM_WORDS_3>,
+        &BigNum<NUM_WORDS_5>,
+    ),
+    partial_products_of_prime_power_orders: (
+        &BigNum<NUM_WORDS_23>,
+        &BigNum<NUM_WORDS_25>,
+        &BigNum<NUM_WORDS_35>,
+    ),
+    full_product_of_prime_power_orders: &BigNum<NUM_WORDS_235>,
+    p_adic_bases: (
+        &[BigNum<NUM_WORDS_2>],
+        &[BigNum<NUM_WORDS_3>],
+        &[BigNum<NUM_WORDS_5>],
+    ),
+) -> (BigNum<NUM_WORDS_235>, u32) {
+    let mut retval = SUCCESS_RETVAL;
+
+    let (result_mod_power_of_two, ok) =
+        solve_dlp_small_prime_power_order(generator, value, 2, es.0, p_adic_bases.0);
+    retval &= ok;
+
+    let (result_mod_power_of_three, ok) =
+        solve_dlp_small_prime_power_order(generator, value, 3, es.1, p_adic_bases.1);
+    retval &= ok;
+
+    let (result_mod_power_of_five, ok) =
+        solve_dlp_small_prime_power_order(generator, value, 5, es.2, p_adic_bases.2);
+    retval &= ok;
+
+    let result = crt_mod_powers_of_two_three_five(
+        (
+            &result_mod_power_of_two,
+            &result_mod_power_of_three,
+            &result_mod_power_of_five,
+        ),
+        prime_power_orders,
+        partial_products_of_prime_power_orders,
+        full_product_of_prime_power_orders,
+    );
+
+    (result, retval)
 }
 
 pub fn solve_dlp_order_five<Fp2: Fp2Trait>(generator: &Fp2, value: &Fp2) -> (u8, u32) {

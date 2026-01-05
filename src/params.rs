@@ -111,21 +111,47 @@ pub mod poke_i {
     pub const NUM_WORDS_2: usize = 3;
     const NUM_WORDS_3: usize = 5;
     pub const NUM_WORDS_5: usize = 1;
-    const NUM_WORDS_COF: usize = 7;
+    const NUM_WORDS_23: usize = 7;
+    const NUM_WORDS_25: usize = 3;
+    const NUM_WORDS_35: usize = 5;
+    const NUM_WORDS_235: usize = 7;
+    const NUM_WORDS_5_COF: usize = 7;
     const NUM_WORDS_P: usize = 7;
 
-    pub fn get_params()
-    -> PublicParams<PokeFieldI, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>
-    {
+    pub fn get_params() -> PublicParams<
+        PokeFieldI,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_235,
+        NUM_WORDS_5_COF,
+        NUM_WORDS_P,
+    > {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let cofactor = BigNum::<1>::one();
-        let five_torsion_cofactor = full_two_torsion_order
+        let cofactor = BigNum::one();
+        let two_times_three_torsion_order = full_two_torsion_order
             .widening_mul(&three_torsion_order)
+            .truncate();
+        let two_times_five_torsion_order = full_two_torsion_order
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let three_times_five_torsion_order = three_torsion_order
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let full_torsion_order = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let five_torsion_cofactor = two_times_three_torsion_order
             .widening_mul(&cofactor)
             .truncate();
+        let field_characteristic = full_torsion_order.widening_mul(&cofactor).truncate();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -143,11 +169,19 @@ pub mod poke_i {
             &PointX::from_x_coord(&XY_X),
         );
 
+        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(2, exp))
+            .collect::<Vec<_>>();
+        let three_adic_basis = (0..=THREE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(3, exp))
+            .collect::<Vec<_>>();
         let five_adic_basis = (0..=FIVE_TORSION_EXP)
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
         PublicParams {
+            field_characteristic,
+            cofactor,
             starting_curve: Curve::new(&PokeFieldI::ZERO),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
@@ -158,9 +192,15 @@ pub mod poke_i {
             five_torsion_exp: FIVE_TORSION_EXP,
             five_torsion_order,
             five_torsion_cofactor,
+            two_times_three_torsion_order,
+            two_times_five_torsion_order,
+            three_times_five_torsion_order,
+            full_torsion_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
+            two_adic_basis,
+            three_adic_basis,
             five_adic_basis,
         }
     }
@@ -325,21 +365,47 @@ pub mod poke_iii {
     pub const NUM_WORDS_2: usize = 4;
     const NUM_WORDS_3: usize = 7;
     pub const NUM_WORDS_5: usize = 2;
-    const NUM_WORDS_COF: usize = 10;
+    const NUM_WORDS_23: usize = 10;
+    const NUM_WORDS_25: usize = 5;
+    const NUM_WORDS_35: usize = 8;
+    const NUM_WORDS_235: usize = 11;
+    const NUM_WORDS_5_COF: usize = 10;
     const NUM_WORDS_P: usize = 11;
 
-    pub fn get_params()
-    -> PublicParams<PokeFieldIII, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>
-    {
+    pub fn get_params() -> PublicParams<
+        PokeFieldIII,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_235,
+        NUM_WORDS_5_COF,
+        NUM_WORDS_P,
+    > {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let cofactor = BigNum::<1>::from_prime_power(7, 2);
-        let five_torsion_cofactor = full_two_torsion_order
+        let cofactor = BigNum::from_prime_power(7, 2);
+        let two_times_three_torsion_order = full_two_torsion_order
             .widening_mul(&three_torsion_order)
+            .truncate();
+        let two_times_five_torsion_order = full_two_torsion_order
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let three_times_five_torsion_order = three_torsion_order
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let full_torsion_order = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let five_torsion_cofactor = two_times_three_torsion_order
             .widening_mul(&cofactor)
             .truncate();
+        let field_characteristic = full_torsion_order.widening_mul(&cofactor).truncate();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -357,11 +423,19 @@ pub mod poke_iii {
             &PointX::from_x_coord(&XY_X),
         );
 
+        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(2, exp))
+            .collect::<Vec<_>>();
+        let three_adic_basis = (0..=THREE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(3, exp))
+            .collect::<Vec<_>>();
         let five_adic_basis = (0..=FIVE_TORSION_EXP)
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
         PublicParams {
+            field_characteristic,
+            cofactor,
             starting_curve: Curve::new(&PokeFieldIII::ZERO),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
@@ -372,9 +446,15 @@ pub mod poke_iii {
             five_torsion_exp: FIVE_TORSION_EXP,
             five_torsion_order,
             five_torsion_cofactor,
+            two_times_three_torsion_order,
+            two_times_five_torsion_order,
+            three_times_five_torsion_order,
+            full_torsion_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
+            two_adic_basis,
+            three_adic_basis,
             five_adic_basis,
         }
     }
@@ -557,21 +637,47 @@ pub mod poke_v {
     pub const NUM_WORDS_2: usize = 5;
     const NUM_WORDS_3: usize = 9;
     pub const NUM_WORDS_5: usize = 2;
-    const NUM_WORDS_COF: usize = 13;
+    const NUM_WORDS_23: usize = 13;
+    const NUM_WORDS_25: usize = 6;
+    const NUM_WORDS_35: usize = 10;
+    const NUM_WORDS_235: usize = 14;
+    const NUM_WORDS_5_COF: usize = 13;
     const NUM_WORDS_P: usize = 14;
 
-    pub fn get_params()
-    -> PublicParams<PokeFieldV, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_5, NUM_WORDS_COF, NUM_WORDS_P>
-    {
+    pub fn get_params() -> PublicParams<
+        PokeFieldV,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_235,
+        NUM_WORDS_5_COF,
+        NUM_WORDS_P,
+    > {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
         let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
         let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
-        let cofactor = BigNum::<1>::from_prime(547);
-        let five_torsion_cofactor = full_two_torsion_order
+        let cofactor = BigNum::from_prime(547);
+        let two_times_three_torsion_order = full_two_torsion_order
             .widening_mul(&three_torsion_order)
+            .truncate();
+        let two_times_five_torsion_order = full_two_torsion_order
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let three_times_five_torsion_order = three_torsion_order
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let full_torsion_order = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .widening_mul(&five_torsion_order)
+            .truncate();
+        let five_torsion_cofactor = two_times_three_torsion_order
             .widening_mul(&cofactor)
             .truncate();
+        let field_characteristic = full_torsion_order.widening_mul(&cofactor).truncate();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -589,11 +695,19 @@ pub mod poke_v {
             &PointX::from_x_coord(&XY_X),
         );
 
+        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(2, exp))
+            .collect::<Vec<_>>();
+        let three_adic_basis = (0..=THREE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(3, exp))
+            .collect::<Vec<_>>();
         let five_adic_basis = (0..=FIVE_TORSION_EXP)
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
         PublicParams {
+            field_characteristic,
+            cofactor,
             starting_curve: Curve::new(&PokeFieldV::ZERO),
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
@@ -604,9 +718,15 @@ pub mod poke_v {
             five_torsion_exp: FIVE_TORSION_EXP,
             five_torsion_order,
             five_torsion_cofactor,
+            two_times_three_torsion_order,
+            two_times_five_torsion_order,
+            three_times_five_torsion_order,
+            full_torsion_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
+            two_adic_basis,
+            three_adic_basis,
             five_adic_basis,
         }
     }

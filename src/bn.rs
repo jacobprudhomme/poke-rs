@@ -147,6 +147,15 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
             bitlen,
         }
     }
+
+    pub fn widen<const NEW_NUM_WORDS: usize>(&self) -> BigNum<NEW_NUM_WORDS> {
+        let mut words = [0; NEW_NUM_WORDS];
+        words[..NUM_WORDS].copy_from_slice(&self.repr[..NUM_WORDS]);
+        BigNum {
+            repr: words,
+            bitlen: self.bitlen,
+        }
+    }
 }
 
 // WARN: Since addition is expected to have size max(lhs.len(), rhs.len()) + 1,

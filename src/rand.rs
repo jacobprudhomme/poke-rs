@@ -33,6 +33,27 @@ pub fn sample_random_unit_mod_prime_power<const NUM_WORDS_MOD: usize>(
     BigNum::new(&unit.to_u64_digits())
 }
 
+pub fn sample_random_element_mod_coprime_with_small_primes<const NUM_WORDS_MOD: usize>(
+    modulus: &BigNum<NUM_WORDS_MOD>,
+    coprime_to: &[u8],
+) -> BigNum<NUM_WORDS_MOD> {
+    let mut rng = old_rand::thread_rng();
+
+    let coprime_to = coprime_to
+        .iter()
+        .map(|&n| BigUint::from(n))
+        .collect::<Vec<_>>();
+
+    // Keep generating elements until we find one coprime to all primes in coprime_to
+    let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
+    let mut element = rng.gen_biguint_below(&modulus);
+    while coprime_to.iter().any(|p| &element % p == BigUint::ZERO) {
+        element = rng.gen_biguint_below(&modulus);
+    }
+
+    BigNum::new(&element.to_u64_digits())
+}
+
 // FIXME: Validate that this algorithm generates a uniformly random invertible matrices in SL_2(Z_(5^c))
 pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usize>(
     modulus_base: u8,

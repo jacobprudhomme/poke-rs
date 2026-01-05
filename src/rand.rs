@@ -68,30 +68,38 @@ pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usiz
 }
 
 // Randomly find a basis of the given torsion subgroup on the given curve
-pub fn sample_random_torsion_basis_order_prime_power<
+// WARN: Only works for torsion subgroup orders with prime factors < 256
+pub fn sample_random_torsion_basis_order_product_of_powers_of_small_primes<
     Fp2: Fp2Trait,
     const NUM_WORDS_TORSION: usize,
     const NUM_WORDS_COF: usize,
 >(
     curve: &Curve<Fp2>,
-    torsion_subgroup_order_base: u8,
+    torsion_subgroup_order_base_primes: &[u8],
     torsion_subgroup_order: &BigNum<NUM_WORDS_TORSION>,
     order_cofactor: &BigNum<NUM_WORDS_COF>,
 ) -> (Point<Fp2>, Point<Fp2>, Fp2) {
     let mut rng = rand::rng();
 
-    let torsion_subgroup_order_base = BigUint::from(torsion_subgroup_order_base);
+    let torsion_subgroup_order_base_primes = torsion_subgroup_order_base_primes
+        .iter()
+        .map(|&prime| BigUint::from(prime))
+        .collect::<Vec<_>>();
+    let torsion_subgroup_order_biguint =
+        BigUint::from_bytes_le(&torsion_subgroup_order.to_le_bytes());
 
-    let reduced_torsion_subgroup_order =
-        &BigUint::from_bytes_le(&torsion_subgroup_order.to_le_bytes())
-            / &torsion_subgroup_order_base;
-    let reduced_torsion_subgroup_order =
-        BigNum::<NUM_WORDS_TORSION>::new(&reduced_torsion_subgroup_order.to_u64_digits());
+    let reduced_torsion_subgroup_orders = &torsion_subgroup_order_base_primes
+        .iter()
+        .map(|prime| &torsion_subgroup_order_biguint / prime)
+        .map(|reduced_order| BigNum::<NUM_WORDS_TORSION>::new(&reduced_order.to_u64_digits()))
+        .collect::<Vec<_>>();
 
     // Generate a point of the desired order
-    // FIXME: should I break the loop condition only at the very end, all conditions being tested at once?
+    // ASK: Should I break the loop condition only at the very end, all conditions being tested at once?
     // Or is this not even necessary, because exiting early only leaks information we know?
-    // TODO: check how long it takes for these loops to terminate on average, as we are not generating deterministically as in the Sage implementation
+    // My guess is that when doing rejection sampling, it doesn't matter when we reject, since we know
+    // the final result must not satisfy any of the rejection criteria anyway.
+    // TODO: Check how long it takes for these loops to terminate on average, as we are not generating deterministically as in the Sage implementation
     let U = loop {
         let U = curve.rand_point(&mut rng);
 
@@ -104,12 +112,15 @@ pub fn sample_random_torsion_basis_order_prime_power<
             continue;
         }
 
-        let U_saturated = curve.mul(
-            &U_in_torsion_subgroup,
-            &reduced_torsion_subgroup_order.to_le_bytes(),
-            reduced_torsion_subgroup_order.nbits(),
-        );
-        if U_saturated.is_zero() == SUCCESS_RETVAL {
+        let mut Us_saturated = reduced_torsion_subgroup_orders.iter().map(|reduced_order| {
+            curve.mul(
+                &U_in_torsion_subgroup,
+                &reduced_order.to_le_bytes(),
+                reduced_order.nbits(),
+            )
+        });
+        // ASK: Is it a problem that any() short-circuits? See above comment
+        if Us_saturated.any(|U_saturated| U_saturated.is_zero() == SUCCESS_RETVAL) {
             continue;
         }
 
@@ -130,12 +141,15 @@ pub fn sample_random_torsion_basis_order_prime_power<
             continue;
         }
 
-        let V_saturated = curve.mul(
-            &V_in_torsion_subgroup,
-            &reduced_torsion_subgroup_order.to_le_bytes(),
-            reduced_torsion_subgroup_order.nbits(),
-        );
-        if V_saturated.is_zero() == SUCCESS_RETVAL {
+        let mut Vs_saturated = reduced_torsion_subgroup_orders.iter().map(|reduced_order| {
+            curve.mul(
+                &V_in_torsion_subgroup,
+                &reduced_order.to_le_bytes(),
+                reduced_order.nbits(),
+            )
+        });
+        // ASK: Is it a problem that any() short-circuits? See above comment
+        if Vs_saturated.any(|V_saturated| V_saturated.is_zero() == SUCCESS_RETVAL) {
             continue;
         }
 
@@ -152,24 +166,30 @@ pub fn sample_random_torsion_basis_order_prime_power<
             torsion_subgroup_order.nbits(),
         );
 
-        let eUV_saturated = eUV.pow(
-            &reduced_torsion_subgroup_order.to_le_bytes(),
-            reduced_torsion_subgroup_order.nbits(),
-        );
-        if eUV_saturated.equals(&Fp2::ONE) == SUCCESS_RETVAL {
+        // ASK: Is it a problem that any() short-circuits? See above comment
+        let eUVs_saturated = reduced_torsion_subgroup_orders
+            .iter()
+            .map(|reduced_order| eUV.pow(&reduced_order.to_le_bytes(), reduced_order.nbits()))
+            .collect::<Vec<_>>();
+        if eUVs_saturated
+            .iter()
+            .any(|eUV_saturated| eUV_saturated.equals(&Fp2::ONE) == SUCCESS_RETVAL)
+        {
             continue;
         }
         // FIXME: Is this check necessary? Because of the fact that the group might have order m*n
-        if eUV_saturated
-            .pow(
-                &torsion_subgroup_order_base.to_bytes_le(),
-                torsion_subgroup_order_base.bits()
-                    .try_into()
-                    .expect("Size in bits of constant 5 is too big to fit in a usize (we do not ever expect this to happen)"),
-            )
-            .equals(&Fp2::ONE)
-            == FAILURE_RETVAL
-        {
+        // ASK: Is it a problem that any() short-circuits? See above comment
+        if eUVs_saturated.iter().zip(torsion_subgroup_order_base_primes.iter()).any(|(eUV_saturated, prime)| {
+            eUV_saturated
+                .pow(
+                    &prime.to_bytes_le(),
+                    prime.bits()
+                        .try_into()
+                        .expect("Size in bits of constant 5 is too big to fit in a usize (we do not ever expect this to happen)"),
+                )
+                .equals(&Fp2::ONE)
+                == FAILURE_RETVAL
+        }) {
             continue;
         }
 

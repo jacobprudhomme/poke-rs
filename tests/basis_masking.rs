@@ -10,7 +10,8 @@ use poke::{
     poke::PublicParams,
     rand::{
         sample_random_invertible_matrix_mod_prime_power,
-        sample_random_torsion_basis_order_prime_power, sample_random_unit_mod_prime_power,
+        sample_random_torsion_basis_order_product_of_powers_of_small_primes,
+        sample_random_unit_mod_prime_power,
     },
 };
 use rstest::rstest;
@@ -263,9 +264,9 @@ fn all_methods_for_single_scalar_are_equal<
     >,
 ) {
     let s = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
-    let (P, Q, _) = sample_random_torsion_basis_order_prime_power(
+    let (P, Q, _) = sample_random_torsion_basis_order_product_of_powers_of_small_primes(
         &params.starting_curve,
-        5,
+        &[5],
         &params.five_torsion_order,
         &params.five_torsion_cofactor,
     );
@@ -342,9 +343,9 @@ fn all_methods_for_different_scalars_are_equal<
 ) {
     let s1 = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
     let s2 = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
-    let (P, Q, _) = sample_random_torsion_basis_order_prime_power(
+    let (P, Q, _) = sample_random_torsion_basis_order_product_of_powers_of_small_primes(
         &params.starting_curve,
-        5,
+        &[5],
         &params.five_torsion_order,
         &params.five_torsion_cofactor,
     );
@@ -427,9 +428,9 @@ fn all_methods_for_scalar_matrix_are_equal<
     >,
 ) {
     let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion_order);
-    let (P, Q, _) = sample_random_torsion_basis_order_prime_power(
+    let (P, Q, _) = sample_random_torsion_basis_order_product_of_powers_of_small_primes(
         &params.starting_curve,
-        5,
+        &[5],
         &params.five_torsion_order,
         &params.five_torsion_cofactor,
     );
@@ -492,9 +493,9 @@ fn all_methods_for_special_case_are_equal<
     >,
 ) {
     let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion_order);
-    let (P, Q, _) = sample_random_torsion_basis_order_prime_power(
+    let (P, Q, _) = sample_random_torsion_basis_order_product_of_powers_of_small_primes(
         &params.starting_curve,
-        5,
+        &[5],
         &params.five_torsion_order,
         &params.five_torsion_cofactor,
     );

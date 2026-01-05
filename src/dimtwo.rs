@@ -6,7 +6,7 @@ use isogeny::{
 
 use crate::{
     SUCCESS_RETVAL, bn::BigNum, dlp::solve_dlp_small_prime_power_order,
-    rand::sample_random_torsion_basis_order_prime_power,
+    rand::sample_random_torsion_basis_order_product_of_powers_of_small_primes,
 };
 
 pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
@@ -40,9 +40,9 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     let PQ = embedded_isogeny_domain.sub(&P, &Q);
 
     // Generate random basis of the 5^c-torsion on E_AB
-    let (U, V, eUV_AB) = sample_random_torsion_basis_order_prime_power(
+    let (U, V, eUV_AB) = sample_random_torsion_basis_order_product_of_powers_of_small_primes(
         &embedded_isogeny_codomain,
-        torsion_basis_order_base,
+        &[torsion_basis_order_base],
         torsion_basis_order,
         torsion_basis_cofactor,
     );

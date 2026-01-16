@@ -1,8 +1,7 @@
 use core::{
     array, cmp, fmt,
-    ops::{Add, AddAssign, Mul, MulAssign},
+    ops::{Add, AddAssign, Mul, MulAssign, Sub},
 };
-use std::ops::Sub;
 
 use isogeny::utilities::bn::{
     bn_add_vartime, bn_bit_length_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
@@ -80,7 +79,7 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
     }
 
     pub fn one() -> Self {
-        let mut words = [1; NUM_WORDS];
+        let mut words = [0; NUM_WORDS];
         words[0] = 1;
 
         Self {

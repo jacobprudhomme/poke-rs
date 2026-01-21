@@ -153,7 +153,8 @@ pub mod poke_i {
         let five_torsion_cofactor = two_times_three_torsion_order
             .widening_mul(&cofactor)
             .truncate();
-        let field_characteristic = full_torsion_order.widening_mul(&cofactor).truncate();
+        let field_characteristic =
+            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -409,7 +410,8 @@ pub mod poke_iii {
         let five_torsion_cofactor = two_times_three_torsion_order
             .widening_mul(&cofactor)
             .truncate();
-        let field_characteristic = full_torsion_order.widening_mul(&cofactor).truncate();
+        let field_characteristic =
+            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -683,7 +685,8 @@ pub mod poke_v {
         let five_torsion_cofactor = two_times_three_torsion_order
             .widening_mul(&cofactor)
             .truncate();
-        let field_characteristic = full_torsion_order.widening_mul(&cofactor).truncate();
+        let field_characteristic =
+            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),

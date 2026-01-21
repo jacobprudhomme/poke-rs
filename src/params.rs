@@ -1,6 +1,6 @@
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
 
-use crate::bn::BigNum;
+use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
 
 pub mod poke_i {
     use super::*;
@@ -132,10 +132,15 @@ pub mod poke_i {
         NUM_WORDS_2335,
         NUM_WORDS_2355,
     > {
+        let starting_curve = Curve::new(&PokeFieldI::ZERO);
+
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let full_two_torsion_order = 4 * &effective_two_torsion_order;
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
-        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
+        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
+        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
+        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
+        let three_torsion_order = 3 * &reduced_three_torsion_order;
+        let reduced_five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP - 1);
+        let five_torsion_order = 5 * &reduced_five_torsion_order;
         let cofactor = BigNum::one();
         let two_times_three_torsion_order = full_two_torsion_order
             .widening_mul(&three_torsion_order)
@@ -182,10 +187,234 @@ pub mod poke_i {
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
+        // Check that basis points are indeed on E_0
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+
+        // Check that 2^a-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 3^b-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 5^c-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.P,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.Q,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.PQ,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.P,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.Q,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.PQ,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
         PublicParams {
             field_characteristic,
             cofactor,
-            starting_curve: Curve::new(&PokeFieldI::ZERO),
+            starting_curve,
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
@@ -389,10 +618,15 @@ pub mod poke_iii {
         NUM_WORDS_2335,
         NUM_WORDS_2355,
     > {
+        let starting_curve = Curve::new(&PokeFieldIII::ZERO);
+
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let full_two_torsion_order = 4 * &effective_two_torsion_order;
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
-        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
+        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
+        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
+        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
+        let three_torsion_order = 3 * &reduced_three_torsion_order;
+        let reduced_five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP - 1);
+        let five_torsion_order = 5 * &reduced_five_torsion_order;
         let cofactor = BigNum::from_prime_power(7, 2);
         let two_times_three_torsion_order = full_two_torsion_order
             .widening_mul(&three_torsion_order)
@@ -439,10 +673,234 @@ pub mod poke_iii {
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
+        // Check that basis points are indeed on E_0
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+
+        // Check that 2^a-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 3^b-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 5^c-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.P,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.Q,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.PQ,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.P,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.Q,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.PQ,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
         PublicParams {
             field_characteristic,
             cofactor,
-            starting_curve: Curve::new(&PokeFieldIII::ZERO),
+            starting_curve,
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
@@ -664,10 +1122,15 @@ pub mod poke_v {
         NUM_WORDS_2335,
         NUM_WORDS_2355,
     > {
+        let starting_curve = Curve::new(&PokeFieldV::ZERO);
+
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let full_two_torsion_order = 4 * &effective_two_torsion_order;
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
-        let five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP);
+        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
+        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
+        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
+        let three_torsion_order = 3 * &reduced_three_torsion_order;
+        let reduced_five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP - 1);
+        let five_torsion_order = 5 * &reduced_five_torsion_order;
         let cofactor = BigNum::from_prime(547);
         let two_times_three_torsion_order = full_two_torsion_order
             .widening_mul(&three_torsion_order)
@@ -714,10 +1177,234 @@ pub mod poke_v {
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
+        // Check that basis points are indeed on E_0
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&five_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+
+        // Check that 2^a-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 3^b-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 5^c-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.P,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.Q,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.PQ,
+                    &five_torsion_order.to_le_bytes(),
+                    five_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.P,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.Q,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &five_torsion_basis.PQ,
+                    &reduced_five_torsion_order.to_le_bytes(),
+                    reduced_five_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
         PublicParams {
             field_characteristic,
             cofactor,
-            starting_curve: Curve::new(&PokeFieldV::ZERO),
+            starting_curve,
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,

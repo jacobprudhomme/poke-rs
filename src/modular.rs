@@ -58,56 +58,71 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
     }
 }
 
-pub fn crt_mod_powers_of_two_three_five<
-    const NUM_WORDS_2: usize,
-    const NUM_WORDS_3: usize,
-    const NUM_WORDS_5: usize,
-    const NUM_WORDS_23: usize,
-    const NUM_WORDS_25: usize,
-    const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
+pub fn crt3<
+    const NUM_WORDS_X: usize,
+    const NUM_WORDS_Y: usize,
+    const NUM_WORDS_Z: usize,
+    const NUM_WORDS_XY: usize,
+    const NUM_WORDS_XZ: usize,
+    const NUM_WORDS_YZ: usize,
+    const NUM_WORDS_XYZ: usize,
+    const NUM_WORDS_XXYZ: usize,
+    const NUM_WORDS_XYYZ: usize,
+    const NUM_WORDS_XYZZ: usize,
 >(
     residues: (
-        &BigNum<NUM_WORDS_2>,
-        &BigNum<NUM_WORDS_3>,
-        &BigNum<NUM_WORDS_5>,
+        &BigNum<NUM_WORDS_X>,
+        &BigNum<NUM_WORDS_Y>,
+        &BigNum<NUM_WORDS_Z>,
     ),
     partial_moduli: (
-        &BigNum<NUM_WORDS_2>,
-        &BigNum<NUM_WORDS_3>,
-        &BigNum<NUM_WORDS_5>,
+        &BigNum<NUM_WORDS_X>,
+        &BigNum<NUM_WORDS_Y>,
+        &BigNum<NUM_WORDS_Z>,
     ),
-    partial_modulus_products: (
-        &BigNum<NUM_WORDS_35>,
-        &BigNum<NUM_WORDS_25>,
-        &BigNum<NUM_WORDS_23>,
+    duals_of_partial_moduli: (
+        &BigNum<NUM_WORDS_YZ>,
+        &BigNum<NUM_WORDS_XZ>,
+        &BigNum<NUM_WORDS_XY>,
     ),
-    full_modulus: &BigNum<NUM_WORDS_235>,
-) -> BigNum<NUM_WORDS_235> {
+    full_modulus: &BigNum<NUM_WORDS_XYZ>,
+    _intermediate_bignum_sizes: PhantomData<(
+        [(); NUM_WORDS_XXYZ],
+        [(); NUM_WORDS_XYYZ],
+        [(); NUM_WORDS_XYZZ],
+    )>,
+) -> BigNum<NUM_WORDS_XYZ> {
     let mut result = BigNum::zero();
 
-    // FIXME: Is it possible that any of these go beyond the prescribed fixed word-size?
-    result += residues.0.widen()
-        * partial_modulus_products
+    // FIXME: Is it possible that the result goes beyond its size bounds when adding the reduced partial results?
+    // Or does BigNUM<NUM_WORDS_XYZ> have enough room for the result to grow a bit, for all concrete instantiations?
+
+    // Solution mod x^ex
+    let partial_result: BigNum<NUM_WORDS_XXYZ> = residues.0.widen()
+        * duals_of_partial_moduli
             .0
             .invert_mod(partial_moduli.0)
             .widen()
-        * partial_modulus_products.0.widen();
-    result = result.reduce_mod(full_modulus);
-    result += residues.1.widen()
-        * partial_modulus_products
+        * duals_of_partial_moduli.0.widen();
+    result += partial_result.reduce_mod(full_modulus);
+
+    // Solution mod y^ey
+    let partial_result: BigNum<NUM_WORDS_XYYZ> = residues.1.widen()
+        * duals_of_partial_moduli
             .1
             .invert_mod(partial_moduli.1)
             .widen()
-        * partial_modulus_products.1.widen();
-    result = result.reduce_mod(full_modulus);
-    result += residues.2.widen()
-        * partial_modulus_products
+        * duals_of_partial_moduli.1.widen();
+    result = (result + partial_result.reduce_mod(full_modulus)).reduce_mod(full_modulus);
+
+    // Solution mod z^ez
+    let partial_result: BigNum<NUM_WORDS_XYZZ> = residues.2.widen()
+        * duals_of_partial_moduli
             .2
             .invert_mod(partial_moduli.2)
             .widen()
-        * partial_modulus_products.2.widen();
-    result = result.reduce_mod(full_modulus);
+        * duals_of_partial_moduli.2.widen();
+    result = (result + partial_result.reduce_mod(full_modulus)).reduce_mod(full_modulus);
 
     result
 }

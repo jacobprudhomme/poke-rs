@@ -1,10 +1,10 @@
+use core::marker::PhantomData;
+
 use fp2::traits::Fp2 as Fp2Trait;
 
-use crate::{
-    FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum, modular::crt_mod_powers_of_two_three_five,
-};
+use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum, modular::crt3};
 
-// Works for primes < 256
+// Works for primes < 256. Assumes generator `generator` generates the subgroup.
 pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     generator: &Fp2,
     value: &Fp2,
@@ -15,7 +15,8 @@ pub fn solve_dlp_small_prime_order<Fp2: Fp2Trait>(
     let mut element = Fp2::ONE;
     let mut result = 0;
     for i in 0..p {
-        let found_log = value.equals(&element);
+        // Only set this if we have not already found the log
+        let found_log = !retval & value.equals(&element);
         result |= i & (found_log as u8);
         retval |= found_log;
 
@@ -74,6 +75,9 @@ pub fn solve_dlp_order_powers_of_two_three_five<
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
     const NUM_WORDS_235: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     generator: &Fp2,
     value: &Fp2,
@@ -84,9 +88,9 @@ pub fn solve_dlp_order_powers_of_two_three_five<
         &BigNum<NUM_WORDS_5>,
     ),
     partial_products_of_prime_power_orders: (
-        &BigNum<NUM_WORDS_23>,
-        &BigNum<NUM_WORDS_25>,
         &BigNum<NUM_WORDS_35>,
+        &BigNum<NUM_WORDS_25>,
+        &BigNum<NUM_WORDS_23>,
     ),
     full_product_of_prime_power_orders: &BigNum<NUM_WORDS_235>,
     p_adic_bases: (
@@ -94,22 +98,66 @@ pub fn solve_dlp_order_powers_of_two_three_five<
         &[BigNum<NUM_WORDS_3>],
         &[BigNum<NUM_WORDS_5>],
     ),
+    intermediate_bignum_sizes: PhantomData<(
+        [(); NUM_WORDS_2235],
+        [(); NUM_WORDS_2335],
+        [(); NUM_WORDS_2355],
+    )>,
 ) -> (BigNum<NUM_WORDS_235>, u32) {
     let mut retval = SUCCESS_RETVAL;
 
-    let (result_mod_power_of_two, ok) =
-        solve_dlp_small_prime_power_order(generator, value, 2, es.0, p_adic_bases.0);
+    let generator_of_power_of_two_subgroup = generator.pow(
+        &partial_products_of_prime_power_orders.0.to_le_bytes(),
+        partial_products_of_prime_power_orders.0.nbits(),
+    );
+    let value_in_power_of_two_subgroup = value.pow(
+        &partial_products_of_prime_power_orders.0.to_le_bytes(),
+        partial_products_of_prime_power_orders.0.nbits(),
+    );
+    let (result_mod_power_of_two, ok) = solve_dlp_small_prime_power_order(
+        &generator_of_power_of_two_subgroup,
+        &value_in_power_of_two_subgroup,
+        2,
+        es.0,
+        p_adic_bases.0,
+    );
     retval &= ok;
 
-    let (result_mod_power_of_three, ok) =
-        solve_dlp_small_prime_power_order(generator, value, 3, es.1, p_adic_bases.1);
+    let generator_of_power_of_three_subgroup = generator.pow(
+        &partial_products_of_prime_power_orders.1.to_le_bytes(),
+        partial_products_of_prime_power_orders.1.nbits(),
+    );
+    let value_in_power_of_three_subgroup = value.pow(
+        &partial_products_of_prime_power_orders.1.to_le_bytes(),
+        partial_products_of_prime_power_orders.1.nbits(),
+    );
+    let (result_mod_power_of_three, ok) = solve_dlp_small_prime_power_order(
+        &generator_of_power_of_three_subgroup,
+        &value_in_power_of_three_subgroup,
+        3,
+        es.1,
+        p_adic_bases.1,
+    );
     retval &= ok;
 
-    let (result_mod_power_of_five, ok) =
-        solve_dlp_small_prime_power_order(generator, value, 5, es.2, p_adic_bases.2);
+    let generator_of_power_of_five_subgroup = generator.pow(
+        &partial_products_of_prime_power_orders.2.to_le_bytes(),
+        partial_products_of_prime_power_orders.2.nbits(),
+    );
+    let value_in_power_of_five_subgroup = value.pow(
+        &partial_products_of_prime_power_orders.2.to_le_bytes(),
+        partial_products_of_prime_power_orders.2.nbits(),
+    );
+    let (result_mod_power_of_five, ok) = solve_dlp_small_prime_power_order(
+        &generator_of_power_of_five_subgroup,
+        &value_in_power_of_five_subgroup,
+        5,
+        es.2,
+        p_adic_bases.2,
+    );
     retval &= ok;
 
-    let result = crt_mod_powers_of_two_three_five(
+    let result = crt3(
         (
             &result_mod_power_of_two,
             &result_mod_power_of_three,
@@ -118,6 +166,7 @@ pub fn solve_dlp_order_powers_of_two_three_five<
         prime_power_orders,
         partial_products_of_prime_power_orders,
         full_product_of_prime_power_orders,
+        intermediate_bignum_sizes,
     );
 
     (result, retval)

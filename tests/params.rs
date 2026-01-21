@@ -22,9 +22,10 @@ fn starting_curve_has_j_invariant_1728<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -34,9 +35,10 @@ fn starting_curve_has_j_invariant_1728<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     assert_eq!(
@@ -61,9 +63,10 @@ fn torsion_basis_points_have_correct_order<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -73,9 +76,10 @@ fn torsion_basis_points_have_correct_order<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     let reduced_three_torsion_order = BigNum::<NUM_WORDS_3>::new(
@@ -202,9 +206,10 @@ fn torsion_basis_points_are_on_curve<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -214,9 +219,10 @@ fn torsion_basis_points_are_on_curve<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     // Check (P, Q, P - Q), a basis of the 2^a-torsion
@@ -301,9 +307,10 @@ fn torsion_basis_points_are_linearly_independent<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -313,9 +320,10 @@ fn torsion_basis_points_are_linearly_independent<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     let reduced_full_two_torsion_order = BigNum::<NUM_WORDS_2>::new(

@@ -254,9 +254,10 @@ fn all_methods_for_single_scalar_are_equal<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -266,9 +267,10 @@ fn all_methods_for_single_scalar_are_equal<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     let s = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
@@ -340,9 +342,10 @@ fn all_methods_for_different_scalars_are_equal<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -352,9 +355,10 @@ fn all_methods_for_different_scalars_are_equal<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     let s1 = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
@@ -434,9 +438,10 @@ fn all_methods_for_scalar_matrix_are_equal<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -446,9 +451,10 @@ fn all_methods_for_scalar_matrix_are_equal<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion_order);
@@ -507,9 +513,10 @@ fn all_methods_for_special_case_are_equal<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
-    const NUM_WORDS_235: usize,
-    const NUM_WORDS_5_COF: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -519,9 +526,10 @@ fn all_methods_for_special_case_are_equal<
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     >,
 ) {
     let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion_order);

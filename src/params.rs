@@ -114,9 +114,10 @@ pub mod poke_i {
     const NUM_WORDS_23: usize = 7;
     const NUM_WORDS_25: usize = 3;
     const NUM_WORDS_35: usize = 5;
-    const NUM_WORDS_235: usize = 7;
-    const NUM_WORDS_5_COF: usize = 7;
     const NUM_WORDS_P: usize = 7;
+    const NUM_WORDS_2235: usize = 9;
+    const NUM_WORDS_2335: usize = 11;
+    const NUM_WORDS_2355: usize = 8;
 
     pub fn get_params() -> PublicParams<
         PokeFieldI,
@@ -126,9 +127,10 @@ pub mod poke_i {
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     > {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
@@ -368,9 +370,10 @@ pub mod poke_iii {
     const NUM_WORDS_23: usize = 10;
     const NUM_WORDS_25: usize = 5;
     const NUM_WORDS_35: usize = 8;
-    const NUM_WORDS_235: usize = 11;
-    const NUM_WORDS_5_COF: usize = 10;
     const NUM_WORDS_P: usize = 11;
+    const NUM_WORDS_2235: usize = 14;
+    const NUM_WORDS_2335: usize = 17;
+    const NUM_WORDS_2355: usize = 12;
 
     pub fn get_params() -> PublicParams<
         PokeFieldIII,
@@ -380,9 +383,10 @@ pub mod poke_iii {
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     > {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;
@@ -640,9 +644,10 @@ pub mod poke_v {
     const NUM_WORDS_23: usize = 13;
     const NUM_WORDS_25: usize = 6;
     const NUM_WORDS_35: usize = 10;
-    const NUM_WORDS_235: usize = 14;
-    const NUM_WORDS_5_COF: usize = 13;
     const NUM_WORDS_P: usize = 14;
+    const NUM_WORDS_2235: usize = 18;
+    const NUM_WORDS_2335: usize = 22;
+    const NUM_WORDS_2355: usize = 15;
 
     pub fn get_params() -> PublicParams<
         PokeFieldV,
@@ -652,9 +657,10 @@ pub mod poke_v {
         NUM_WORDS_23,
         NUM_WORDS_25,
         NUM_WORDS_35,
-        NUM_WORDS_235,
-        NUM_WORDS_5_COF,
         NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
     > {
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
         let full_two_torsion_order = 4 * &effective_two_torsion_order;

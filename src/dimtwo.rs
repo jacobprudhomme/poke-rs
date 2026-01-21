@@ -18,8 +18,8 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     domain: &EllipticProduct<Fp2>,
     kernel: (&ProductPoint<Fp2>, &ProductPoint<Fp2>),
     chain_length: usize,
-    degree: &BigNum<NUM_WORDS_2>, // 2^chain_length
-    embedded_isogeny_degree: &BigNum<NUM_WORDS_2>,
+    degree: &BigNum<NUM_WORDS_2>,
+    degree_dual: &BigNum<NUM_WORDS_2>,
     torsion_basis: &BasisX<Fp2>,
     torsion_basis_order_base: u8,
     torsion_basis_order_exp: usize,

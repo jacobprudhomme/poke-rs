@@ -6,7 +6,7 @@ use isogeny::{
 
 use crate::{
     SUCCESS_RETVAL, bn::BigNum, dlp::solve_dlp_small_prime_power_order,
-    rand::sample_random_torsion_basis_order_product_of_powers_of_small_primes,
+    rand::sample_random_torsion_basis,
 };
 
 pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
@@ -26,21 +26,18 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     torsion_basis_order: &BigNum<NUM_WORDS_ORD>,
     torsion_basis_cofactor: &BigNum<NUM_WORDS_COF>,
     p_adic_basis_for_torsion_basis_order_base: &[BigNum<NUM_WORDS_ORD>],
-) -> ((Point<Fp2>, Point<Fp2>), u32) {
+) -> (Curve<Fp2>, (Point<Fp2>, Point<Fp2>), u32) {
     let mut retval = SUCCESS_RETVAL;
 
     let (embedded_isogeny_domain, embedded_isogeny_codomain) = domain.curves();
     let (P1P2, Q1Q2) = kernel;
-
-    // Factor that shows up in the application of the 2D-isogeny, from the dual that appears in its representation
-    let dual_factor = degree - embedded_isogeny_degree;
 
     // Lift basis to full points, as the 2D-isogeny function requires this as input
     let (P, Q) = embedded_isogeny_domain.lift_basis(torsion_basis);
     let PQ = embedded_isogeny_domain.sub(&P, &Q);
 
     // Generate random basis of the 5^c-torsion on E_AB
-    let (U, V, eUV_AB) = sample_random_torsion_basis_order_product_of_powers_of_small_primes(
+    let (U, V, eUV_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[torsion_basis_order_base],
         torsion_basis_order,
@@ -108,34 +105,31 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     // Used to make a choice of scalar factor later
     // FIXME: if we're computing this in addition to the proper pairing, would it not be better to just
     // compute the pairing from the power of e(U,V) directly, and fix the same power in both keygen and decryption?
-    let eUV_power_q = eUV_AB.pow(
-        &embedded_isogeny_degree.to_le_bytes(),
-        embedded_isogeny_degree.nbits(),
-    );
+    let eUV_power_q = eUV_AB.pow(&degree.to_le_bytes(), degree.nbits());
     let eUV_aux_is_eUV_power_q = eUV_aux.equals(&eUV_power_q);
 
-    let eXV = aux_curve.weil_pairing(
+    let ePV = aux_curve.weil_pairing(
         &P_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &PV_aux_curve.to_pointx().x(),
         &torsion_basis_order.to_le_bytes(),
         torsion_basis_order.nbits(),
     );
-    let eXmU = aux_curve.weil_pairing(
+    let ePmU = aux_curve.weil_pairing(
         &P_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &PmU_aux_curve.to_pointx().x(),
         &torsion_basis_order.to_le_bytes(),
         torsion_basis_order.nbits(),
     );
-    let eYV = aux_curve.weil_pairing(
+    let eQV = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &QV_aux_curve.to_pointx().x(),
         &torsion_basis_order.to_le_bytes(),
         torsion_basis_order.nbits(),
     );
-    let eYmU = aux_curve.weil_pairing(
+    let eQmU = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &QmU_aux_curve.to_pointx().x(),
@@ -146,7 +140,7 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     // Solve discrete logarithm between pairings to obtain expression of P' in terms of <U',V'>
     let (x, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
-        &eXV,
+        &ePV,
         torsion_basis_order_base,
         torsion_basis_order_exp,
         p_adic_basis_for_torsion_basis_order_base,
@@ -154,7 +148,7 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     retval &= ok;
     let (y, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
-        &eXmU,
+        &ePmU,
         torsion_basis_order_base,
         torsion_basis_order_exp,
         p_adic_basis_for_torsion_basis_order_base,
@@ -162,7 +156,7 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     retval &= ok;
     let (w, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
-        &eYV,
+        &eQV,
         torsion_basis_order_base,
         torsion_basis_order_exp,
         p_adic_basis_for_torsion_basis_order_base,
@@ -170,7 +164,7 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     retval &= ok;
     let (z, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
-        &eYmU,
+        &eQmU,
         torsion_basis_order_base,
         torsion_basis_order_exp,
         p_adic_basis_for_torsion_basis_order_base,
@@ -189,15 +183,15 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     embedded_isogeny_codomain.mul_into(
         &mut U_aux_curve,
         &PQ_aux_curve,
-        &embedded_isogeny_degree.to_le_bytes(),
-        embedded_isogeny_degree.nbits(),
+        &degree.to_le_bytes(),
+        degree.nbits(),
     );
     // [2^(a-2) - q] * P'
     embedded_isogeny_codomain.mul_into(
         &mut V_aux_curve,
         &PQ_aux_curve,
-        &dual_factor.to_le_bytes(),
-        dual_factor.nbits(),
+        &degree_dual.to_le_bytes(),
+        degree_dual.nbits(),
     );
     // Choose the appropriate one of the above points depending on whether
     // e(U',V') = e(U,V)^q or e(U',V') = e(U,V)^(2^(a-2) - q)
@@ -214,20 +208,20 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     embedded_isogeny_codomain.mul_into(
         &mut U_aux_curve,
         &PQ_aux_curve,
-        &embedded_isogeny_degree.to_le_bytes(),
-        embedded_isogeny_degree.nbits(),
+        &degree.to_le_bytes(),
+        degree.nbits(),
     );
     // [2^(a-2) - q] * Q'
     embedded_isogeny_codomain.mul_into(
         &mut V_aux_curve,
         &PQ_aux_curve,
-        &dual_factor.to_le_bytes(),
-        dual_factor.nbits(),
+        &degree_dual.to_le_bytes(),
+        degree_dual.nbits(),
     );
     // Choose the appropriate one of the above points depending on whether
     // e(U',V') = e(U,V)^q or e(U',V') = e(U,V)^(2^(a-2) - q)
     let mut img_Q = U_aux_curve;
     img_Q.set_cond(&V_aux_curve, !eUV_aux_is_eUV_power_q);
 
-    ((img_P, img_Q), retval)
+    (aux_curve, (img_P, img_Q), retval)
 }

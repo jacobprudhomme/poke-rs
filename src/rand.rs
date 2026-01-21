@@ -90,26 +90,26 @@ pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usiz
 
 // Randomly find a basis of the given torsion subgroup on the given curve
 // WARN: Only works for torsion subgroup orders with prime factors < 256
-pub fn sample_random_torsion_basis_order_product_of_powers_of_small_primes<
+pub fn sample_random_torsion_basis<
     Fp2: Fp2Trait,
     const NUM_WORDS_TORSION: usize,
     const NUM_WORDS_COF: usize,
 >(
     curve: &Curve<Fp2>,
-    torsion_subgroup_order_base_primes: &[u8],
+    torsion_subgroup_order_prime_factors: &[u8],
     torsion_subgroup_order: &BigNum<NUM_WORDS_TORSION>,
     order_cofactor: &BigNum<NUM_WORDS_COF>,
 ) -> (Point<Fp2>, Point<Fp2>, Fp2) {
     let mut rng = rand::rng();
 
-    let torsion_subgroup_order_base_primes = torsion_subgroup_order_base_primes
+    let torsion_subgroup_order_prime_factors = torsion_subgroup_order_prime_factors
         .iter()
         .map(|&prime| BigUint::from(prime))
         .collect::<Vec<_>>();
     let torsion_subgroup_order_biguint =
         BigUint::from_bytes_le(&torsion_subgroup_order.to_le_bytes());
 
-    let reduced_torsion_subgroup_orders = &torsion_subgroup_order_base_primes
+    let reduced_torsion_subgroup_orders = &torsion_subgroup_order_prime_factors
         .iter()
         .map(|prime| &torsion_subgroup_order_biguint / prime)
         .map(|reduced_order| BigNum::<NUM_WORDS_TORSION>::new(&reduced_order.to_u64_digits()))
@@ -200,7 +200,7 @@ pub fn sample_random_torsion_basis_order_product_of_powers_of_small_primes<
         }
         // FIXME: Is this check necessary? Because of the fact that the group might have order m*n
         // ASK: Is it a problem that any() short-circuits? See above comment
-        if eUVs_saturated.iter().zip(torsion_subgroup_order_base_primes.iter()).any(|(eUV_saturated, prime)| {
+        if eUVs_saturated.iter().zip(torsion_subgroup_order_prime_factors.iter()).any(|(eUV_saturated, prime)| {
             eUV_saturated
                 .pow(
                     &prime.to_bytes_le(),

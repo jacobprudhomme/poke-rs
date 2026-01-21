@@ -11,7 +11,10 @@ use poke::{
     },
     params::{poke_i, poke_iii, poke_v},
     poke::PublicParams,
-    rand::{sample_random_torsion_basis_order_product_of_powers_of_small_primes, sample_random_unit_mod_prime_power},
+    rand::{
+        sample_random_torsion_basis,
+        sample_random_unit_mod_prime_power,
+    },
 };
 
 // Sample a basis of the 5^c-torsion, along with the Weil pairing on it,
@@ -42,7 +45,7 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<
     >,
 ) -> (BasisX<Fp2>, Fp2, Point<Fp2>) {
     // The Weil pairing of a basis of the n-torsion subgroup will be the generator of an order-n subgroup of Fp^2
-    let (U, V, eUV) = sample_random_torsion_basis_order_product_of_powers_of_small_primes(
+    let (U, V, eUV) = sample_random_torsion_basis(
         &pub_params.starting_curve,
         &[5],
         &pub_params.five_torsion_order,

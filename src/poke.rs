@@ -275,19 +275,21 @@ where
 
     /* Derive shared secret from image points and use them to decrypt message */
 
-    let (five_torsion_basis_img_EAB, ok) = eval_2d_two_isogeny_chain_on_prime_power_torsion_basis(
-        &domain,
-        (&P1P2, &Q1Q2),
-        pub_params.effective_two_torsion_exp,
-        &pub_params.effective_two_torsion_order,
-        &prv_key.q,
-        &ciphertext.masked_five_torsion_basis_EB,
-        5,
-        pub_params.five_torsion_exp,
-        &pub_params.five_torsion_order,
-        &pub_params.five_torsion_cofactor,
-        &pub_params.five_adic_basis,
-    );
+    let q_dual = &pub_params.effective_two_torsion_order - &prv_key.q;
+    let (_, five_torsion_basis_img_EAB, ok) =
+        eval_2d_two_isogeny_chain_on_prime_power_torsion_basis(
+            &domain,
+            (&P1P2, &Q1Q2),
+            pub_params.effective_two_torsion_exp,
+            &prv_key.q,
+            &q_dual,
+            &ciphertext.masked_five_torsion_basis_EB,
+            5,
+            pub_params.five_torsion_exp,
+            &pub_params.five_torsion_order,
+            &pub_params.five_torsion_cofactor,
+            &pub_params.five_adic_basis,
+        );
     retval &= ok;
 
     let (X_AB, Y_AB) = mask_basis_by_same_scalar(

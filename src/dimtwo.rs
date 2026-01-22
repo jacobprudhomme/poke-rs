@@ -1,8 +1,8 @@
-use core::marker::PhantomData;
+use core::{marker::PhantomData, mem};
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve, projective_point::Point},
+    elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point},
     polynomial_ring::poly::Polynomial,
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
@@ -193,7 +193,6 @@ pub fn generate_2d_isogeny_poke<
         &pub_params.five_torsion_order,
         &pub_params.five_adic_basis,
     );
-    let K35 = pub_params.starting_curve.add(&K3, &K5);
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny
     let (P, Q) = pub_params
@@ -211,25 +210,32 @@ pub fn generate_2d_isogeny_poke<
         &theta,
         &Q,
     );
-    let mut theta_two_torsion_basis = [
+    let mut theta_two_torsion_basis_and_K5 = [
         theta_P.to_pointx(),
         theta_Q.to_pointx(),
         pub_params
             .starting_curve
             .sub(&theta_P, &theta_Q)
             .to_pointx(),
+        K5.to_pointx(),
     ];
 
-    let codomain = pub_params
-        .starting_curve
-        .velu_composite_isogeny::<Polynomial<Fp2>>(
-            &K35.to_pointx(),
-            &[
-                (3, pub_params.three_torsion_exp),
-                (5, pub_params.five_torsion_exp),
-            ],
-            &mut theta_two_torsion_basis,
-        );
+    let (codomain, ok) = pub_params.starting_curve.three_isogeny_chain(
+        &K3.to_pointx(),
+        pub_params.three_torsion_exp,
+        &mut theta_two_torsion_basis_and_K5,
+    );
+    retval &= ok;
+
+    let K5_img_under_backtracking_isogeny =
+        mem::replace(&mut theta_two_torsion_basis_and_K5[3], PointX::INFINITY);
+    let mut theta_two_torsion_basis = &mut theta_two_torsion_basis_and_K5[..3];
+    let codomain = codomain.velu_prime_power_isogeny::<Polynomial<Fp2>>(
+        &K5_img_under_backtracking_isogeny,
+        5,
+        pub_params.five_torsion_exp,
+        &mut theta_two_torsion_basis,
+    );
 
     let theta_backtrack_two_torsion_basis_img = BasisX::from_slice(&theta_two_torsion_basis);
     let (theta_backtrack_P, theta_backtrack_Q) =

@@ -1,12 +1,13 @@
 use poke::{
-    SUCCESS_RETVAL, example_keypairs, params,
-    poke::{decrypt, encrypt},
+    SUCCESS_RETVAL, params,
+    poke::{decrypt, encrypt, keygen},
 };
 
 fn main() {
     let params = params::poke_i::get_params();
-    let pub_key = example_keypairs::poke_i::get_pub_key();
-    let prv_key = example_keypairs::poke_i::get_prv_key();
+
+    let (pub_key, prv_key, ok) = keygen(&params);
+    assert_eq!(ok, SUCCESS_RETVAL, "Key generation finished with errors");
 
     let message = String::from("Hello, world!");
     let message = message.as_bytes();

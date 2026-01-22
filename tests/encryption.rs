@@ -7,22 +7,54 @@ use num_bigint::BigUint;
 use poke::{
     FAILURE_RETVAL, SUCCESS_RETVAL,
     bn::BigNum,
-    example_keypairs, params,
-    poke::{PubKey, PublicParams, encrypt},
+    params::{poke_i, poke_iii, poke_v},
+    poke::{PubKey, PublicParams, encrypt, keygen},
 };
 use rstest::rstest;
 use rstest_reuse::{apply, template};
 
 const MESSAGE: &'static [u8; 13] = b"Hello, world!";
 
+fn pub_key<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_5: usize,
+    const NUM_WORDS_23: usize,
+    const NUM_WORDS_25: usize,
+    const NUM_WORDS_35: usize,
+    const NUM_WORDS_P: usize,
+    const NUM_WORDS_2235: usize,
+    const NUM_WORDS_2335: usize,
+    const NUM_WORDS_2355: usize,
+>(
+    params: PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_5,
+        NUM_WORDS_23,
+        NUM_WORDS_25,
+        NUM_WORDS_35,
+        NUM_WORDS_P,
+        NUM_WORDS_2235,
+        NUM_WORDS_2335,
+        NUM_WORDS_2355,
+    >,
+) -> PubKey<Fp2> {
+    let (mut pub_key, _, mut ok) = keygen(&params);
+    while ok == FAILURE_RETVAL {
+        (pub_key, _, ok) = keygen(&params);
+    }
+
+    pub_key
+}
+
 #[template]
 #[rstest]
-#[case::poke_level_i(params::poke_i::get_params(), example_keypairs::poke_i::get_pub_key())]
-#[case::poke_level_iii(
-    params::poke_iii::get_params(),
-    example_keypairs::poke_iii::get_pub_key()
-)]
-#[case::poke_level_v(params::poke_v::get_params(), example_keypairs::poke_v::get_pub_key())]
+#[case::poke_level_i(poke_i::get_params(), pub_key(poke_i::get_params()))]
+#[case::poke_level_iii(poke_iii::get_params(), pub_key(poke_iii::get_params()))]
+#[case::poke_level_v(poke_v::get_params(), pub_key(poke_v::get_params()))]
 fn encryption_test_data<Fp2: Fp2Trait>(
     #[case] params: PublicParams<Fp2>,
     #[case] pub_key: PubKey<Fp2>,

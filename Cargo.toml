@@ -34,3 +34,7 @@ harness = false
 [[bench]]
 name = "dlp"
 harness = false
+
+[[bench]]
+name = "backtracking_isogeny"
+harness = false

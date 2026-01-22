@@ -6,7 +6,6 @@ pub mod bn;
 mod dimtwo;
 pub mod dlp;
 mod endomorphism;
-pub mod example_keypairs;
 pub mod fields;
 pub mod inke;
 mod masking;

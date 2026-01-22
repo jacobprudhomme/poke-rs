@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use isogeny::utilities::bn::bn_mul_vartime;
 use num_bigint::BigUint;
 

@@ -17,6 +17,21 @@ pub fn mask_basis_by_same_scalar<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     (masked_P, masked_Q)
 }
 
+pub fn mask_basisx_by_same_scalar<Fp2: Fp2Trait, const NUM_WORDS: usize>(
+    curve: &Curve<Fp2>,
+    basis: &BasisX<Fp2>,
+    scalar: &BigNum<NUM_WORDS>,
+) -> BasisX<Fp2> {
+    let (masked_P, masked_Q) = mask_basis_by_same_scalar(curve, &curve.lift_basis(basis), scalar);
+    let masked_PQ = curve.sub(&masked_P, &masked_Q);
+
+    BasisX::from_points(
+        &masked_P.to_pointx(),
+        &masked_Q.to_pointx(),
+        &masked_PQ.to_pointx(),
+    )
+}
+
 pub fn mask_basisx_by_diagonal_scalars<Fp2: Fp2Trait, const NUM_WORDS: usize>(
     curve: &Curve<Fp2>,
     basis: &BasisX<Fp2>,

@@ -3,14 +3,14 @@
 //! Adapted from the KLaPoTi-Rust library: https://github.com/isogeny-klapoti/klapoti-rust.
 
 use fp2::traits::Fp2 as Fp2Trait;
-use isogeny::elliptic::{curve::Curve, projective_point::Point};
+use isogeny::elliptic::{basis::BasisX, curve::Curve, projective_point::Point};
 use rug::{
     Integer,
     integer::{IsPrime, Order},
     rand::RandState,
 };
 
-use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
+use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum, dlp::solve_dlp_small_prime_power_order};
 
 // First 1006 primes
 const SMALL_PRIMES: [u32; 1006] = [
@@ -395,6 +395,7 @@ pub fn represent_integer<const NUM_WORDS: usize, const NUM_WORDS_P: usize>(
         }
 
         (x, y, found_solution) = cornacchia(Integer::ONE, &norm);
+        counter -= 1;
     }
     if counter == 0 {
         println!("Tried 1,000,000 times to solve with Cornacchia, but couldn't find a solution");
@@ -471,6 +472,70 @@ pub fn apply_endomorphism_from_quaternion<Fp2: Fp2Trait, const NUM_WORDS_P: usiz
     curve.addto(&mut result, &T);
 
     result
+}
+
+/// Given a `basis` of the `p`^`e`-torsion and an `endo`morphism on `curve`, finds
+/// the kernel of a degree-`p`^`e` isogeny backtracking the `endo`morphism
+pub fn find_kernel_of_backtracking_isogeny_prime_power_degree<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_P: usize,
+    const NUM_WORDS_DEG: usize,
+>(
+    field_characteristic: &BigNum<NUM_WORDS_P>,
+    curve: &Curve<Fp2>,
+    endo: &Quaternion,
+    basis: &BasisX<Fp2>,
+    p: u8,
+    e: usize,
+    reduced_degree: &BigNum<NUM_WORDS_DEG>,
+    degree: &BigNum<NUM_WORDS_DEG>,
+    p_adic_basis: &[BigNum<NUM_WORDS_DEG>],
+) -> Point<Fp2> {
+    // Apply the endomorphism to points basis points on the starting curve,
+    // one of which will be used as the kernel for the dual endomorphism
+    let (P, Q) = curve.lift_basis(basis);
+    let endo_P = apply_endomorphism_from_quaternion(field_characteristic, curve, endo, &P);
+    let endo_Q = apply_endomorphism_from_quaternion(field_characteristic, curve, endo, &Q);
+
+    // From each torsion basis point, construct a possible kernel for the degree-p^e backtracking isogeny
+    let endoP_Q = curve.sub(&endo_P, &Q);
+    let e_endoP_Q = curve.weil_pairing(
+        &endo_P.to_pointx().x(),
+        &Q.to_pointx().x(),
+        &endoP_Q.to_pointx().x(),
+        &degree.to_le_bytes(),
+        degree.nbits(),
+    );
+
+    let endoQ_Q = curve.sub(&endo_Q, &Q);
+    let e_endoQ_Q = curve.weil_pairing(
+        &endo_Q.to_pointx().x(),
+        &Q.to_pointx().x(),
+        &endoQ_Q.to_pointx().x(),
+        &degree.to_le_bytes(),
+        degree.nbits(),
+    );
+
+    // If a discrete log of e(endo(P), Q) w.r.t. e(endo(Q), Q) exists,
+    // then endo(Q) is linearly independent to the kernel of endo-dual.
+    // Otherwise, endo(P) must be.
+    let endoQ_has_full_order = !curve
+        .mul(
+            &endo_Q,
+            &reduced_degree.to_le_bytes(),
+            reduced_degree.nbits(),
+        )
+        .is_zero();
+    let (_, discrete_log_exists) =
+        solve_dlp_small_prime_power_order(&e_endoQ_Q, &e_endoP_Q, p, e, p_adic_basis);
+
+    let mut backtracking_isogeny_kernel = endo_P;
+    backtracking_isogeny_kernel.set_cond(
+        &endo_Q,
+        endoQ_has_full_order & (discrete_log_exists | !discrete_log_exists),
+    );
+
+    backtracking_isogeny_kernel
 }
 
 #[cfg(test)]

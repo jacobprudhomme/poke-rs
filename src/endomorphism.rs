@@ -530,10 +530,7 @@ pub fn find_kernel_of_backtracking_isogeny_prime_power_degree<
         solve_dlp_small_prime_power_order(&e_endoQ_Q, &e_endoP_Q, p, e, p_adic_basis);
 
     let mut backtracking_isogeny_kernel = endo_P;
-    backtracking_isogeny_kernel.set_cond(
-        &endo_Q,
-        endoQ_has_full_order & (discrete_log_exists | !discrete_log_exists),
-    );
+    backtracking_isogeny_kernel.set_cond(&endo_Q, endoQ_has_full_order & discrete_log_exists);
 
     backtracking_isogeny_kernel
 }

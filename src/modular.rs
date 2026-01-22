@@ -60,6 +60,38 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
     }
 }
 
+pub fn crt2<
+    const NUM_WORDS_X: usize,
+    const NUM_WORDS_Y: usize,
+    const NUM_WORDS_XY: usize,
+    const NUM_WORDS_XXY: usize,
+    const NUM_WORDS_XYY: usize,
+>(
+    residues: (&BigNum<NUM_WORDS_X>, &BigNum<NUM_WORDS_Y>),
+    partial_moduli: (&BigNum<NUM_WORDS_X>, &BigNum<NUM_WORDS_Y>),
+    full_modulus: &BigNum<NUM_WORDS_XY>,
+    _intermediate_bignum_sizes: PhantomData<([(); NUM_WORDS_XXY], [(); NUM_WORDS_XYY])>,
+) -> BigNum<NUM_WORDS_XY> {
+    let mut result = BigNum::zero();
+
+    // FIXME: Is it possible that the result goes beyond its size bounds when adding the reduced partial results?
+    // Or does BigNUM<NUM_WORDS_XY> have enough room for the result to grow a bit, for all concrete instantiations?
+
+    // Solution mod x^ex
+    let partial_result: BigNum<NUM_WORDS_XXY> = residues.0.widen()
+        * partial_moduli.1.invert_mod(partial_moduli.0).widen()
+        * partial_moduli.1.widen();
+    result += partial_result.reduce_mod(full_modulus);
+
+    // Solution mod y^ey
+    let partial_result: BigNum<NUM_WORDS_XYY> = residues.1.widen()
+        * partial_moduli.0.invert_mod(partial_moduli.1).widen()
+        * partial_moduli.0.widen();
+    result = (result + partial_result.reduce_mod(full_modulus)).reduce_mod(full_modulus);
+
+    result
+}
+
 pub fn crt3<
     const NUM_WORDS_X: usize,
     const NUM_WORDS_Y: usize,

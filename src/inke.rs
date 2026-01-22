@@ -1,8 +1,8 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve},
+    elliptic::{basis::BasisX, curve::Curve, projective_point::Point},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 use sha3::{
@@ -13,20 +13,39 @@ use sha3::{
 use crate::{
     SUCCESS_RETVAL,
     bn::BigNum,
-    masking::{mask_basisx_by_diagonal_scalars, mask_basisx_by_diagonal_scalars_points_only},
-    rand::{sample_random_element_mod, sample_random_unit_mod_prime_power},
+    dimtwo::{eval_2d_two_isogeny_chain_inke, generate_2d_isogeny_inke},
+    masking::{
+        mask_basis_by_same_scalar, mask_basisx_by_diagonal_scalars,
+        mask_basisx_by_diagonal_scalars_points_only, mask_basisx_by_same_scalar,
+    },
+    rand::{
+        sample_random_element_mod, sample_random_secret_degree, sample_random_unit_mod_prime_power,
+    },
 };
 
-pub struct PublicParams<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_3: usize> {
+pub struct PublicParams<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_P: usize,
+    const NUM_WORDS_223: usize,
+    const NUM_WORDS_233: usize,
+> {
+    pub field_characteristic: BigNum<NUM_WORDS_P>,
+    pub cofactor: BigNum<1>,
     pub starting_curve: Curve<Fp2>,
     pub full_two_torsion_order: BigNum<NUM_WORDS_2>,
     pub full_two_torsion_exp: usize,
     pub effective_two_torsion_order: BigNum<NUM_WORDS_2>,
     pub effective_two_torsion_exp: usize,
+    pub reduced_three_torsion_order: BigNum<NUM_WORDS_3>,
     pub three_torsion_order: BigNum<NUM_WORDS_3>,
     pub three_torsion_exp: usize,
+    pub full_torsion_order: BigNum<NUM_WORDS_P>,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
+    pub two_adic_basis: Vec<BigNum<NUM_WORDS_2>>,
+    pub three_adic_basis: Vec<BigNum<NUM_WORDS_3>>,
 }
 
 pub struct PrvKey<Fp2: Fp2Trait, const NUM_WORDS_2: usize> {
@@ -52,8 +71,170 @@ pub struct Ciphertext<Fp2: Fp2Trait> {
     pub encrypted_message: Vec<u8>,
 }
 
-pub fn encrypt<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_3: usize>(
-    pub_params: &PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3>,
+pub fn keygen<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_P: usize,
+    const NUM_WORDS_223: usize,
+    const NUM_WORDS_233: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_P,
+        NUM_WORDS_223,
+        NUM_WORDS_233,
+    >,
+) -> (PubKey<Fp2>, PrvKey<Fp2, NUM_WORDS_2>, u32) {
+    let mut retval = SUCCESS_RETVAL;
+
+    // Keep generating elements until we find an invertible one
+    let (q, q_dual) = sample_random_secret_degree(&pub_params.effective_two_torsion_order, &[3]);
+
+    let (domain, (P1P2, Q1Q2), ok) = generate_2d_isogeny_inke(pub_params, &q, &q_dual);
+    retval &= ok;
+    let codomain_curve = domain.curves().1;
+
+    /* Construct a basis of the entire (2^a * 3^b)-torsion */
+
+    let (P, Q) = pub_params
+        .starting_curve
+        .lift_basis(&pub_params.two_torsion_basis);
+    let (R, S) = pub_params
+        .starting_curve
+        .lift_basis(&pub_params.three_torsion_basis);
+
+    let mut PR = Point::INFINITY;
+    pub_params.starting_curve.addto(&mut PR, &P);
+    pub_params.starting_curve.addto(&mut PR, &R);
+    let mut QS = Point::INFINITY;
+    pub_params.starting_curve.addto(&mut QS, &Q);
+    pub_params.starting_curve.addto(&mut QS, &S);
+    let PRQS = pub_params.starting_curve.sub(&PR, &QS);
+
+    let full_torsion_basis =
+        BasisX::from_points(&PR.to_pointx(), &QS.to_pointx(), &PRQS.to_pointx());
+
+    let (full_torsion_basis_EA, intermediate_curve, full_torsion_basis_EA1, ok) =
+        eval_2d_two_isogeny_chain_inke(
+            &domain,
+            (&P1P2, &Q1Q2),
+            pub_params.effective_two_torsion_exp,
+            &q,
+            &q_dual,
+            &full_torsion_basis,
+            (
+                pub_params.full_two_torsion_exp,
+                pub_params.three_torsion_exp,
+            ),
+            (
+                &pub_params.full_two_torsion_order,
+                &pub_params.three_torsion_order,
+            ),
+            &pub_params.full_torsion_order,
+            &pub_params.cofactor,
+            (&pub_params.two_adic_basis, &pub_params.three_adic_basis),
+            PhantomData::<([(); NUM_WORDS_223], [(); NUM_WORDS_233])>,
+        );
+    retval &= ok;
+
+    let two_torsion_basis_EA = mask_basis_by_same_scalar(
+        &codomain_curve,
+        &full_torsion_basis_EA,
+        &pub_params.three_torsion_order,
+    );
+    let (P_A, Q_A) = mask_basis_by_same_scalar(
+        &codomain_curve,
+        &two_torsion_basis_EA,
+        &pub_params
+            .three_torsion_order
+            .invert_mod(&pub_params.full_two_torsion_order),
+    );
+    let PQ_A = codomain_curve.sub(&P_A, &Q_A);
+
+    let three_torsion_basis_EA = mask_basis_by_same_scalar(
+        &codomain_curve,
+        &full_torsion_basis_EA,
+        &pub_params.full_two_torsion_order,
+    );
+    let (R_A, S_A) = mask_basis_by_same_scalar(
+        &codomain_curve,
+        &three_torsion_basis_EA,
+        &pub_params
+            .full_two_torsion_order
+            .invert_mod(&pub_params.three_torsion_order),
+    );
+    let RS_A = codomain_curve.sub(&R_A, &S_A);
+
+    let three_torsion_basis_EA1 = mask_basis_by_same_scalar(
+        &intermediate_curve,
+        &full_torsion_basis_EA1,
+        &pub_params.full_two_torsion_order,
+    );
+    let (R_A1, S_A1) = mask_basis_by_same_scalar(
+        &intermediate_curve,
+        &three_torsion_basis_EA1,
+        &pub_params
+            .full_two_torsion_order
+            .invert_mod(&pub_params.three_torsion_order),
+    );
+    let RS_A1 = intermediate_curve.sub(&R_A1, &S_A1);
+
+    let two_torsion_basis_EA =
+        BasisX::from_points(&P_A.to_pointx(), &Q_A.to_pointx(), &PQ_A.to_pointx());
+    let three_torsion_basis_EA =
+        BasisX::from_points(&R_A.to_pointx(), &S_A.to_pointx(), &RS_A.to_pointx());
+    let three_torsion_basis_EA1 =
+        BasisX::from_points(&R_A1.to_pointx(), &S_A1.to_pointx(), &RS_A1.to_pointx());
+
+    let alpha = sample_random_unit_mod_prime_power(2, &pub_params.full_two_torsion_order);
+    let beta = sample_random_unit_mod_prime_power(2, &pub_params.full_two_torsion_order);
+    let gamma = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion_order);
+    let gamma_prime = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion_order);
+
+    let masked_two_torsion_basis_EA =
+        mask_basisx_by_diagonal_scalars(&codomain_curve, &two_torsion_basis_EA, &alpha, &beta);
+    let masked_three_torsion_basis_EA =
+        mask_basisx_by_same_scalar(&codomain_curve, &three_torsion_basis_EA, &gamma);
+    let masked_three_torsion_basis_EA1 =
+        mask_basisx_by_same_scalar(&intermediate_curve, &three_torsion_basis_EA1, &gamma_prime);
+
+    (
+        PubKey {
+            codomain_curve,
+            masked_two_torsion_basis_img: masked_two_torsion_basis_EA,
+            masked_three_torsion_basis_img: masked_three_torsion_basis_EA,
+            intermediate_curve,
+            masked_three_torsion_basis_img_intermediate: masked_three_torsion_basis_EA1,
+        },
+        PrvKey {
+            q,
+            alpha,
+            beta,
+            _field: PhantomData,
+        },
+        retval,
+    )
+}
+
+pub fn encrypt<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_P: usize,
+    const NUM_WORDS_223: usize,
+    const NUM_WORDS_233: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_P,
+        NUM_WORDS_223,
+        NUM_WORDS_233,
+    >,
     pub_key: &PubKey<Fp2>,
     message: &[u8],
 ) -> (Ciphertext<Fp2>, u32)
@@ -148,8 +329,22 @@ where
     (ct, retval)
 }
 
-pub fn decrypt<Fp2: Fp2Trait, const NUM_WORDS_2: usize, const NUM_WORDS_3: usize>(
-    pub_params: &PublicParams<Fp2, NUM_WORDS_2, NUM_WORDS_3>,
+pub fn decrypt<
+    Fp2: Fp2Trait,
+    const NUM_WORDS_2: usize,
+    const NUM_WORDS_3: usize,
+    const NUM_WORDS_P: usize,
+    const NUM_WORDS_223: usize,
+    const NUM_WORDS_233: usize,
+>(
+    pub_params: &PublicParams<
+        Fp2,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_P,
+        NUM_WORDS_223,
+        NUM_WORDS_233,
+    >,
     prv_key: &PrvKey<Fp2, NUM_WORDS_2>,
     ciphertext: &Ciphertext<Fp2>,
 ) -> (Vec<u8>, u32)

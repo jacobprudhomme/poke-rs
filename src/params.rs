@@ -1512,11 +1512,26 @@ pub mod inke_i {
     // (mod 2^128) will only take up 2 words)
     pub const NUM_WORDS_2: usize = 3;
     const NUM_WORDS_3: usize = 5;
+    const NUM_WORDS_P: usize = 7;
+    const NUM_WORDS_223: usize = 9;
+    const NUM_WORDS_233: usize = 11;
 
-    pub fn get_params() -> PublicParams<InkeFieldI, NUM_WORDS_2, NUM_WORDS_3> {
+    pub fn get_params()
+    -> PublicParams<InkeFieldI, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_P, NUM_WORDS_223, NUM_WORDS_233>
+    {
+        let starting_curve = Curve::new(&InkeFieldI::ZERO);
+
         let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let full_two_torsion_order = 4 * &effective_two_torsion_order;
-        let three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP);
+        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
+        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
+        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
+        let three_torsion_order = 3 * &reduced_three_torsion_order;
+        let cofactor = BigNum::from_prime(127);
+        let full_torsion_order = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .truncate();
+        let field_characteristic =
+            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -1529,16 +1544,811 @@ pub mod inke_i {
             &PointX::from_x_coord(&RS_X),
         );
 
+        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(2, exp))
+            .collect::<Vec<_>>();
+        let three_adic_basis = (0..=THREE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(3, exp))
+            .collect::<Vec<_>>();
+
+        // Check that basis points are indeed on E_0
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+
+        // Check that 2^a-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 3^b-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
         PublicParams {
-            starting_curve: Curve::new(&InkeFieldI::ZERO),
+            field_characteristic,
+            cofactor,
+            starting_curve,
             full_two_torsion_exp: FULL_TWO_TORSION_EXP,
             full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
             three_torsion_exp: THREE_TORSION_EXP,
+            reduced_three_torsion_order,
             three_torsion_order,
+            full_torsion_order,
             two_torsion_basis,
             three_torsion_basis,
+            two_adic_basis,
+            three_adic_basis,
+        }
+    }
+}
+
+pub mod inke_iii {
+    use super::*;
+    use crate::{
+        fields::{InkeFieldIII, InkeFieldIIIBase},
+        inke::PublicParams,
+    };
+
+    // Construct basis points for the 2^a-torsion on E_0
+    const P_X_RE: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        180, 63, 10, 189, 221, 217, 7, 248, 13, 54, 79, 225, 58, 255, 200, 99, 55, 58, 131, 219,
+        107, 194, 90, 154, 49, 152, 154, 90, 219, 206, 112, 139, 74, 68, 59, 204, 94, 94, 107, 137,
+        248, 121, 105, 221, 202, 226, 63, 158, 248, 28, 232, 38, 166, 100, 66, 235, 179, 46, 91,
+        111, 181, 20, 142, 57, 66, 224, 101, 252, 169, 128, 227, 201, 16,
+    ];
+    const P_X_IM: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        129, 98, 201, 30, 124, 12, 146, 103, 152, 68, 121, 150, 70, 121, 187, 38, 199, 81, 76, 28,
+        245, 33, 212, 62, 110, 143, 52, 30, 59, 60, 166, 112, 18, 70, 118, 203, 71, 136, 229, 9,
+        244, 244, 127, 94, 147, 80, 112, 204, 139, 99, 91, 167, 135, 139, 0, 104, 242, 80, 18, 175,
+        193, 40, 26, 80, 76, 230, 56, 169, 91, 152, 127, 154, 60,
+    ];
+    const Q_X_RE: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        207, 5, 253, 178, 248, 68, 38, 65, 183, 251, 66, 53, 123, 66, 175, 158, 169, 254, 180, 191,
+        188, 67, 5, 106, 65, 123, 204, 7, 82, 66, 76, 206, 254, 11, 54, 4, 169, 103, 94, 220, 175,
+        41, 236, 20, 173, 38, 7, 75, 23, 172, 10, 79, 154, 180, 159, 184, 238, 131, 90, 200, 242,
+        101, 132, 198, 50, 207, 170, 76, 57, 144, 150, 174, 26,
+    ];
+    const Q_X_IM: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        106, 212, 243, 175, 23, 135, 98, 11, 29, 87, 67, 229, 193, 168, 91, 67, 158, 66, 145, 250,
+        98, 63, 148, 168, 119, 214, 69, 67, 97, 237, 226, 151, 113, 89, 234, 182, 97, 157, 201,
+        221, 81, 58, 166, 205, 242, 75, 151, 71, 125, 110, 203, 213, 9, 218, 244, 209, 248, 239,
+        152, 243, 129, 32, 116, 205, 214, 155, 196, 188, 77, 44, 94, 128, 12,
+    ];
+    const PQ_X_RE: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        199, 136, 159, 107, 99, 235, 112, 101, 161, 214, 252, 133, 1, 172, 241, 204, 199, 143, 116,
+        140, 60, 216, 224, 61, 132, 19, 11, 58, 227, 236, 227, 45, 148, 163, 80, 233, 254, 75, 32,
+        35, 210, 8, 181, 115, 199, 215, 191, 242, 226, 75, 41, 222, 245, 57, 128, 169, 255, 34,
+        251, 56, 30, 10, 155, 150, 177, 255, 242, 26, 114, 111, 146, 129, 8,
+    ];
+    const PQ_X_IM: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        169, 180, 138, 244, 147, 31, 53, 16, 226, 191, 213, 198, 252, 41, 250, 228, 229, 90, 223,
+        45, 26, 78, 199, 32, 48, 245, 52, 54, 254, 247, 0, 129, 171, 162, 100, 73, 253, 159, 191,
+        217, 36, 216, 132, 103, 116, 178, 227, 203, 93, 23, 226, 246, 224, 251, 43, 149, 94, 122,
+        226, 49, 161, 6, 97, 212, 127, 132, 90, 209, 102, 195, 191, 106, 60,
+    ];
+    const P_X: InkeFieldIII = InkeFieldIII::const_decode_no_check(&P_X_RE, &P_X_IM);
+    const Q_X: InkeFieldIII = InkeFieldIII::const_decode_no_check(&Q_X_RE, &Q_X_IM);
+    const PQ_X: InkeFieldIII = InkeFieldIII::const_decode_no_check(&PQ_X_RE, &PQ_X_IM);
+
+    // Construct basis points for the 3^b-torsion on E_0
+    const R_X_RE: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        228, 118, 23, 49, 159, 211, 244, 33, 40, 136, 139, 172, 217, 158, 168, 68, 89, 75, 167, 9,
+        178, 236, 175, 155, 4, 146, 167, 212, 23, 70, 219, 94, 248, 79, 219, 237, 73, 225, 225, 39,
+        92, 164, 251, 158, 2, 188, 28, 14, 234, 222, 70, 85, 246, 75, 103, 96, 34, 69, 229, 228,
+        241, 132, 19, 219, 173, 219, 183, 77, 205, 92, 245, 158, 42,
+    ];
+    const R_X_IM: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        82, 149, 249, 90, 115, 116, 96, 216, 108, 75, 77, 75, 147, 64, 130, 194, 56, 250, 200, 213,
+        53, 63, 141, 1, 177, 188, 11, 151, 215, 137, 150, 193, 37, 130, 18, 200, 92, 72, 219, 224,
+        225, 190, 96, 148, 165, 84, 129, 65, 104, 227, 240, 234, 151, 82, 25, 223, 182, 87, 61,
+        246, 124, 131, 119, 156, 37, 204, 149, 225, 219, 107, 252, 244, 1,
+    ];
+    const S_X_RE: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        33, 176, 215, 55, 44, 5, 108, 84, 75, 118, 170, 48, 146, 17, 75, 17, 131, 193, 219, 194,
+        109, 176, 34, 4, 94, 230, 111, 54, 184, 191, 67, 141, 201, 146, 1, 216, 6, 11, 87, 182,
+        232, 6, 124, 173, 192, 16, 0, 29, 93, 33, 10, 181, 43, 174, 152, 83, 79, 169, 114, 219, 79,
+        230, 63, 27, 249, 243, 107, 233, 224, 43, 180, 250, 12,
+    ];
+    const S_X_IM: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        169, 30, 71, 149, 138, 95, 132, 111, 108, 191, 243, 85, 229, 168, 10, 90, 127, 148, 119,
+        27, 71, 87, 67, 117, 48, 70, 178, 182, 59, 210, 137, 8, 27, 99, 187, 154, 154, 185, 179,
+        17, 109, 189, 159, 81, 45, 164, 117, 159, 250, 197, 94, 116, 90, 89, 252, 205, 74, 243,
+        117, 113, 222, 106, 201, 93, 125, 74, 16, 251, 80, 123, 146, 212, 51,
+    ];
+    const RS_X_RE: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        199, 180, 2, 203, 0, 180, 115, 221, 244, 47, 139, 162, 60, 179, 255, 232, 157, 117, 98,
+        134, 84, 102, 157, 225, 65, 150, 155, 61, 43, 50, 84, 21, 173, 40, 218, 168, 254, 130, 140,
+        77, 49, 1, 122, 123, 181, 21, 69, 38, 27, 234, 73, 152, 96, 141, 76, 227, 104, 194, 187,
+        198, 21, 23, 168, 144, 188, 41, 144, 20, 36, 46, 101, 87, 64,
+    ];
+    const RS_X_IM: [u8; InkeFieldIIIBase::ENCODED_LENGTH] = [
+        113, 227, 243, 11, 210, 68, 107, 108, 79, 2, 205, 243, 141, 166, 218, 77, 221, 32, 132,
+        162, 3, 242, 121, 214, 20, 226, 132, 101, 253, 82, 71, 183, 109, 102, 236, 210, 119, 80,
+        231, 240, 171, 146, 152, 224, 56, 2, 28, 141, 118, 241, 250, 15, 242, 33, 197, 72, 214,
+        168, 183, 143, 63, 209, 68, 201, 43, 83, 78, 89, 243, 60, 172, 198, 23,
+    ];
+    const R_X: InkeFieldIII = InkeFieldIII::const_decode_no_check(&R_X_RE, &R_X_IM);
+    const S_X: InkeFieldIII = InkeFieldIII::const_decode_no_check(&S_X_RE, &S_X_IM);
+    const RS_X: InkeFieldIII = InkeFieldIII::const_decode_no_check(&RS_X_RE, &RS_X_IM);
+
+    const FULL_TWO_TORSION_EXP: usize = 192;
+    const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
+    const THREE_TORSION_EXP: usize = 243;
+
+    // FIXME: Some improvements can maybe be made here by the fact that 2^126 fits into 2 words, and
+    // 2^128 can even be represented without the 3rd word by some sort of flag (since all numbers
+    // (mod 2^128) will only take up 2 words)
+    pub const NUM_WORDS_2: usize = 4;
+    const NUM_WORDS_3: usize = 7;
+    const NUM_WORDS_P: usize = 10;
+    const NUM_WORDS_223: usize = 13;
+    const NUM_WORDS_233: usize = 16;
+
+    pub fn get_params() -> PublicParams<
+        InkeFieldIII,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_P,
+        NUM_WORDS_223,
+        NUM_WORDS_233,
+    > {
+        let starting_curve = Curve::new(&InkeFieldIII::ZERO);
+
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
+        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
+        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
+        let three_torsion_order = 3 * &reduced_three_torsion_order;
+        let cofactor = BigNum::from_prime_factors(&[(5, 1), (7, 1)]);
+        let full_torsion_order = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .truncate();
+        let field_characteristic =
+            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
+
+        let two_torsion_basis = BasisX::from_points(
+            &PointX::from_x_coord(&P_X),
+            &PointX::from_x_coord(&Q_X),
+            &PointX::from_x_coord(&PQ_X),
+        );
+        let three_torsion_basis = BasisX::from_points(
+            &PointX::from_x_coord(&R_X),
+            &PointX::from_x_coord(&S_X),
+            &PointX::from_x_coord(&RS_X),
+        );
+
+        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(2, exp))
+            .collect::<Vec<_>>();
+        let three_adic_basis = (0..=THREE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(3, exp))
+            .collect::<Vec<_>>();
+
+        // Check that basis points are indeed on E_0
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+
+        // Check that 2^a-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 3^b-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        PublicParams {
+            field_characteristic,
+            cofactor,
+            starting_curve,
+            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
+            full_two_torsion_order,
+            effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
+            effective_two_torsion_order,
+            three_torsion_exp: THREE_TORSION_EXP,
+            reduced_three_torsion_order,
+            three_torsion_order,
+            full_torsion_order,
+            two_torsion_basis,
+            three_torsion_basis,
+            two_adic_basis,
+            three_adic_basis,
+        }
+    }
+}
+
+pub mod inke_v {
+    use super::*;
+    use crate::{
+        fields::{InkeFieldV, InkeFieldVBase},
+        inke::PublicParams,
+    };
+
+    // Construct basis points for the 2^a-torsion on E_0
+    const P_X_RE: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        252, 15, 246, 145, 72, 248, 75, 16, 226, 173, 27, 66, 48, 163, 57, 48, 175, 246, 12, 228,
+        96, 81, 233, 229, 223, 55, 59, 48, 191, 119, 93, 141, 139, 113, 8, 125, 58, 6, 112, 128,
+        215, 255, 58, 32, 186, 72, 111, 125, 125, 112, 64, 64, 141, 177, 117, 66, 171, 65, 254, 15,
+        34, 163, 195, 98, 38, 157, 113, 80, 72, 159, 94, 102, 21, 194, 233, 30, 120, 255, 126, 36,
+        50, 136, 96, 248, 131, 93, 234, 26, 210, 55, 253, 29, 150, 124, 93, 9, 125, 0,
+    ];
+    const P_X_IM: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        20, 54, 122, 62, 101, 180, 208, 21, 10, 251, 199, 125, 182, 45, 188, 38, 10, 81, 205, 224,
+        96, 171, 179, 99, 168, 174, 209, 155, 83, 1, 83, 196, 167, 219, 18, 163, 102, 154, 145, 46,
+        67, 85, 195, 149, 177, 67, 126, 161, 111, 254, 46, 125, 196, 50, 110, 16, 115, 35, 244, 91,
+        111, 254, 246, 98, 159, 27, 155, 113, 234, 41, 205, 40, 197, 111, 78, 63, 207, 167, 1, 44,
+        89, 124, 82, 1, 204, 51, 36, 200, 98, 229, 236, 22, 153, 124, 105, 81, 41, 0,
+    ];
+    const Q_X_RE: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        96, 124, 160, 161, 244, 201, 31, 189, 240, 200, 110, 107, 164, 187, 0, 52, 32, 95, 106, 88,
+        103, 97, 236, 19, 227, 18, 33, 238, 161, 197, 4, 130, 109, 253, 239, 16, 67, 46, 252, 255,
+        19, 206, 242, 11, 111, 16, 182, 152, 39, 79, 18, 79, 183, 12, 206, 74, 226, 23, 44, 73,
+        185, 229, 103, 39, 88, 131, 120, 87, 171, 68, 199, 159, 72, 144, 235, 102, 95, 135, 17, 1,
+        118, 229, 94, 80, 70, 40, 101, 253, 232, 127, 217, 62, 236, 242, 201, 114, 132, 0,
+    ];
+    const Q_X_IM: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        123, 60, 228, 6, 43, 12, 214, 78, 180, 218, 175, 236, 48, 124, 225, 24, 19, 155, 164, 97,
+        13, 149, 161, 219, 23, 150, 222, 79, 171, 158, 90, 57, 149, 194, 37, 68, 36, 23, 161, 89,
+        50, 135, 139, 255, 216, 13, 198, 56, 30, 95, 236, 210, 61, 249, 33, 189, 20, 159, 206, 82,
+        193, 44, 187, 44, 186, 240, 186, 251, 209, 234, 168, 243, 252, 119, 24, 79, 140, 106, 71,
+        197, 195, 66, 43, 68, 55, 18, 243, 239, 96, 235, 133, 28, 214, 136, 52, 199, 116, 0,
+    ];
+    const PQ_X_RE: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        231, 35, 217, 247, 199, 24, 39, 212, 125, 135, 7, 243, 69, 138, 21, 30, 112, 14, 242, 81,
+        185, 184, 141, 139, 141, 114, 231, 10, 141, 144, 188, 47, 85, 13, 47, 253, 28, 236, 132,
+        80, 208, 85, 146, 43, 100, 55, 116, 205, 244, 167, 40, 250, 52, 27, 27, 117, 13, 243, 53,
+        112, 33, 84, 189, 133, 66, 25, 77, 175, 26, 218, 149, 231, 66, 72, 69, 100, 222, 153, 29,
+        174, 128, 139, 83, 18, 195, 236, 253, 232, 135, 253, 194, 79, 254, 105, 78, 212, 221, 0,
+    ];
+    const PQ_X_IM: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        12, 96, 207, 23, 137, 174, 225, 52, 82, 184, 3, 251, 211, 211, 252, 105, 67, 121, 25, 16,
+        11, 206, 225, 83, 179, 193, 57, 233, 253, 7, 119, 254, 191, 251, 17, 227, 88, 48, 14, 85,
+        254, 245, 214, 113, 202, 31, 199, 26, 250, 88, 15, 236, 113, 43, 23, 175, 181, 206, 162,
+        133, 62, 118, 176, 235, 135, 3, 240, 10, 61, 230, 149, 74, 96, 163, 254, 86, 166, 24, 14,
+        28, 42, 14, 54, 63, 179, 175, 147, 229, 73, 146, 136, 216, 85, 56, 147, 120, 39, 0,
+    ];
+    const P_X: InkeFieldV = InkeFieldV::const_decode_no_check(&P_X_RE, &P_X_IM);
+    const Q_X: InkeFieldV = InkeFieldV::const_decode_no_check(&Q_X_RE, &Q_X_IM);
+    const PQ_X: InkeFieldV = InkeFieldV::const_decode_no_check(&PQ_X_RE, &PQ_X_IM);
+
+    // Construct basis points for the 3^b-torsion on E_0
+    const R_X_RE: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        129, 150, 25, 201, 6, 143, 33, 145, 143, 62, 229, 63, 242, 44, 224, 185, 78, 165, 70, 84,
+        211, 164, 60, 167, 154, 64, 139, 180, 6, 141, 45, 29, 92, 176, 170, 134, 211, 113, 50, 112,
+        39, 204, 232, 75, 40, 109, 86, 87, 119, 19, 200, 224, 85, 184, 217, 236, 67, 158, 135, 3,
+        108, 233, 64, 240, 55, 149, 211, 125, 198, 166, 61, 144, 118, 89, 92, 125, 1, 110, 91, 193,
+        36, 41, 149, 24, 23, 42, 9, 7, 195, 153, 183, 246, 157, 56, 23, 173, 67, 0,
+    ];
+    const R_X_IM: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        179, 206, 210, 96, 21, 218, 224, 199, 69, 128, 163, 132, 168, 1, 217, 110, 115, 190, 253,
+        216, 86, 111, 143, 145, 200, 213, 120, 159, 148, 42, 57, 177, 215, 137, 15, 134, 141, 190,
+        246, 121, 173, 166, 62, 204, 228, 124, 55, 134, 26, 88, 43, 178, 14, 60, 32, 99, 195, 140,
+        167, 174, 62, 112, 57, 239, 9, 49, 195, 187, 253, 12, 189, 15, 247, 59, 204, 22, 201, 116,
+        148, 118, 242, 19, 17, 150, 19, 86, 246, 37, 175, 49, 131, 148, 117, 0, 20, 23, 167, 0,
+    ];
+    const S_X_RE: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        235, 113, 149, 36, 189, 238, 240, 128, 179, 210, 205, 212, 195, 102, 224, 140, 24, 119,
+        158, 135, 31, 129, 230, 111, 17, 26, 190, 106, 140, 145, 47, 249, 143, 236, 221, 38, 190,
+        81, 199, 144, 146, 230, 179, 53, 230, 75, 198, 173, 28, 127, 4, 191, 65, 38, 237, 45, 189,
+        216, 125, 86, 104, 192, 174, 17, 6, 90, 192, 15, 62, 233, 211, 243, 240, 244, 212, 158,
+        119, 94, 104, 118, 144, 1, 103, 204, 4, 160, 144, 143, 2, 93, 15, 193, 52, 229, 195, 255,
+        113, 0,
+    ];
+    const S_X_IM: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        69, 3, 137, 93, 143, 18, 186, 174, 86, 0, 42, 156, 67, 15, 202, 5, 240, 101, 86, 64, 48,
+        183, 53, 246, 27, 161, 132, 103, 242, 48, 65, 204, 144, 75, 96, 91, 82, 201, 156, 74, 235,
+        125, 83, 16, 179, 139, 172, 78, 67, 134, 178, 110, 66, 192, 76, 171, 23, 46, 212, 171, 137,
+        17, 216, 136, 213, 158, 73, 87, 160, 226, 51, 156, 175, 20, 155, 124, 203, 125, 237, 204,
+        33, 114, 208, 76, 7, 97, 118, 185, 117, 190, 159, 33, 252, 18, 230, 200, 35, 0,
+    ];
+    const RS_X_RE: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        96, 108, 86, 5, 196, 117, 120, 19, 240, 251, 231, 14, 134, 101, 51, 25, 237, 137, 48, 222,
+        15, 201, 181, 77, 241, 97, 201, 112, 210, 98, 248, 135, 95, 142, 235, 30, 5, 16, 161, 226,
+        198, 7, 224, 249, 170, 231, 153, 54, 169, 33, 36, 66, 5, 32, 240, 60, 251, 227, 149, 169,
+        92, 70, 60, 226, 178, 50, 178, 254, 169, 199, 51, 230, 93, 89, 228, 125, 106, 130, 105,
+        202, 56, 188, 185, 147, 217, 105, 30, 190, 187, 188, 115, 26, 232, 196, 4, 243, 79, 0,
+    ];
+    const RS_X_IM: [u8; InkeFieldVBase::ENCODED_LENGTH] = [
+        58, 244, 126, 225, 51, 20, 82, 198, 123, 50, 176, 101, 246, 18, 95, 225, 212, 123, 135, 60,
+        93, 5, 225, 174, 121, 54, 252, 160, 255, 43, 11, 198, 109, 194, 112, 243, 5, 48, 175, 73,
+        156, 47, 181, 81, 198, 9, 228, 1, 165, 177, 96, 213, 94, 96, 186, 63, 102, 238, 193, 88,
+        40, 114, 186, 154, 38, 39, 96, 81, 254, 175, 105, 9, 241, 25, 184, 151, 2, 220, 64, 207,
+        106, 31, 173, 117, 44, 20, 41, 207, 84, 111, 182, 255, 11, 76, 220, 150, 123, 0,
+    ];
+    const R_X: InkeFieldV = InkeFieldV::const_decode_no_check(&R_X_RE, &R_X_IM);
+    const S_X: InkeFieldV = InkeFieldV::const_decode_no_check(&S_X_RE, &S_X_IM);
+    const RS_X: InkeFieldV = InkeFieldV::const_decode_no_check(&RS_X_RE, &RS_X_IM);
+
+    const FULL_TWO_TORSION_EXP: usize = 257;
+    const EFFECTIVE_TWO_TORSION_EXP: usize = FULL_TWO_TORSION_EXP - 2;
+    const THREE_TORSION_EXP: usize = 324;
+
+    // FIXME: Some improvements can maybe be made here by the fact that 2^126 fits into 2 words, and
+    // 2^128 can even be represented without the 3rd word by some sort of flag (since all numbers
+    // (mod 2^128) will only take up 2 words)
+    pub const NUM_WORDS_2: usize = 5;
+    const NUM_WORDS_3: usize = 9;
+    const NUM_WORDS_P: usize = 13;
+    const NUM_WORDS_223: usize = 17;
+    const NUM_WORDS_233: usize = 21;
+
+    pub fn get_params()
+    -> PublicParams<InkeFieldV, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_P, NUM_WORDS_223, NUM_WORDS_233>
+    {
+        let starting_curve = Curve::new(&InkeFieldV::ZERO);
+
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
+        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
+        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
+        let three_torsion_order = 3 * &reduced_three_torsion_order;
+        let cofactor = BigNum::from_prime_power(7, 2);
+        let full_torsion_order = full_two_torsion_order
+            .widening_mul(&three_torsion_order)
+            .truncate();
+        let field_characteristic =
+            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
+
+        let two_torsion_basis = BasisX::from_points(
+            &PointX::from_x_coord(&P_X),
+            &PointX::from_x_coord(&Q_X),
+            &PointX::from_x_coord(&PQ_X),
+        );
+        let three_torsion_basis = BasisX::from_points(
+            &PointX::from_x_coord(&R_X),
+            &PointX::from_x_coord(&S_X),
+            &PointX::from_x_coord(&RS_X),
+        );
+
+        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(2, exp))
+            .collect::<Vec<_>>();
+        let three_adic_basis = (0..=THREE_TORSION_EXP)
+            .map(|exp| BigNum::from_prime_power(3, exp))
+            .collect::<Vec<_>>();
+
+        // Check that basis points are indeed on E_0
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&two_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.P.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.Q.x()),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve.is_on_curve(&three_torsion_basis.PQ.x()),
+            SUCCESS_RETVAL
+        );
+
+        // Check that 2^a-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &full_two_torsion_order.to_le_bytes(),
+                    full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.P,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.Q,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &two_torsion_basis.PQ,
+                    &reduced_full_two_torsion_order.to_le_bytes(),
+                    reduced_full_two_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        // Check that 3^b-basis points indeed have the correct order
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &three_torsion_order.to_le_bytes(),
+                    three_torsion_order.nbits()
+                )
+                .is_zero(),
+            SUCCESS_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.P,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.Q,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+        debug_assert_eq!(
+            starting_curve
+                .xmul(
+                    &three_torsion_basis.PQ,
+                    &reduced_three_torsion_order.to_le_bytes(),
+                    reduced_three_torsion_order.nbits()
+                )
+                .is_zero(),
+            FAILURE_RETVAL
+        );
+
+        PublicParams {
+            field_characteristic,
+            cofactor,
+            starting_curve,
+            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
+            full_two_torsion_order,
+            effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
+            effective_two_torsion_order,
+            three_torsion_exp: THREE_TORSION_EXP,
+            reduced_three_torsion_order,
+            three_torsion_order,
+            full_torsion_order,
+            two_torsion_basis,
+            three_torsion_basis,
+            two_adic_basis,
+            three_adic_basis,
         }
     }
 }

@@ -3,12 +3,12 @@
 #![feature(generic_const_exprs)]
 
 pub mod bn;
-mod dimtwo;
+pub mod dimtwo;
 pub mod dlp;
 mod endomorphism;
 pub mod fields;
 pub mod inke;
-mod masking;
+pub mod masking;
 mod modular;
 pub mod params;
 pub mod poke;

@@ -38,3 +38,7 @@ harness = false
 [[bench]]
 name = "backtracking_isogeny"
 harness = false
+
+[[bench]]
+name = "basis_mapping_2d"
+harness = false

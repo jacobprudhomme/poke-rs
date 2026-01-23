@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point},
+    elliptic::{basis::BasisX, curve::Curve, point::PointX},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 use sha3::{
@@ -14,8 +14,8 @@ use crate::{
     SUCCESS_RETVAL,
     bn::BigNum,
     dimtwo::{
-        eval_2d_two_isogeny_chain_on_prime_power_torsion_basis, eval_2d_two_isogeny_chain_poke,
-        generate_2d_isogeny_poke,
+        eval_2d_two_isogeny_chain_on_prime_power_torsion_basis,
+        eval_2d_two_isogeny_chain_poke_separate_bases, generate_2d_isogeny_poke,
     },
     masking::{
         mask_basis_by_same_scalar, mask_basisx_by_diagonal_scalars,
@@ -129,38 +129,17 @@ pub fn keygen<
     retval &= ok;
     let codomain_curve = domain.curves().1;
 
-    /* Construct a basis of the entire (2^a * 3^b * 5^c)-torsion */
-
-    let (P, Q) = pub_params
-        .starting_curve
-        .lift_basis(&pub_params.two_torsion_basis);
-    let (R, S) = pub_params
-        .starting_curve
-        .lift_basis(&pub_params.three_torsion_basis);
-    let (X, Y) = pub_params
-        .starting_curve
-        .lift_basis(&pub_params.five_torsion_basis);
-
-    let mut PRX = Point::INFINITY;
-    pub_params.starting_curve.addto(&mut PRX, &P);
-    pub_params.starting_curve.addto(&mut PRX, &R);
-    pub_params.starting_curve.addto(&mut PRX, &X);
-    let mut QSY = Point::INFINITY;
-    pub_params.starting_curve.addto(&mut QSY, &Q);
-    pub_params.starting_curve.addto(&mut QSY, &S);
-    pub_params.starting_curve.addto(&mut QSY, &Y);
-    let PRXQSY = pub_params.starting_curve.sub(&PRX, &QSY);
-
-    let full_torsion_basis =
-        BasisX::from_points(&PRX.to_pointx(), &QSY.to_pointx(), &PRXQSY.to_pointx());
-
-    let (full_torsion_basis_EA, ok) = eval_2d_two_isogeny_chain_poke(
+    let ((P_A, Q_A), (R_A, S_A), (X_A, Y_A), ok) = eval_2d_two_isogeny_chain_poke_separate_bases(
         &domain,
         (&P1P2, &Q1Q2),
         pub_params.effective_two_torsion_exp,
         &q,
         &q_dual,
-        &full_torsion_basis,
+        (
+            &pub_params.two_torsion_basis,
+            &pub_params.three_torsion_basis,
+            &pub_params.five_torsion_basis,
+        ),
         (
             pub_params.full_two_torsion_exp,
             pub_params.three_torsion_exp,
@@ -172,73 +151,33 @@ pub fn keygen<
             &pub_params.five_torsion_order,
         ),
         (
-            &pub_params.three_times_five_torsion_order,
-            &pub_params.two_times_five_torsion_order,
-            &pub_params.two_times_three_torsion_order,
+            &(&pub_params.three_times_five_torsion_order * pub_params.cofactor.widen()),
+            &(&pub_params.two_times_five_torsion_order * pub_params.cofactor.widen()),
+            &(&pub_params.two_times_three_torsion_order * pub_params.cofactor.widen()),
         ),
-        &pub_params.full_torsion_order,
-        &pub_params.cofactor,
         (
             &pub_params.two_adic_basis,
             &pub_params.three_adic_basis,
             &pub_params.five_adic_basis,
         ),
-        PhantomData::<(
-            [(); NUM_WORDS_2235],
-            [(); NUM_WORDS_2335],
-            [(); NUM_WORDS_2355],
-        )>,
     );
     retval &= ok;
 
-    let two_torsion_basis_EA = mask_basis_by_same_scalar(
-        &codomain_curve,
-        &full_torsion_basis_EA,
-        &pub_params.three_times_five_torsion_order,
+    let two_torsion_basis_EA = BasisX::from_points(
+        &P_A.to_pointx(),
+        &Q_A.to_pointx(),
+        &codomain_curve.sub(&P_A, &Q_A).to_pointx(),
     );
-    let (P_A, Q_A) = mask_basis_by_same_scalar(
-        &codomain_curve,
-        &two_torsion_basis_EA,
-        &pub_params
-            .three_times_five_torsion_order
-            .invert_mod(&pub_params.full_two_torsion_order),
+    let three_torsion_basis_EA = BasisX::from_points(
+        &R_A.to_pointx(),
+        &S_A.to_pointx(),
+        &codomain_curve.sub(&R_A, &S_A).to_pointx(),
     );
-    let PQ_A = codomain_curve.sub(&P_A, &Q_A);
-
-    let three_torsion_basis_EA = mask_basis_by_same_scalar(
-        &codomain_curve,
-        &full_torsion_basis_EA,
-        &pub_params.two_times_five_torsion_order,
+    let five_torsion_basis_EA = BasisX::from_points(
+        &X_A.to_pointx(),
+        &Y_A.to_pointx(),
+        &codomain_curve.sub(&X_A, &Y_A).to_pointx(),
     );
-    let (R_A, S_A) = mask_basis_by_same_scalar(
-        &codomain_curve,
-        &three_torsion_basis_EA,
-        &pub_params
-            .two_times_five_torsion_order
-            .invert_mod(&pub_params.three_torsion_order),
-    );
-    let RS_A = codomain_curve.sub(&R_A, &S_A);
-
-    let five_torsion_basis_EA = mask_basis_by_same_scalar(
-        &codomain_curve,
-        &full_torsion_basis_EA,
-        &pub_params.two_times_three_torsion_order,
-    );
-    let (X_A, Y_A) = mask_basis_by_same_scalar(
-        &codomain_curve,
-        &five_torsion_basis_EA,
-        &pub_params
-            .two_times_three_torsion_order
-            .invert_mod(&pub_params.five_torsion_order),
-    );
-    let XY_A = codomain_curve.sub(&X_A, &Y_A);
-
-    let two_torsion_basis_EA =
-        BasisX::from_points(&P_A.to_pointx(), &Q_A.to_pointx(), &PQ_A.to_pointx());
-    let three_torsion_basis_EA =
-        BasisX::from_points(&R_A.to_pointx(), &S_A.to_pointx(), &RS_A.to_pointx());
-    let five_torsion_basis_EA =
-        BasisX::from_points(&X_A.to_pointx(), &Y_A.to_pointx(), &XY_A.to_pointx());
 
     let alpha = sample_random_unit_mod_prime_power(2, &pub_params.full_two_torsion_order);
     let beta = sample_random_unit_mod_prime_power(2, &pub_params.full_two_torsion_order);

@@ -366,6 +366,8 @@ pub fn represent_integer<const NUM_WORDS: usize, const NUM_WORDS_P: usize>(
     let mut rng = RandState::new();
 
     let TWO = Integer::from(2);
+    let PRIMES = SMALL_PRIMES.map(|prime| Integer::from(prime));
+    let BAD_PRIMES = SMALL_BAD_PRIMES.map(|prime| Integer::from(prime));
 
     let target_norm = Integer::from_digits(&target_norm.to_le_bytes(), Order::Lsf);
     let p = Integer::from_digits(&p.to_le_bytes(), Order::Lsf);
@@ -394,7 +396,7 @@ pub fn represent_integer<const NUM_WORDS: usize, const NUM_WORDS_P: usize>(
             continue;
         }
 
-        (x, y, found_solution) = cornacchia(Integer::ONE, &norm);
+        (x, y, found_solution) = cornacchia_extended(&norm, &PRIMES, &BAD_PRIMES);
         counter -= 1;
     }
     if counter == 0 {

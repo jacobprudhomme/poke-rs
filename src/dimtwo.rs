@@ -1,9 +1,8 @@
-use core::{marker::PhantomData, mem};
+use core::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point},
-    polynomial_ring::poly::Polynomial,
+    elliptic::{basis::BasisX, curve::Curve, projective_point::Point},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 
@@ -135,6 +134,7 @@ pub fn generate_2d_isogeny_poke<
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
     const NUM_WORDS_P: usize,
+    const NUM_WORDS_223: usize,
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
@@ -148,6 +148,7 @@ pub fn generate_2d_isogeny_poke<
         NUM_WORDS_25,
         NUM_WORDS_35,
         NUM_WORDS_P,
+        NUM_WORDS_223,
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
@@ -164,13 +165,13 @@ pub fn generate_2d_isogeny_poke<
     // FIXME: When I manage to get around the shortcomings of const generics, I can use
     // widening_mul() here instead, and only progressively widen the BigNums as I multiply
     let norm: BigNum<NUM_WORDS_2235> =
-        q.widen() * q_dual.widen() * pub_params.three_times_five_torsion_order.widen();
+        q.widen() * q_dual.widen() * pub_params.three_torsion_order.widen();
     let (theta, ok) = represent_integer(&norm, &pub_params.field_characteristic);
     retval &= ok;
 
     /* Construct backtracking isogeny */
 
-    // Find kernels of degree-3^b and degree-5^c backtracking isogenies of theta
+    // Find kernel of degree-3^b backtracking isogeny of theta
     let K3 = find_kernel_of_backtracking_isogeny_prime_power_degree(
         &pub_params.field_characteristic,
         &pub_params.starting_curve,
@@ -181,17 +182,6 @@ pub fn generate_2d_isogeny_poke<
         &pub_params.reduced_three_torsion_order,
         &pub_params.three_torsion_order,
         &pub_params.three_adic_basis,
-    );
-    let K5 = find_kernel_of_backtracking_isogeny_prime_power_degree(
-        &pub_params.field_characteristic,
-        &pub_params.starting_curve,
-        &theta,
-        &pub_params.five_torsion_basis,
-        5,
-        pub_params.five_torsion_exp,
-        &pub_params.reduced_five_torsion_order,
-        &pub_params.five_torsion_order,
-        &pub_params.five_adic_basis,
     );
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny
@@ -210,43 +200,32 @@ pub fn generate_2d_isogeny_poke<
         &theta,
         &Q,
     );
-    let mut theta_two_torsion_basis_and_K5 = [
+    let mut theta_two_torsion_basis = [
         theta_P.to_pointx(),
         theta_Q.to_pointx(),
         pub_params
             .starting_curve
             .sub(&theta_P, &theta_Q)
             .to_pointx(),
-        K5.to_pointx(),
     ];
 
     let (codomain, ok) = pub_params.starting_curve.three_isogeny_chain(
         &K3.to_pointx(),
         pub_params.three_torsion_exp,
-        &mut theta_two_torsion_basis_and_K5,
-    );
-    retval &= ok;
-
-    let K5_img_under_backtracking_isogeny =
-        mem::replace(&mut theta_two_torsion_basis_and_K5[3], PointX::INFINITY);
-    let mut theta_two_torsion_basis = &mut theta_two_torsion_basis_and_K5[..3];
-    let codomain = codomain.velu_prime_power_isogeny::<Polynomial<Fp2>>(
-        &K5_img_under_backtracking_isogeny,
-        5,
-        pub_params.five_torsion_exp,
         &mut theta_two_torsion_basis,
     );
+    retval &= ok;
 
     let theta_backtrack_two_torsion_basis_img = BasisX::from_slice(&theta_two_torsion_basis);
     let (theta_backtrack_P, theta_backtrack_Q) =
         codomain.lift_basis(&theta_backtrack_two_torsion_basis_img);
 
-    // Get rid of the (3^b * 5^c)-factor introduced by the backtracking isogeny
+    // Get rid of the 3^b-factor introduced by the backtracking isogeny
     let (scaled_theta_backtrack_P, scaled_theta_backtrack_Q) = mask_basis_by_same_scalar(
         &codomain,
         &(theta_backtrack_P, theta_backtrack_Q),
         &pub_params
-            .three_times_five_torsion_order
+            .three_torsion_order
             .invert_mod(&pub_params.full_two_torsion_order),
     );
     // TODO: Test if removing the negation of these points still creates a valid isogeny

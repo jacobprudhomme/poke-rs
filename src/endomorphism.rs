@@ -10,7 +10,7 @@ use rug::{
     rand::RandState,
 };
 
-use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum, dlp::solve_dlp_small_prime_power_order};
+use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
 
 // First 1006 primes
 const SMALL_PRIMES: [u32; 1006] = [
@@ -485,11 +485,7 @@ pub fn find_kernel_of_backtracking_isogeny_prime_power_degree<
     curve: &Curve<Fp2>,
     endo: &Quaternion,
     basis: &BasisX<Fp2>,
-    p: u8,
-    e: usize,
     reduced_degree: &BigNum<NUM_WORDS_DEG>,
-    degree: &BigNum<NUM_WORDS_DEG>,
-    p_adic_basis: &[BigNum<NUM_WORDS_DEG>],
 ) -> Point<Fp2> {
     // Apply the endomorphism to points basis points on the starting curve,
     // one of which will be used as the kernel for the dual endomorphism
@@ -497,28 +493,8 @@ pub fn find_kernel_of_backtracking_isogeny_prime_power_degree<
     let endo_P = apply_endomorphism_from_quaternion(field_characteristic, curve, endo, &P);
     let endo_Q = apply_endomorphism_from_quaternion(field_characteristic, curve, endo, &Q);
 
-    // From each torsion basis point, construct a possible kernel for the degree-p^e backtracking isogeny
-    let endoP_Q = curve.sub(&endo_P, &Q);
-    let e_endoP_Q = curve.weil_pairing(
-        &endo_P.to_pointx().x(),
-        &Q.to_pointx().x(),
-        &endoP_Q.to_pointx().x(),
-        &degree.to_le_bytes(),
-        degree.nbits(),
-    );
-
-    let endoQ_Q = curve.sub(&endo_Q, &Q);
-    let e_endoQ_Q = curve.weil_pairing(
-        &endo_Q.to_pointx().x(),
-        &Q.to_pointx().x(),
-        &endoQ_Q.to_pointx().x(),
-        &degree.to_le_bytes(),
-        degree.nbits(),
-    );
-
-    // If a discrete log of e(endo(P), Q) w.r.t. e(endo(Q), Q) exists,
-    // then endo(Q) is linearly independent to the kernel of endo-dual.
-    // Otherwise, endo(P) must be.
+    // If endo(Q) is of full order, then it must be linearly independent to the kernel of
+    // the backtracking isogeny we're trying to construct. Otherwise, endo(P) must be.
     let endoQ_has_full_order = !curve
         .mul(
             &endo_Q,
@@ -526,11 +502,8 @@ pub fn find_kernel_of_backtracking_isogeny_prime_power_degree<
             reduced_degree.nbits(),
         )
         .is_zero();
-    let (_, discrete_log_exists) =
-        solve_dlp_small_prime_power_order(&e_endoQ_Q, &e_endoP_Q, p, e, p_adic_basis);
-
     let mut backtracking_isogeny_kernel = endo_P;
-    backtracking_isogeny_kernel.set_cond(&endo_Q, endoQ_has_full_order & discrete_log_exists);
+    backtracking_isogeny_kernel.set_cond(&endo_Q, endoQ_has_full_order);
 
     backtracking_isogeny_kernel
 }

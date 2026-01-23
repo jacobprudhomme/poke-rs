@@ -63,11 +63,7 @@ pub fn generate_2d_isogeny_inke<
         &pub_params.starting_curve,
         &theta,
         &pub_params.three_torsion_basis,
-        3,
-        pub_params.three_torsion_exp,
         &pub_params.reduced_three_torsion_order,
-        &pub_params.three_torsion_order,
-        &pub_params.three_adic_basis,
     );
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny
@@ -177,11 +173,7 @@ pub fn generate_2d_isogeny_poke<
         &pub_params.starting_curve,
         &theta,
         &pub_params.three_torsion_basis,
-        3,
-        pub_params.three_torsion_exp,
         &pub_params.reduced_three_torsion_order,
-        &pub_params.three_torsion_order,
-        &pub_params.three_adic_basis,
     );
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny

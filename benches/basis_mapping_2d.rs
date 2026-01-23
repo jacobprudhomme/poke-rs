@@ -436,7 +436,7 @@ fn basis_mapping_2d_inke(c: &mut Criterion) {
     let (domain_v, kernel_v, _) = generate_2d_isogeny_inke(&params_v, &q_v, &q_dual_v);
 
     let mut full_basis_group = c.benchmark_group(
-        "Method 1: Evaluating the 2D-isogeny over a full (2^a * 3^b * 5^c)-torsion basis",
+        "Method 1: Evaluating the 2D-isogeny over a full (2^a * 3^b)-torsion basis",
     );
     full_basis_group.bench_function("INKE level I", |b| {
         b.iter(|| {

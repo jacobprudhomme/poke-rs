@@ -1000,8 +1000,8 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
 
     /* Derive final image points on intermediate curve */
 
-    let img_P_intermediate = P_aux_curve.clone();
-    let img_Q_intermediate = Q_aux_curve.clone();
+    let img_R_intermediate = R_aux_curve.clone();
+    let img_S_intermediate = S_aux_curve.clone();
 
     /* Derive final image points on embedded codomain curve by applying the change-of-basis matrix */
 
@@ -1109,7 +1109,7 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
         (img_P_codomain, img_Q_codomain),
         (img_R_codomain, img_S_codomain),
         aux_curve,
-        (img_P_intermediate, img_Q_intermediate),
+        (img_R_intermediate, img_S_intermediate),
         retval,
     )
 }

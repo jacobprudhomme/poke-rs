@@ -69,6 +69,7 @@ pub fn crt2<
 >(
     residues: (&BigNum<NUM_WORDS_X>, &BigNum<NUM_WORDS_Y>),
     partial_moduli: (&BigNum<NUM_WORDS_X>, &BigNum<NUM_WORDS_Y>),
+    inv_partial_moduli: (&BigNum<NUM_WORDS_X>, &BigNum<NUM_WORDS_Y>),
     full_modulus: &BigNum<NUM_WORDS_XY>,
     _intermediate_bignum_sizes: PhantomData<([(); NUM_WORDS_XXY], [(); NUM_WORDS_XYY])>,
 ) -> BigNum<NUM_WORDS_XY> {
@@ -78,15 +79,13 @@ pub fn crt2<
     // Or does BigNUM<NUM_WORDS_XY> have enough room for the result to grow a bit, for all concrete instantiations?
 
     // Solution mod x^ex
-    let partial_result: BigNum<NUM_WORDS_XXY> = residues.0.widen()
-        * partial_moduli.1.invert_mod(partial_moduli.0).widen()
-        * partial_moduli.1.widen();
+    let partial_result: BigNum<NUM_WORDS_XXY> =
+        residues.0.widen() * inv_partial_moduli.0.widen() * partial_moduli.1.widen();
     result += partial_result.reduce_mod(full_modulus);
 
     // Solution mod y^ey
-    let partial_result: BigNum<NUM_WORDS_XYY> = residues.1.widen()
-        * partial_moduli.0.invert_mod(partial_moduli.1).widen()
-        * partial_moduli.0.widen();
+    let partial_result: BigNum<NUM_WORDS_XYY> =
+        residues.1.widen() * inv_partial_moduli.1.widen() * partial_moduli.0.widen();
     result = (result + partial_result.reduce_mod(full_modulus)).reduce_mod(full_modulus);
 
     result
@@ -109,15 +108,15 @@ pub fn crt3<
         &BigNum<NUM_WORDS_Y>,
         &BigNum<NUM_WORDS_Z>,
     ),
-    partial_moduli: (
-        &BigNum<NUM_WORDS_X>,
-        &BigNum<NUM_WORDS_Y>,
-        &BigNum<NUM_WORDS_Z>,
-    ),
     duals_of_partial_moduli: (
         &BigNum<NUM_WORDS_YZ>,
         &BigNum<NUM_WORDS_XZ>,
         &BigNum<NUM_WORDS_XY>,
+    ),
+    inv_duals_of_partial_moduli: (
+        &BigNum<NUM_WORDS_X>,
+        &BigNum<NUM_WORDS_Y>,
+        &BigNum<NUM_WORDS_Z>,
     ),
     full_modulus: &BigNum<NUM_WORDS_XYZ>,
     _intermediate_bignum_sizes: PhantomData<(
@@ -133,28 +132,19 @@ pub fn crt3<
 
     // Solution mod x^ex
     let partial_result: BigNum<NUM_WORDS_XXYZ> = residues.0.widen()
-        * duals_of_partial_moduli
-            .0
-            .invert_mod(partial_moduli.0)
-            .widen()
+        * inv_duals_of_partial_moduli.0.widen()
         * duals_of_partial_moduli.0.widen();
     result += partial_result.reduce_mod(full_modulus);
 
     // Solution mod y^ey
     let partial_result: BigNum<NUM_WORDS_XYYZ> = residues.1.widen()
-        * duals_of_partial_moduli
-            .1
-            .invert_mod(partial_moduli.1)
-            .widen()
+        * inv_duals_of_partial_moduli.1.widen()
         * duals_of_partial_moduli.1.widen();
     result = (result + partial_result.reduce_mod(full_modulus)).reduce_mod(full_modulus);
 
     // Solution mod z^ez
     let partial_result: BigNum<NUM_WORDS_XYZZ> = residues.2.widen()
-        * duals_of_partial_moduli
-            .2
-            .invert_mod(partial_moduli.2)
-            .widen()
+        * inv_duals_of_partial_moduli.2.widen()
         * duals_of_partial_moduli.2.widen();
     result = (result + partial_result.reduce_mod(full_modulus)).reduce_mod(full_modulus);
 

@@ -167,6 +167,14 @@ pub mod poke_i {
         let field_characteristic =
             full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
+        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_three_five_orders_mod_two_order =
+            three_times_five_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_two_five_orders_mod_three_order =
+            two_times_five_torsion_order.invert_mod(&three_torsion_order);
+        let inv_two_three_orders_mod_five_order =
+            two_times_three_torsion_order.invert_mod(&five_torsion_order);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
@@ -487,6 +495,10 @@ pub mod poke_i {
             two_times_five_torsion_order,
             three_times_five_torsion_order,
             full_torsion_order,
+            inv_three_order_mod_two_order,
+            inv_three_five_orders_mod_two_order,
+            inv_two_five_orders_mod_three_order,
+            inv_two_three_orders_mod_five_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
@@ -709,6 +721,14 @@ pub mod poke_iii {
         let field_characteristic =
             full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
+        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_three_five_orders_mod_two_order =
+            three_times_five_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_two_five_orders_mod_three_order =
+            two_times_five_torsion_order.invert_mod(&three_torsion_order);
+        let inv_two_three_orders_mod_five_order =
+            two_times_three_torsion_order.invert_mod(&five_torsion_order);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
@@ -1029,6 +1049,10 @@ pub mod poke_iii {
             two_times_five_torsion_order,
             three_times_five_torsion_order,
             full_torsion_order,
+            inv_three_order_mod_two_order,
+            inv_three_five_orders_mod_two_order,
+            inv_two_five_orders_mod_three_order,
+            inv_two_three_orders_mod_five_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
@@ -1269,6 +1293,14 @@ pub mod poke_v {
         let field_characteristic =
             full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
+        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_three_five_orders_mod_two_order =
+            three_times_five_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_two_five_orders_mod_three_order =
+            two_times_five_torsion_order.invert_mod(&three_torsion_order);
+        let inv_two_three_orders_mod_five_order =
+            two_times_three_torsion_order.invert_mod(&five_torsion_order);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
@@ -1589,6 +1621,10 @@ pub mod poke_v {
             two_times_five_torsion_order,
             three_times_five_torsion_order,
             full_torsion_order,
+            inv_three_order_mod_two_order,
+            inv_three_five_orders_mod_two_order,
+            inv_two_five_orders_mod_three_order,
+            inv_two_three_orders_mod_five_order,
             two_torsion_basis,
             three_torsion_basis,
             five_torsion_basis,
@@ -1698,6 +1734,9 @@ pub mod inke_i {
             .truncate();
         let field_characteristic =
             full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
+
+        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_two_order_mod_three_order = full_two_torsion_order.invert_mod(&three_torsion_order);
 
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
@@ -1911,6 +1950,8 @@ pub mod inke_i {
             reduced_three_torsion_order,
             three_torsion_order,
             full_torsion_order,
+            inv_three_order_mod_two_order,
+            inv_two_order_mod_three_order,
             two_torsion_basis,
             three_torsion_basis,
             two_adic_basis,
@@ -2044,6 +2085,9 @@ pub mod inke_iii {
         let field_characteristic =
             full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
+        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_two_order_mod_three_order = full_two_torsion_order.invert_mod(&three_torsion_order);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
@@ -2256,6 +2300,8 @@ pub mod inke_iii {
             reduced_three_torsion_order,
             three_torsion_order,
             full_torsion_order,
+            inv_three_order_mod_two_order,
+            inv_two_order_mod_three_order,
             two_torsion_basis,
             three_torsion_basis,
             two_adic_basis,
@@ -2397,6 +2443,9 @@ pub mod inke_v {
         let field_characteristic =
             full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
 
+        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
+        let inv_two_order_mod_three_order = full_two_torsion_order.invert_mod(&three_torsion_order);
+
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
@@ -2609,6 +2658,8 @@ pub mod inke_v {
             reduced_three_torsion_order,
             three_torsion_order,
             full_torsion_order,
+            inv_three_order_mod_two_order,
+            inv_two_order_mod_three_order,
             two_torsion_basis,
             three_torsion_basis,
             two_adic_basis,

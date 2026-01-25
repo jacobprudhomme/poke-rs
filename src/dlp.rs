@@ -75,6 +75,7 @@ pub fn solve_dlp_order_powers_of_two_three<
     value: &Fp2,
     es: (usize, usize),
     prime_power_orders: (&BigNum<NUM_WORDS_2>, &BigNum<NUM_WORDS_3>),
+    inv_prime_power_orders: (&BigNum<NUM_WORDS_2>, &BigNum<NUM_WORDS_3>),
     full_product_of_prime_power_orders: &BigNum<NUM_WORDS_23>,
     p_adic_bases: (&[BigNum<NUM_WORDS_2>], &[BigNum<NUM_WORDS_3>]),
     intermediate_bignum_sizes: PhantomData<([(); NUM_WORDS_223], [(); NUM_WORDS_233])>,
@@ -118,6 +119,7 @@ pub fn solve_dlp_order_powers_of_two_three<
     let result = crt2(
         (&result_mod_power_of_two, &result_mod_power_of_three),
         prime_power_orders,
+        inv_prime_power_orders,
         full_product_of_prime_power_orders,
         intermediate_bignum_sizes,
     );
@@ -141,15 +143,15 @@ pub fn solve_dlp_order_powers_of_two_three_five<
     generator: &Fp2,
     value: &Fp2,
     es: (usize, usize, usize),
-    prime_power_orders: (
-        &BigNum<NUM_WORDS_2>,
-        &BigNum<NUM_WORDS_3>,
-        &BigNum<NUM_WORDS_5>,
-    ),
     partial_products_of_prime_power_orders: (
         &BigNum<NUM_WORDS_35>,
         &BigNum<NUM_WORDS_25>,
         &BigNum<NUM_WORDS_23>,
+    ),
+    inv_partial_products_of_prime_power_orders: (
+        &BigNum<NUM_WORDS_2>,
+        &BigNum<NUM_WORDS_3>,
+        &BigNum<NUM_WORDS_5>,
     ),
     full_product_of_prime_power_orders: &BigNum<NUM_WORDS_235>,
     p_adic_bases: (
@@ -222,8 +224,8 @@ pub fn solve_dlp_order_powers_of_two_three_five<
             &result_mod_power_of_three,
             &result_mod_power_of_five,
         ),
-        prime_power_orders,
         partial_products_of_prime_power_orders,
+        inv_partial_products_of_prime_power_orders,
         full_product_of_prime_power_orders,
         intermediate_bignum_sizes,
     );

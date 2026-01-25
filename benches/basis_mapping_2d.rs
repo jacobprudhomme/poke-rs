@@ -84,6 +84,10 @@ fn apply_2d_isogeny_to_full_torsion_basis_inke<
                 &pub_params.full_two_torsion_order,
                 &pub_params.three_torsion_order,
             ),
+            (
+                &pub_params.inv_three_order_mod_two_order,
+                &pub_params.inv_two_order_mod_three_order,
+            ),
             &pub_params.full_torsion_order,
             &pub_params.cofactor,
             (&pub_params.two_adic_basis, &pub_params.three_adic_basis),
@@ -98,9 +102,7 @@ fn apply_2d_isogeny_to_full_torsion_basis_inke<
     let two_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &two_torsion_basis_EA,
-        &pub_params
-            .three_torsion_order
-            .invert_mod(&pub_params.full_two_torsion_order),
+        &pub_params.inv_three_order_mod_two_order,
     );
 
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
@@ -111,9 +113,7 @@ fn apply_2d_isogeny_to_full_torsion_basis_inke<
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &three_torsion_basis_EA,
-        &pub_params
-            .full_two_torsion_order
-            .invert_mod(&pub_params.three_torsion_order),
+        &pub_params.inv_two_order_mod_three_order,
     );
 
     let three_torsion_basis_EA1 = mask_basis_by_same_scalar(
@@ -124,9 +124,7 @@ fn apply_2d_isogeny_to_full_torsion_basis_inke<
     let three_torsion_basis_EA1 = mask_basis_by_same_scalar(
         &intermediate_curve,
         &three_torsion_basis_EA1,
-        &pub_params
-            .full_two_torsion_order
-            .invert_mod(&pub_params.three_torsion_order),
+        &pub_params.inv_two_order_mod_three_order,
     );
 
     (
@@ -272,14 +270,14 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
             pub_params.five_torsion_exp,
         ),
         (
-            &pub_params.full_two_torsion_order,
-            &pub_params.three_torsion_order,
-            &pub_params.five_torsion_order,
-        ),
-        (
             &pub_params.three_times_five_torsion_order,
             &pub_params.two_times_five_torsion_order,
             &pub_params.two_times_three_torsion_order,
+        ),
+        (
+            &pub_params.inv_three_five_orders_mod_two_order,
+            &pub_params.inv_two_five_orders_mod_three_order,
+            &pub_params.inv_two_three_orders_mod_five_order,
         ),
         &pub_params.full_torsion_order,
         &pub_params.cofactor,
@@ -303,9 +301,7 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
     let two_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &two_torsion_basis_EA,
-        &pub_params
-            .three_times_five_torsion_order
-            .invert_mod(&pub_params.full_two_torsion_order),
+        &pub_params.inv_three_five_orders_mod_two_order,
     );
 
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
@@ -316,9 +312,7 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &three_torsion_basis_EA,
-        &pub_params
-            .two_times_five_torsion_order
-            .invert_mod(&pub_params.three_torsion_order),
+        &pub_params.inv_two_five_orders_mod_three_order,
     );
 
     let five_torsion_basis_EA = mask_basis_by_same_scalar(
@@ -329,9 +323,7 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
     let five_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &five_torsion_basis_EA,
-        &pub_params
-            .two_times_three_torsion_order
-            .invert_mod(&pub_params.five_torsion_order),
+        &pub_params.inv_two_three_orders_mod_five_order,
     );
 
     (

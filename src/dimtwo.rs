@@ -100,9 +100,7 @@ pub fn generate_2d_isogeny_inke<
     let (scaled_theta_backtrack_P, scaled_theta_backtrack_Q) = mask_basis_by_same_scalar(
         &codomain,
         &(theta_backtrack_P, theta_backtrack_Q),
-        &pub_params
-            .three_torsion_order
-            .invert_mod(&pub_params.full_two_torsion_order),
+        &pub_params.inv_three_order_mod_two_order,
     );
 
     let two_torsion_basis_E0 = pub_params
@@ -208,9 +206,7 @@ pub fn generate_2d_isogeny_poke<
     let (scaled_theta_backtrack_P, scaled_theta_backtrack_Q) = mask_basis_by_same_scalar(
         &codomain,
         &(theta_backtrack_P, theta_backtrack_Q),
-        &pub_params
-            .three_torsion_order
-            .invert_mod(&pub_params.full_two_torsion_order),
+        &pub_params.inv_three_order_mod_two_order,
     );
 
     let two_torsion_basis_E0 = pub_params
@@ -586,6 +582,7 @@ pub fn eval_2d_two_isogeny_chain_inke<
         &ePV,
         torsion_basis_prime_power_exps,
         torsion_basis_orders,
+        inv_torsion_basis_orders,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,
@@ -596,6 +593,7 @@ pub fn eval_2d_two_isogeny_chain_inke<
         &ePmU,
         torsion_basis_prime_power_exps,
         torsion_basis_orders,
+        inv_torsion_basis_orders,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,
@@ -606,6 +604,7 @@ pub fn eval_2d_two_isogeny_chain_inke<
         &eQV,
         torsion_basis_prime_power_exps,
         torsion_basis_orders,
+        inv_torsion_basis_orders,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,
@@ -616,6 +615,7 @@ pub fn eval_2d_two_isogeny_chain_inke<
         &eQmU,
         torsion_basis_prime_power_exps,
         torsion_basis_orders,
+        inv_torsion_basis_orders,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,
@@ -1101,15 +1101,15 @@ pub fn eval_2d_two_isogeny_chain_poke<
     degree_dual: &BigNum<NUM_WORDS_2>,
     full_torsion_basis: &BasisX<Fp2>,
     torsion_basis_prime_power_exps: (usize, usize, usize),
-    torsion_basis_orders: (
-        &BigNum<NUM_WORDS_2>,
-        &BigNum<NUM_WORDS_3>,
-        &BigNum<NUM_WORDS_5>,
-    ),
     partial_products_of_prime_powers: (
         &BigNum<NUM_WORDS_35>,
         &BigNum<NUM_WORDS_25>,
         &BigNum<NUM_WORDS_23>,
+    ),
+    inv_partial_products_of_prime_powers: (
+        &BigNum<NUM_WORDS_2>,
+        &BigNum<NUM_WORDS_3>,
+        &BigNum<NUM_WORDS_5>,
     ),
     full_torsion_basis_order: &BigNum<NUM_WORDS_235>,
     full_torsion_basis_cofactor: &BigNum<1>,
@@ -1239,8 +1239,8 @@ pub fn eval_2d_two_isogeny_chain_poke<
         &eUV_aux,
         &ePV,
         torsion_basis_prime_power_exps,
-        torsion_basis_orders,
         partial_products_of_prime_powers,
+        inv_partial_products_of_prime_powers,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,
@@ -1250,8 +1250,8 @@ pub fn eval_2d_two_isogeny_chain_poke<
         &eUV_aux,
         &ePmU,
         torsion_basis_prime_power_exps,
-        torsion_basis_orders,
         partial_products_of_prime_powers,
+        inv_partial_products_of_prime_powers,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,
@@ -1261,8 +1261,8 @@ pub fn eval_2d_two_isogeny_chain_poke<
         &eUV_aux,
         &eQV,
         torsion_basis_prime_power_exps,
-        torsion_basis_orders,
         partial_products_of_prime_powers,
+        inv_partial_products_of_prime_powers,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,
@@ -1272,8 +1272,8 @@ pub fn eval_2d_two_isogeny_chain_poke<
         &eUV_aux,
         &eQmU,
         torsion_basis_prime_power_exps,
-        torsion_basis_orders,
         partial_products_of_prime_powers,
+        inv_partial_products_of_prime_powers,
         full_torsion_basis_order,
         p_adic_bases,
         intermediate_bignum_sizes,

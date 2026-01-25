@@ -42,6 +42,8 @@ pub struct PublicParams<
     pub three_torsion_order: BigNum<NUM_WORDS_3>,
     pub three_torsion_exp: usize,
     pub full_torsion_order: BigNum<NUM_WORDS_P>,
+    pub inv_three_order_mod_two_order: BigNum<NUM_WORDS_2>,
+    pub inv_two_order_mod_three_order: BigNum<NUM_WORDS_3>,
     pub two_torsion_basis: BasisX<Fp2>,
     pub three_torsion_basis: BasisX<Fp2>,
     pub two_adic_basis: Vec<BigNum<NUM_WORDS_2>>,

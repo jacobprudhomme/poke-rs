@@ -309,9 +309,10 @@ pub fn represent_integer<const NUM_WORDS: usize, const NUM_WORDS_P: usize>(
 
     let target_norm = Integer::from_digits(&target_norm.to_le_bytes(), Order::Lsf);
     let p = Integer::from_digits(&p.to_le_bytes(), Order::Lsf);
+    let target_norm_over_p = &target_norm / p.clone();
 
     // FIXME: does this do rounding division? And does rounding division mess up our parameters?
-    let m_prime = (&target_norm / p.clone()).sqrt();
+    let m_prime = target_norm_over_p.clone().sqrt();
     let m_prime_range = &TWO * m_prime.clone() + Integer::ONE;
 
     let mut x = Integer::ZERO;
@@ -324,7 +325,7 @@ pub fn represent_integer<const NUM_WORDS: usize, const NUM_WORDS_P: usize>(
     while counter > 0 && found_solution == FAILURE_RETVAL {
         z = m_prime_range.clone().random_below(&mut rng) - &m_prime;
 
-        let m_dblprime = (&target_norm / p.clone() - z.clone().square()).sqrt();
+        let m_dblprime = (&target_norm_over_p - z.clone().square()).sqrt();
         let m_dblprime_range = &TWO * m_dblprime.clone() + Integer::ONE;
         t = m_dblprime_range.clone().random_below(&mut rng) - &m_dblprime;
 

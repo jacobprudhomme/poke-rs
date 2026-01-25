@@ -110,8 +110,12 @@ pub fn generate_2d_isogeny_inke<
             .three_torsion_order
             .invert_mod(&pub_params.full_two_torsion_order),
     );
-    // TODO: Test if removing the negation of these points still creates a valid isogeny
-    let (scaled_P, scaled_Q) = mask_basis_by_same_scalar(&pub_params.starting_curve, &(-P, -Q), &q);
+
+    let two_torsion_basis_E0 = pub_params
+        .starting_curve
+        .lift_basis(&pub_params.two_torsion_basis);
+    let (scaled_P, scaled_Q) =
+        mask_basis_by_same_scalar(&pub_params.starting_curve, &two_torsion_basis_E0, &q);
 
     // Construct secret 2D-isogeny
     let domain = EllipticProduct::new(&pub_params.starting_curve, &codomain);
@@ -220,8 +224,12 @@ pub fn generate_2d_isogeny_poke<
             .three_torsion_order
             .invert_mod(&pub_params.full_two_torsion_order),
     );
-    // TODO: Test if removing the negation of these points still creates a valid isogeny
-    let (scaled_P, scaled_Q) = mask_basis_by_same_scalar(&pub_params.starting_curve, &(-P, -Q), &q);
+
+    let two_torsion_basis_E0 = pub_params
+        .starting_curve
+        .lift_basis(&pub_params.two_torsion_basis);
+    let (scaled_P, scaled_Q) =
+        mask_basis_by_same_scalar(&pub_params.starting_curve, &two_torsion_basis_E0, &q);
 
     // Construct secret 2D-isogeny
     let domain = EllipticProduct::new(&pub_params.starting_curve, &codomain);

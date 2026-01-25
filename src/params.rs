@@ -1,6 +1,10 @@
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
 
-use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
+use crate::{
+    FAILURE_RETVAL, SUCCESS_RETVAL,
+    bn::BigNum,
+    endomorphism::{frobenius_endomorphism, iota_endomorphism},
+};
 
 pub mod poke_i {
     use super::*;
@@ -188,6 +192,57 @@ pub mod poke_i {
         let five_adic_basis = (0..=FIVE_TORSION_EXP)
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
+
+        let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_two_torsion_basis = (
+            [
+                P,
+                iota_endomorphism(&P),
+                frobenius_endomorphism(&field_characteristic, &P),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &P)),
+            ],
+            [
+                Q,
+                iota_endomorphism(&Q),
+                frobenius_endomorphism(&field_characteristic, &Q),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Q)),
+            ],
+        );
+        let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
+        let quaternion_three_torsion_basis = (
+            [
+                R,
+                iota_endomorphism(&R),
+                frobenius_endomorphism(&field_characteristic, &R),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &R)),
+            ],
+            [
+                S,
+                iota_endomorphism(&S),
+                frobenius_endomorphism(&field_characteristic, &S),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
+            ],
+        );
+        let (X, Y) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_five_torsion_basis = (
+            [
+                X,
+                iota_endomorphism(&X),
+                frobenius_endomorphism(&field_characteristic, &X),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &X)),
+            ],
+            [
+                Y,
+                iota_endomorphism(&Y),
+                frobenius_endomorphism(&field_characteristic, &Y),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Y)),
+            ],
+        );
+        let quaternion_bases = [
+            quaternion_two_torsion_basis,
+            quaternion_three_torsion_basis,
+            quaternion_five_torsion_basis,
+        ];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -438,6 +493,7 @@ pub mod poke_i {
             two_adic_basis,
             three_adic_basis,
             five_adic_basis,
+            quaternion_bases,
         }
     }
 }
@@ -679,6 +735,57 @@ pub mod poke_iii {
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
+        let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_two_torsion_basis = (
+            [
+                P,
+                iota_endomorphism(&P),
+                frobenius_endomorphism(&field_characteristic, &P),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &P)),
+            ],
+            [
+                Q,
+                iota_endomorphism(&Q),
+                frobenius_endomorphism(&field_characteristic, &Q),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Q)),
+            ],
+        );
+        let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
+        let quaternion_three_torsion_basis = (
+            [
+                R,
+                iota_endomorphism(&R),
+                frobenius_endomorphism(&field_characteristic, &R),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &R)),
+            ],
+            [
+                S,
+                iota_endomorphism(&S),
+                frobenius_endomorphism(&field_characteristic, &S),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
+            ],
+        );
+        let (X, Y) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_five_torsion_basis = (
+            [
+                X,
+                iota_endomorphism(&X),
+                frobenius_endomorphism(&field_characteristic, &X),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &X)),
+            ],
+            [
+                Y,
+                iota_endomorphism(&Y),
+                frobenius_endomorphism(&field_characteristic, &Y),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Y)),
+            ],
+        );
+        let quaternion_bases = [
+            quaternion_two_torsion_basis,
+            quaternion_three_torsion_basis,
+            quaternion_five_torsion_basis,
+        ];
+
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
             starting_curve.is_on_curve(&two_torsion_basis.P.x()),
@@ -928,6 +1035,7 @@ pub mod poke_iii {
             two_adic_basis,
             three_adic_basis,
             five_adic_basis,
+            quaternion_bases,
         }
     }
 }
@@ -1187,6 +1295,57 @@ pub mod poke_v {
             .map(|exp| BigNum::from_prime_power(5, exp))
             .collect::<Vec<_>>();
 
+        let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_two_torsion_basis = (
+            [
+                P,
+                iota_endomorphism(&P),
+                frobenius_endomorphism(&field_characteristic, &P),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &P)),
+            ],
+            [
+                Q,
+                iota_endomorphism(&Q),
+                frobenius_endomorphism(&field_characteristic, &Q),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Q)),
+            ],
+        );
+        let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
+        let quaternion_three_torsion_basis = (
+            [
+                R,
+                iota_endomorphism(&R),
+                frobenius_endomorphism(&field_characteristic, &R),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &R)),
+            ],
+            [
+                S,
+                iota_endomorphism(&S),
+                frobenius_endomorphism(&field_characteristic, &S),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
+            ],
+        );
+        let (X, Y) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_five_torsion_basis = (
+            [
+                X,
+                iota_endomorphism(&X),
+                frobenius_endomorphism(&field_characteristic, &X),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &X)),
+            ],
+            [
+                Y,
+                iota_endomorphism(&Y),
+                frobenius_endomorphism(&field_characteristic, &Y),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Y)),
+            ],
+        );
+        let quaternion_bases = [
+            quaternion_two_torsion_basis,
+            quaternion_three_torsion_basis,
+            quaternion_five_torsion_basis,
+        ];
+
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
             starting_curve.is_on_curve(&two_torsion_basis.P.x()),
@@ -1436,6 +1595,7 @@ pub mod poke_v {
             two_adic_basis,
             three_adic_basis,
             five_adic_basis,
+            quaternion_bases,
         }
     }
 }
@@ -1556,6 +1716,38 @@ pub mod inke_i {
         let three_adic_basis = (0..=THREE_TORSION_EXP)
             .map(|exp| BigNum::from_prime_power(3, exp))
             .collect::<Vec<_>>();
+
+        let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_two_torsion_basis = (
+            [
+                P,
+                iota_endomorphism(&P),
+                frobenius_endomorphism(&field_characteristic, &P),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &P)),
+            ],
+            [
+                Q,
+                iota_endomorphism(&Q),
+                frobenius_endomorphism(&field_characteristic, &Q),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Q)),
+            ],
+        );
+        let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
+        let quaternion_three_torsion_basis = (
+            [
+                R,
+                iota_endomorphism(&R),
+                frobenius_endomorphism(&field_characteristic, &R),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &R)),
+            ],
+            [
+                S,
+                iota_endomorphism(&S),
+                frobenius_endomorphism(&field_characteristic, &S),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
+            ],
+        );
+        let quaternion_bases = [quaternion_two_torsion_basis, quaternion_three_torsion_basis];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -1723,6 +1915,7 @@ pub mod inke_i {
             three_torsion_basis,
             two_adic_basis,
             three_adic_basis,
+            quaternion_bases,
         }
     }
 }
@@ -1869,6 +2062,38 @@ pub mod inke_iii {
             .map(|exp| BigNum::from_prime_power(3, exp))
             .collect::<Vec<_>>();
 
+        let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_two_torsion_basis = (
+            [
+                P,
+                iota_endomorphism(&P),
+                frobenius_endomorphism(&field_characteristic, &P),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &P)),
+            ],
+            [
+                Q,
+                iota_endomorphism(&Q),
+                frobenius_endomorphism(&field_characteristic, &Q),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Q)),
+            ],
+        );
+        let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
+        let quaternion_three_torsion_basis = (
+            [
+                R,
+                iota_endomorphism(&R),
+                frobenius_endomorphism(&field_characteristic, &R),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &R)),
+            ],
+            [
+                S,
+                iota_endomorphism(&S),
+                frobenius_endomorphism(&field_characteristic, &S),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
+            ],
+        );
+        let quaternion_bases = [quaternion_two_torsion_basis, quaternion_three_torsion_basis];
+
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
             starting_curve.is_on_curve(&two_torsion_basis.P.x()),
@@ -2035,6 +2260,7 @@ pub mod inke_iii {
             three_torsion_basis,
             two_adic_basis,
             three_adic_basis,
+            quaternion_bases,
         }
     }
 }
@@ -2189,6 +2415,38 @@ pub mod inke_v {
             .map(|exp| BigNum::from_prime_power(3, exp))
             .collect::<Vec<_>>();
 
+        let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
+        let quaternion_two_torsion_basis = (
+            [
+                P,
+                iota_endomorphism(&P),
+                frobenius_endomorphism(&field_characteristic, &P),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &P)),
+            ],
+            [
+                Q,
+                iota_endomorphism(&Q),
+                frobenius_endomorphism(&field_characteristic, &Q),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Q)),
+            ],
+        );
+        let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
+        let quaternion_three_torsion_basis = (
+            [
+                R,
+                iota_endomorphism(&R),
+                frobenius_endomorphism(&field_characteristic, &R),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &R)),
+            ],
+            [
+                S,
+                iota_endomorphism(&S),
+                frobenius_endomorphism(&field_characteristic, &S),
+                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
+            ],
+        );
+        let quaternion_bases = [quaternion_two_torsion_basis, quaternion_three_torsion_basis];
+
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
             starting_curve.is_on_curve(&two_torsion_basis.P.x()),
@@ -2355,6 +2613,7 @@ pub mod inke_v {
             three_torsion_basis,
             two_adic_basis,
             three_adic_basis,
+            quaternion_bases,
         }
     }
 }

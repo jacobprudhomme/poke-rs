@@ -3,7 +3,7 @@
 //! Adapted from the KLaPoTi-Rust library: https://github.com/isogeny-klapoti/klapoti-rust.
 
 use fp2::traits::Fp2 as Fp2Trait;
-use isogeny::elliptic::{basis::BasisX, curve::Curve, projective_point::Point};
+use isogeny::elliptic::{curve::Curve, projective_point::Point};
 use rug::{
     Integer,
     integer::{IsPrime, Order},
@@ -350,52 +350,49 @@ pub fn represent_integer<const NUM_WORDS: usize, const NUM_WORDS_P: usize>(
     )
 }
 
-pub fn apply_endomorphism_from_quaternion<Fp2: Fp2Trait, const NUM_WORDS_P: usize>(
+pub fn iota_endomorphism<Fp2: Fp2Trait>(P: &Point<Fp2>) -> Point<Fp2> {
+    let (xP, yP) = P.to_xy();
+
+    Point::new_xy(&(-xP), &(Fp2::ZETA * yP))
+}
+
+pub fn frobenius_endomorphism<Fp2: Fp2Trait, const NUM_WORDS_P: usize>(
     p: &BigNum<NUM_WORDS_P>,
-    curve: &Curve<Fp2>,
-    quat: &Quaternion,
     P: &Point<Fp2>,
 ) -> Point<Fp2> {
-    // TODO: precompute this for 2^a basis points
-    fn i_endo<Fp2: Fp2Trait>(P: &Point<Fp2>) -> Point<Fp2> {
-        let (xP, yP) = P.to_xy();
+    let (xP, yP) = P.to_xy();
 
-        Point::new_xy(&(-xP), &(Fp2::ZETA * yP))
-    }
+    Point::new_xy(
+        &xP.pow(&p.to_le_bytes(), p.nbits()),
+        &yP.pow(&p.to_le_bytes(), p.nbits()),
+    )
+}
 
-    // TODO: precompute this for 2^a basis points
-    fn frob_endo<Fp2: Fp2Trait, const NUM_WORDS_P: usize>(
-        p: &BigNum<NUM_WORDS_P>,
-        P: &Point<Fp2>,
-    ) -> Point<Fp2> {
-        let (xP, yP) = P.to_xy();
-
-        Point::new_xy(
-            &xP.pow(&p.to_le_bytes(), p.nbits()),
-            &yP.pow(&p.to_le_bytes(), p.nbits()),
-        )
-    }
-
+pub fn apply_endomorphism_from_quaternion<Fp2: Fp2Trait>(
+    curve: &Curve<Fp2>,
+    quat_basis: &[Point<Fp2>; 4],
+    quat: &Quaternion,
+) -> Point<Fp2> {
     let mut X = curve.mul(
-        P,
+        &quat_basis[0],
         &quat.x.n.to_digits::<u8>(Order::Lsf),
         quat.x.n.significant_bits() as usize,
     );
     X.set_condneg(quat.x.is_negative);
     let mut Y = curve.mul(
-        &i_endo(P),
+        &quat_basis[1],
         &quat.y.n.to_digits::<u8>(Order::Lsf),
         quat.y.n.significant_bits() as usize,
     );
     Y.set_condneg(quat.y.is_negative);
     let mut Z = curve.mul(
-        &frob_endo(p, P),
+        &quat_basis[2],
         &quat.z.n.to_digits::<u8>(Order::Lsf),
         quat.z.n.significant_bits() as usize,
     );
     Z.set_condneg(quat.z.is_negative);
     let mut T = curve.mul(
-        &i_endo(&frob_endo(p, P)),
+        &quat_basis[3],
         &quat.t.n.to_digits::<u8>(Order::Lsf),
         quat.t.n.significant_bits() as usize,
     );
@@ -414,20 +411,17 @@ pub fn apply_endomorphism_from_quaternion<Fp2: Fp2Trait, const NUM_WORDS_P: usiz
 /// the kernel of a degree-`p`^`e` isogeny backtracking the `endo`morphism
 pub fn find_kernel_of_backtracking_isogeny_prime_power_degree<
     Fp2: Fp2Trait,
-    const NUM_WORDS_P: usize,
     const NUM_WORDS_DEG: usize,
 >(
-    field_characteristic: &BigNum<NUM_WORDS_P>,
     curve: &Curve<Fp2>,
+    quat_basis: &([Point<Fp2>; 4], [Point<Fp2>; 4]),
     endo: &Quaternion,
-    basis: &BasisX<Fp2>,
     reduced_degree: &BigNum<NUM_WORDS_DEG>,
 ) -> Point<Fp2> {
     // Apply the endomorphism to points basis points on the starting curve,
     // one of which will be used as the kernel for the dual endomorphism
-    let (P, Q) = curve.lift_basis(basis);
-    let endo_P = apply_endomorphism_from_quaternion(field_characteristic, curve, endo, &P);
-    let endo_Q = apply_endomorphism_from_quaternion(field_characteristic, curve, endo, &Q);
+    let endo_P = apply_endomorphism_from_quaternion(curve, &quat_basis.0, endo);
+    let endo_Q = apply_endomorphism_from_quaternion(curve, &quat_basis.1, endo);
 
     // If endo(Q) is of full order, then it must be linearly independent to the kernel of
     // the backtracking isogeny we're trying to construct. Otherwise, endo(P) must be.

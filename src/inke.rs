@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::{
-    elliptic::{basis::BasisX, curve::Curve},
+    elliptic::{basis::BasisX, curve::Curve, projective_point::Point},
     theta::elliptic_product::{EllipticProduct, ProductPoint},
 };
 use sha3::{
@@ -46,6 +46,7 @@ pub struct PublicParams<
     pub three_torsion_basis: BasisX<Fp2>,
     pub two_adic_basis: Vec<BigNum<NUM_WORDS_2>>,
     pub three_adic_basis: Vec<BigNum<NUM_WORDS_3>>,
+    pub quaternion_bases: [([Point<Fp2>; 4], [Point<Fp2>; 4]); 2],
 }
 
 pub struct PrvKey<Fp2: Fp2Trait, const NUM_WORDS_2: usize> {

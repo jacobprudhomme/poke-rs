@@ -59,28 +59,22 @@ pub fn generate_2d_isogeny_inke<
 
     // Find kernel of degree-3^b backtracking isogeny of theta
     let K3 = find_kernel_of_backtracking_isogeny_prime_power_degree(
-        &pub_params.field_characteristic,
         &pub_params.starting_curve,
+        &pub_params.quaternion_bases[1],
         &theta,
-        &pub_params.three_torsion_basis,
         &pub_params.reduced_three_torsion_order,
     );
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny
-    let (P, Q) = pub_params
-        .starting_curve
-        .lift_basis(&pub_params.two_torsion_basis);
     let theta_P = apply_endomorphism_from_quaternion(
-        &pub_params.field_characteristic,
         &pub_params.starting_curve,
+        &pub_params.quaternion_bases[0].0,
         &theta,
-        &P,
     );
     let theta_Q = apply_endomorphism_from_quaternion(
-        &pub_params.field_characteristic,
         &pub_params.starting_curve,
+        &pub_params.quaternion_bases[0].1,
         &theta,
-        &Q,
     );
     let mut theta_two_torsion_basis = [
         theta_P.to_pointx(),
@@ -173,28 +167,22 @@ pub fn generate_2d_isogeny_poke<
 
     // Find kernel of degree-3^b backtracking isogeny of theta
     let K3 = find_kernel_of_backtracking_isogeny_prime_power_degree(
-        &pub_params.field_characteristic,
         &pub_params.starting_curve,
+        &pub_params.quaternion_bases[1],
         &theta,
-        &pub_params.three_torsion_basis,
         &pub_params.reduced_three_torsion_order,
     );
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny
-    let (P, Q) = pub_params
-        .starting_curve
-        .lift_basis(&pub_params.two_torsion_basis);
     let theta_P = apply_endomorphism_from_quaternion(
-        &pub_params.field_characteristic,
         &pub_params.starting_curve,
+        &pub_params.quaternion_bases[0].0,
         &theta,
-        &P,
     );
     let theta_Q = apply_endomorphism_from_quaternion(
-        &pub_params.field_characteristic,
         &pub_params.starting_curve,
+        &pub_params.quaternion_bases[0].1,
         &theta,
-        &Q,
     );
     let mut theta_two_torsion_basis = [
         theta_P.to_pointx(),

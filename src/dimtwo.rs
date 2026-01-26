@@ -817,12 +817,11 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
 
     // Compute the pairings between respective pairs of input and random torsion bases,
     // which will be the generators of the discrete log subgroups we attempt to solve
-    let eUV_aux = aux_curve.weil_pairing(
+    let eUV_aux = aux_curve.weil_pairing_2exp(
         &U_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &UV_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
     let eWZ_aux = aux_curve.weil_pairing(
         &W_aux_curve.to_pointx().x(),
@@ -834,33 +833,29 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
 
     // Compute the pairings for which we will solve the discrete log w.r.t.
     // the above generators for the entries of the change-of-basis matrices
-    let ePV = aux_curve.weil_pairing(
+    let ePV = aux_curve.weil_pairing_2exp(
         &P_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &PV_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
-    let ePmU = aux_curve.weil_pairing(
+    let ePmU = aux_curve.weil_pairing_2exp(
         &P_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &PmU_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
-    let eQV = aux_curve.weil_pairing(
+    let eQV = aux_curve.weil_pairing_2exp(
         &Q_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &QV_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
-    let eQmU = aux_curve.weil_pairing(
+    let eQmU = aux_curve.weil_pairing_2exp(
         &Q_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &QmU_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
 
     let eRZ = aux_curve.weil_pairing(
@@ -899,37 +894,36 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
     let dual_has_degree_q = eUV_aux.equals(&eUV_power_q);
 
     // Solve discrete logarithm between pairings to obtain expression of P',Q' in terms of <U',V'>
-    let (x2, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
+    let (prime_powers_of_eUV_aux, dlog_table, ok) =
+        eUV_aux.precompute_dlp_tables(torsion_params.0.exp);
+    retval &= ok;
+    let (x2, ok) = eUV_aux.solve_dlp_2e(
         &ePV,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eUV_aux, &dlog_table)),
     );
+    let x2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&x2);
     retval &= ok;
-    let (y2, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
+    let (y2, ok) = eUV_aux.solve_dlp_2e(
         &ePmU,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eUV_aux, &dlog_table)),
     );
+    let y2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&y2);
     retval &= ok;
-    let (w2, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
+    let (w2, ok) = eUV_aux.solve_dlp_2e(
         &eQV,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eUV_aux, &dlog_table)),
     );
+    let w2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&w2);
     retval &= ok;
-    let (z2, ok) = solve_dlp_small_prime_power_order(
-        &eUV_aux,
+    let (z2, ok) = eUV_aux.solve_dlp_2e(
         &eQmU,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eUV_aux, &dlog_table)),
     );
+    let z2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&z2);
     retval &= ok;
 
     // Solve discrete logarithm between pairings to obtain expression of R',S' in terms of <W',Z'>
@@ -1492,12 +1486,11 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
 
     // Compute the pairings between respective pairs of input and random torsion bases,
     // which will be the generators of the discrete log subgroups we attempt to solve
-    let eMN_aux = aux_curve.weil_pairing(
+    let eMN_aux = aux_curve.weil_pairing_2exp(
         &M_aux_curve.to_pointx().x(),
         &N_aux_curve.to_pointx().x(),
         &MN_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
     let eUV_aux = aux_curve.weil_pairing(
         &U_aux_curve.to_pointx().x(),
@@ -1516,33 +1509,29 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
 
     // Compute the pairings for which we will solve the discrete log w.r.t.
     // the above generators for the entries of the change-of-basis matrices
-    let ePN = aux_curve.weil_pairing(
+    let ePN = aux_curve.weil_pairing_2exp(
         &P_aux_curve.to_pointx().x(),
         &N_aux_curve.to_pointx().x(),
         &PN_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
-    let ePmM = aux_curve.weil_pairing(
+    let ePmM = aux_curve.weil_pairing_2exp(
         &P_aux_curve.to_pointx().x(),
         &M_aux_curve.to_pointx().x(),
         &PmM_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
-    let eQN = aux_curve.weil_pairing(
+    let eQN = aux_curve.weil_pairing_2exp(
         &Q_aux_curve.to_pointx().x(),
         &N_aux_curve.to_pointx().x(),
         &QN_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
-    let eQmM = aux_curve.weil_pairing(
+    let eQmM = aux_curve.weil_pairing_2exp(
         &Q_aux_curve.to_pointx().x(),
         &M_aux_curve.to_pointx().x(),
         &QmM_aux_curve.to_pointx().x(),
-        &torsion_params.0.order.to_le_bytes(),
-        torsion_params.0.order.nbits(),
+        torsion_params.0.exp,
     );
 
     let eRV = aux_curve.weil_pairing(
@@ -1611,38 +1600,37 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
 
     // Solve discrete logarithm between pairings to obtain expression of each
     // image point in terms of the image points of its respective random torsion basis
-    let (x2, ok) = solve_dlp_small_prime_power_order(
-        &eMN_aux,
+    let (prime_powers_of_eMN_aux, dlog_table, ok) =
+        eMN_aux.precompute_dlp_tables(torsion_params.0.exp);
+    retval &= ok;
+    let (x2, ok) = eMN_aux.solve_dlp_2e(
         &ePN,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eMN_aux, &dlog_table)),
     );
+    let x2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&x2);
     retval &= ok;
-    let (y2, ok) = solve_dlp_small_prime_power_order(
-        &eMN_aux,
+    let (y2, ok) = eMN_aux.solve_dlp_2e(
         &ePmM,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eMN_aux, &dlog_table)),
     );
+    let y2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&y2);
     retval &= ok;
-    let (w2, ok) = solve_dlp_small_prime_power_order(
-        &eMN_aux,
+    let (w2, ok) = eMN_aux.solve_dlp_2e(
         &eQN,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eMN_aux, &dlog_table)),
     );
+    let w2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&w2);
     retval &= ok;
-    let (z2, ok) = solve_dlp_small_prime_power_order(
-        &eMN_aux,
+    let (z2, ok) = eMN_aux.solve_dlp_2e(
         &eQmM,
-        torsion_params.0.base,
         torsion_params.0.exp,
-        &torsion_params.0.p_adic_basis,
+        Some((&prime_powers_of_eMN_aux, &dlog_table)),
     );
     retval &= ok;
+    let z2 = BigNum::<NUM_WORDS_2>::from_le_bytes(&z2);
 
     let (x3, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,

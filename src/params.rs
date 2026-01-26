@@ -1,3 +1,5 @@
+use core::array;
+
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX};
 
 use crate::{
@@ -6,10 +8,56 @@ use crate::{
     endomorphism::{frobenius_endomorphism, iota_endomorphism},
 };
 
+pub struct TorsionParams<
+    const NUM_WORDS_ORD: usize,
+    const NUM_WORDS_CO: usize,
+    const P_ADIC_BASIS_LEN: usize,
+> {
+    pub base: u8,
+    pub exp: usize,
+    pub order: BigNum<NUM_WORDS_ORD>,
+    pub reduced_order: BigNum<NUM_WORDS_ORD>,
+    pub coproduct: BigNum<NUM_WORDS_CO>,
+    pub inv_coproduct: BigNum<NUM_WORDS_ORD>,
+    pub cofactor: BigNum<NUM_WORDS_CO>,
+    pub p_adic_basis: [BigNum<NUM_WORDS_ORD>; P_ADIC_BASIS_LEN],
+}
+
+impl<const NUM_WORDS_ORD: usize, const NUM_WORDS_CO: usize, const P_ADIC_BASIS_LEN: usize>
+    TorsionParams<NUM_WORDS_ORD, NUM_WORDS_CO, P_ADIC_BASIS_LEN>
+{
+    pub fn new(
+        base: u8,
+        exp: usize,
+        coproduct_factors: &[(usize, usize)],
+        cofactor: &BigNum<1>,
+    ) -> Self {
+        let reduced_order = BigNum::from_prime_power(base as usize, exp - 1);
+        let order = (base as u64) * &reduced_order;
+
+        let coproduct = BigNum::from_prime_factors(coproduct_factors);
+        let inv_coproduct = coproduct.invert_mod(&order);
+        let cofactor = &coproduct * cofactor.widen();
+
+        let p_adic_basis = array::from_fn(|exp| BigNum::from_prime_power(base as usize, exp));
+
+        Self {
+            base,
+            exp,
+            order,
+            reduced_order,
+            coproduct,
+            inv_coproduct,
+            cofactor,
+            p_adic_basis,
+        }
+    }
+}
+
 pub mod poke_i {
     use super::*;
     use crate::{
-        fields::{PokeFieldI, PokeFieldIBase},
+        fields::{POKE_I_MODULUS, PokeFieldI, PokeFieldIBase},
         poke::PublicParams,
     };
 
@@ -137,53 +185,43 @@ pub mod poke_i {
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        { FULL_TWO_TORSION_EXP + 1 },
+        { THREE_TORSION_EXP + 1 },
+        { FIVE_TORSION_EXP + 1 },
     > {
+        let field_characteristic = BigNum::new(&POKE_I_MODULUS);
+        let cofactor = BigNum::one();
         let starting_curve = Curve::new(&PokeFieldI::ZERO);
 
-        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
-        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
-        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
-        let three_torsion_order = 3 * &reduced_three_torsion_order;
-        let reduced_five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP - 1);
-        let five_torsion_order = 5 * &reduced_five_torsion_order;
-        let cofactor = BigNum::one();
-        let two_times_three_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .truncate();
-        let two_times_five_torsion_order = full_two_torsion_order
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let three_times_five_torsion_order = three_torsion_order
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let full_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let five_torsion_cofactor = two_times_three_torsion_order
-            .widening_mul(&cofactor)
-            .truncate();
-        let field_characteristic =
-            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
-
-        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_three_five_orders_mod_two_order =
-            three_times_five_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_two_five_orders_mod_three_order =
-            two_times_five_torsion_order.invert_mod(&three_torsion_order);
-        let inv_two_three_orders_mod_five_order =
-            two_times_three_torsion_order.invert_mod(&five_torsion_order);
-
+        let two_torsion = TorsionParams::new(
+            2,
+            FULL_TWO_TORSION_EXP,
+            &[(3, THREE_TORSION_EXP), (5, FIVE_TORSION_EXP)],
+            &cofactor,
+        );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
+
+        let three_torsion = TorsionParams::new(
+            3,
+            THREE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP), (5, FIVE_TORSION_EXP)],
+            &cofactor,
+        );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
+        );
+
+        let five_torsion = TorsionParams::new(
+            5,
+            FIVE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP), (3, THREE_TORSION_EXP)],
+            &cofactor,
         );
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
@@ -191,18 +229,17 @@ pub mod poke_i {
             &PointX::from_x_coord(&XY_X),
         );
 
-        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(2, exp))
-            .collect::<Vec<_>>();
-        let three_adic_basis = (0..=THREE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(3, exp))
-            .collect::<Vec<_>>();
-        let five_adic_basis = (0..=FIVE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(5, exp))
-            .collect::<Vec<_>>();
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let full_torsion_order = two_torsion
+            .order
+            .widening_mul(&three_torsion.order)
+            .widening_mul(&five_torsion.order)
+            .truncate();
+
+        let inv_three_order_mod_two_order = three_torsion.order.invert_mod(&two_torsion.order);
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_two_torsion_basis = (
+        let two_quaternion_basis = (
             [
                 P,
                 iota_endomorphism(&P),
@@ -217,7 +254,7 @@ pub mod poke_i {
             ],
         );
         let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
-        let quaternion_three_torsion_basis = (
+        let three_quaternion_basis = (
             [
                 R,
                 iota_endomorphism(&R),
@@ -231,26 +268,6 @@ pub mod poke_i {
                 iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
             ],
         );
-        let (X, Y) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_five_torsion_basis = (
-            [
-                X,
-                iota_endomorphism(&X),
-                frobenius_endomorphism(&field_characteristic, &X),
-                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &X)),
-            ],
-            [
-                Y,
-                iota_endomorphism(&Y),
-                frobenius_endomorphism(&field_characteristic, &Y),
-                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Y)),
-            ],
-        );
-        let quaternion_bases = [
-            quaternion_two_torsion_basis,
-            quaternion_three_torsion_basis,
-            quaternion_five_torsion_basis,
-        ];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -295,8 +312,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -305,8 +322,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -315,8 +332,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -325,8 +342,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -335,8 +352,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -345,8 +362,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -357,8 +374,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -367,8 +384,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -377,8 +394,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -387,8 +404,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -397,8 +414,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -407,8 +424,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -419,8 +436,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &five_torsion_basis.P,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -429,8 +446,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &five_torsion_basis.Q,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -439,8 +456,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &five_torsion_basis.PQ,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -449,8 +466,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &five_torsion_basis.P,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -459,8 +476,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &five_torsion_basis.Q,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -469,8 +486,8 @@ pub mod poke_i {
             starting_curve
                 .xmul(
                     &five_torsion_basis.PQ,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -480,32 +497,18 @@ pub mod poke_i {
             field_characteristic,
             cofactor,
             starting_curve,
-            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
-            full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
-            three_torsion_exp: THREE_TORSION_EXP,
-            reduced_three_torsion_order,
-            three_torsion_order,
-            five_torsion_exp: FIVE_TORSION_EXP,
-            reduced_five_torsion_order,
-            five_torsion_order,
-            five_torsion_cofactor,
-            two_times_three_torsion_order,
-            two_times_five_torsion_order,
-            three_times_five_torsion_order,
+            two_torsion,
+            two_torsion_basis,
+            two_quaternion_basis,
+            three_torsion,
+            three_torsion_basis,
+            three_quaternion_basis,
+            five_torsion,
+            five_torsion_basis,
             full_torsion_order,
             inv_three_order_mod_two_order,
-            inv_three_five_orders_mod_two_order,
-            inv_two_five_orders_mod_three_order,
-            inv_two_three_orders_mod_five_order,
-            two_torsion_basis,
-            three_torsion_basis,
-            five_torsion_basis,
-            two_adic_basis,
-            three_adic_basis,
-            five_adic_basis,
-            quaternion_bases,
         }
     }
 }
@@ -513,7 +516,7 @@ pub mod poke_i {
 pub mod poke_iii {
     use super::*;
     use crate::{
-        fields::{PokeFieldIII, PokeFieldIIIBase},
+        fields::{POKE_III_MODULUS, PokeFieldIII, PokeFieldIIIBase},
         poke::PublicParams,
     };
 
@@ -691,53 +694,43 @@ pub mod poke_iii {
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        { FULL_TWO_TORSION_EXP + 1 },
+        { THREE_TORSION_EXP + 1 },
+        { FIVE_TORSION_EXP + 1 },
     > {
+        let field_characteristic = BigNum::new(&POKE_III_MODULUS);
+        let cofactor = BigNum::from_prime_power(7, 2);
         let starting_curve = Curve::new(&PokeFieldIII::ZERO);
 
-        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
-        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
-        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
-        let three_torsion_order = 3 * &reduced_three_torsion_order;
-        let reduced_five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP - 1);
-        let five_torsion_order = 5 * &reduced_five_torsion_order;
-        let cofactor = BigNum::from_prime_power(7, 2);
-        let two_times_three_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .truncate();
-        let two_times_five_torsion_order = full_two_torsion_order
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let three_times_five_torsion_order = three_torsion_order
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let full_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let five_torsion_cofactor = two_times_three_torsion_order
-            .widening_mul(&cofactor)
-            .truncate();
-        let field_characteristic =
-            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
-
-        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_three_five_orders_mod_two_order =
-            three_times_five_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_two_five_orders_mod_three_order =
-            two_times_five_torsion_order.invert_mod(&three_torsion_order);
-        let inv_two_three_orders_mod_five_order =
-            two_times_three_torsion_order.invert_mod(&five_torsion_order);
-
+        let two_torsion = TorsionParams::new(
+            2,
+            FULL_TWO_TORSION_EXP,
+            &[(3, THREE_TORSION_EXP), (5, FIVE_TORSION_EXP)],
+            &cofactor,
+        );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
+
+        let three_torsion = TorsionParams::new(
+            3,
+            THREE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP), (5, FIVE_TORSION_EXP)],
+            &cofactor,
+        );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
+        );
+
+        let five_torsion = TorsionParams::new(
+            5,
+            FIVE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP), (3, THREE_TORSION_EXP)],
+            &cofactor,
         );
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
@@ -745,18 +738,17 @@ pub mod poke_iii {
             &PointX::from_x_coord(&XY_X),
         );
 
-        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(2, exp))
-            .collect::<Vec<_>>();
-        let three_adic_basis = (0..=THREE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(3, exp))
-            .collect::<Vec<_>>();
-        let five_adic_basis = (0..=FIVE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(5, exp))
-            .collect::<Vec<_>>();
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let full_torsion_order = two_torsion
+            .order
+            .widening_mul(&three_torsion.order)
+            .widening_mul(&five_torsion.order)
+            .truncate();
+
+        let inv_three_order_mod_two_order = three_torsion.order.invert_mod(&two_torsion.order);
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_two_torsion_basis = (
+        let two_quaternion_basis = (
             [
                 P,
                 iota_endomorphism(&P),
@@ -771,7 +763,7 @@ pub mod poke_iii {
             ],
         );
         let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
-        let quaternion_three_torsion_basis = (
+        let three_quaternion_basis = (
             [
                 R,
                 iota_endomorphism(&R),
@@ -785,26 +777,6 @@ pub mod poke_iii {
                 iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
             ],
         );
-        let (X, Y) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_five_torsion_basis = (
-            [
-                X,
-                iota_endomorphism(&X),
-                frobenius_endomorphism(&field_characteristic, &X),
-                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &X)),
-            ],
-            [
-                Y,
-                iota_endomorphism(&Y),
-                frobenius_endomorphism(&field_characteristic, &Y),
-                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Y)),
-            ],
-        );
-        let quaternion_bases = [
-            quaternion_two_torsion_basis,
-            quaternion_three_torsion_basis,
-            quaternion_five_torsion_basis,
-        ];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -849,8 +821,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -859,8 +831,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -869,8 +841,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -879,8 +851,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -889,8 +861,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -899,8 +871,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -911,8 +883,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -921,8 +893,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -931,8 +903,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -941,8 +913,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -951,8 +923,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -961,8 +933,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -973,8 +945,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &five_torsion_basis.P,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -983,8 +955,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &five_torsion_basis.Q,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -993,8 +965,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &five_torsion_basis.PQ,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1003,8 +975,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &five_torsion_basis.P,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1013,8 +985,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &five_torsion_basis.Q,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1023,8 +995,8 @@ pub mod poke_iii {
             starting_curve
                 .xmul(
                     &five_torsion_basis.PQ,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1034,32 +1006,18 @@ pub mod poke_iii {
             field_characteristic,
             cofactor,
             starting_curve,
-            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
-            full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
-            three_torsion_exp: THREE_TORSION_EXP,
-            reduced_three_torsion_order,
-            three_torsion_order,
-            five_torsion_exp: FIVE_TORSION_EXP,
-            reduced_five_torsion_order,
-            five_torsion_order,
-            five_torsion_cofactor,
-            two_times_three_torsion_order,
-            two_times_five_torsion_order,
-            three_times_five_torsion_order,
+            two_torsion,
+            two_torsion_basis,
+            two_quaternion_basis,
+            three_torsion,
+            three_torsion_basis,
+            three_quaternion_basis,
+            five_torsion,
+            five_torsion_basis,
             full_torsion_order,
             inv_three_order_mod_two_order,
-            inv_three_five_orders_mod_two_order,
-            inv_two_five_orders_mod_three_order,
-            inv_two_three_orders_mod_five_order,
-            two_torsion_basis,
-            three_torsion_basis,
-            five_torsion_basis,
-            two_adic_basis,
-            three_adic_basis,
-            five_adic_basis,
-            quaternion_bases,
         }
     }
 }
@@ -1067,7 +1025,7 @@ pub mod poke_iii {
 pub mod poke_v {
     use super::*;
     use crate::{
-        fields::{PokeFieldV, PokeFieldVBase},
+        fields::{POKE_V_MODULUS, PokeFieldV, PokeFieldVBase},
         poke::PublicParams,
     };
 
@@ -1263,53 +1221,43 @@ pub mod poke_v {
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        { FULL_TWO_TORSION_EXP + 1 },
+        { THREE_TORSION_EXP + 1 },
+        { FIVE_TORSION_EXP + 1 },
     > {
+        let field_characteristic = BigNum::new(&POKE_V_MODULUS);
+        let cofactor = BigNum::from_prime(547);
         let starting_curve = Curve::new(&PokeFieldV::ZERO);
 
-        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
-        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
-        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
-        let three_torsion_order = 3 * &reduced_three_torsion_order;
-        let reduced_five_torsion_order = BigNum::from_prime_power(5, FIVE_TORSION_EXP - 1);
-        let five_torsion_order = 5 * &reduced_five_torsion_order;
-        let cofactor = BigNum::from_prime(547);
-        let two_times_three_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .truncate();
-        let two_times_five_torsion_order = full_two_torsion_order
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let three_times_five_torsion_order = three_torsion_order
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let full_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .widening_mul(&five_torsion_order)
-            .truncate();
-        let five_torsion_cofactor = two_times_three_torsion_order
-            .widening_mul(&cofactor)
-            .truncate();
-        let field_characteristic =
-            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
-
-        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_three_five_orders_mod_two_order =
-            three_times_five_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_two_five_orders_mod_three_order =
-            two_times_five_torsion_order.invert_mod(&three_torsion_order);
-        let inv_two_three_orders_mod_five_order =
-            two_times_three_torsion_order.invert_mod(&five_torsion_order);
-
+        let two_torsion = TorsionParams::new(
+            2,
+            FULL_TWO_TORSION_EXP,
+            &[(3, THREE_TORSION_EXP), (5, FIVE_TORSION_EXP)],
+            &cofactor,
+        );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
         );
+
+        let three_torsion = TorsionParams::new(
+            3,
+            THREE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP), (5, FIVE_TORSION_EXP)],
+            &cofactor,
+        );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
             &PointX::from_x_coord(&S_X),
             &PointX::from_x_coord(&RS_X),
+        );
+
+        let five_torsion = TorsionParams::new(
+            5,
+            FIVE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP), (3, THREE_TORSION_EXP)],
+            &cofactor,
         );
         let five_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&X_X),
@@ -1317,18 +1265,17 @@ pub mod poke_v {
             &PointX::from_x_coord(&XY_X),
         );
 
-        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(2, exp))
-            .collect::<Vec<_>>();
-        let three_adic_basis = (0..=THREE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(3, exp))
-            .collect::<Vec<_>>();
-        let five_adic_basis = (0..=FIVE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(5, exp))
-            .collect::<Vec<_>>();
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let full_torsion_order = two_torsion
+            .order
+            .widening_mul(&three_torsion.order)
+            .widening_mul(&five_torsion.order)
+            .truncate();
+
+        let inv_three_order_mod_two_order = three_torsion.order.invert_mod(&two_torsion.order);
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_two_torsion_basis = (
+        let two_quaternion_basis = (
             [
                 P,
                 iota_endomorphism(&P),
@@ -1343,7 +1290,7 @@ pub mod poke_v {
             ],
         );
         let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
-        let quaternion_three_torsion_basis = (
+        let three_quaternion_basis = (
             [
                 R,
                 iota_endomorphism(&R),
@@ -1357,26 +1304,6 @@ pub mod poke_v {
                 iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
             ],
         );
-        let (X, Y) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_five_torsion_basis = (
-            [
-                X,
-                iota_endomorphism(&X),
-                frobenius_endomorphism(&field_characteristic, &X),
-                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &X)),
-            ],
-            [
-                Y,
-                iota_endomorphism(&Y),
-                frobenius_endomorphism(&field_characteristic, &Y),
-                iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &Y)),
-            ],
-        );
-        let quaternion_bases = [
-            quaternion_two_torsion_basis,
-            quaternion_three_torsion_basis,
-            quaternion_five_torsion_basis,
-        ];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -1421,8 +1348,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1431,8 +1358,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1441,8 +1368,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1451,8 +1378,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1461,8 +1388,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1471,8 +1398,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1483,8 +1410,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1493,8 +1420,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1503,8 +1430,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1513,8 +1440,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1523,8 +1450,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1533,8 +1460,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1545,8 +1472,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &five_torsion_basis.P,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1555,8 +1482,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &five_torsion_basis.Q,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1565,8 +1492,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &five_torsion_basis.PQ,
-                    &five_torsion_order.to_le_bytes(),
-                    five_torsion_order.nbits()
+                    &five_torsion.order.to_le_bytes(),
+                    five_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1575,8 +1502,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &five_torsion_basis.P,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1585,8 +1512,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &five_torsion_basis.Q,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1595,8 +1522,8 @@ pub mod poke_v {
             starting_curve
                 .xmul(
                     &five_torsion_basis.PQ,
-                    &reduced_five_torsion_order.to_le_bytes(),
-                    reduced_five_torsion_order.nbits()
+                    &five_torsion.reduced_order.to_le_bytes(),
+                    five_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1606,32 +1533,18 @@ pub mod poke_v {
             field_characteristic,
             cofactor,
             starting_curve,
-            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
-            full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
-            three_torsion_exp: THREE_TORSION_EXP,
-            reduced_three_torsion_order,
-            three_torsion_order,
-            five_torsion_exp: FIVE_TORSION_EXP,
-            reduced_five_torsion_order,
-            five_torsion_order,
-            five_torsion_cofactor,
-            two_times_three_torsion_order,
-            two_times_five_torsion_order,
-            three_times_five_torsion_order,
+            two_torsion,
+            two_torsion_basis,
+            two_quaternion_basis,
+            three_torsion,
+            three_torsion_basis,
+            three_quaternion_basis,
+            five_torsion,
+            five_torsion_basis,
             full_torsion_order,
             inv_three_order_mod_two_order,
-            inv_three_five_orders_mod_two_order,
-            inv_two_five_orders_mod_three_order,
-            inv_two_three_orders_mod_five_order,
-            two_torsion_basis,
-            three_torsion_basis,
-            five_torsion_basis,
-            two_adic_basis,
-            three_adic_basis,
-            five_adic_basis,
-            quaternion_bases,
         }
     }
 }
@@ -1639,7 +1552,7 @@ pub mod poke_v {
 pub mod inke_i {
     use super::*;
     use crate::{
-        fields::{InkeFieldI, InkeFieldIBase},
+        fields::{INKE_I_MODULUS, InkeFieldI, InkeFieldIBase},
         inke::PublicParams,
     };
 
@@ -1718,30 +1631,37 @@ pub mod inke_i {
     const NUM_WORDS_223: usize = 9;
     const NUM_WORDS_233: usize = 11;
 
-    pub fn get_params()
-    -> PublicParams<InkeFieldI, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_P, NUM_WORDS_223, NUM_WORDS_233>
-    {
+    pub fn get_params() -> PublicParams<
+        InkeFieldI,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_P,
+        NUM_WORDS_223,
+        NUM_WORDS_233,
+        { FULL_TWO_TORSION_EXP + 1 },
+        { THREE_TORSION_EXP + 1 },
+    > {
+        let field_characteristic = BigNum::new(&INKE_I_MODULUS);
+        let cofactor = BigNum::from_prime(127);
         let starting_curve = Curve::new(&InkeFieldI::ZERO);
 
-        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
-        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
-        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
-        let three_torsion_order = 3 * &reduced_three_torsion_order;
-        let cofactor = BigNum::from_prime(127);
-        let full_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .truncate();
-        let field_characteristic =
-            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
-
-        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_two_order_mod_three_order = full_two_torsion_order.invert_mod(&three_torsion_order);
-
+        let two_torsion = TorsionParams::new(
+            2,
+            FULL_TWO_TORSION_EXP,
+            &[(3, THREE_TORSION_EXP)],
+            &cofactor,
+        );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
+        );
+
+        let three_torsion = TorsionParams::new(
+            3,
+            THREE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP)],
+            &cofactor,
         );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
@@ -1749,15 +1669,14 @@ pub mod inke_i {
             &PointX::from_x_coord(&RS_X),
         );
 
-        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(2, exp))
-            .collect::<Vec<_>>();
-        let three_adic_basis = (0..=THREE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(3, exp))
-            .collect::<Vec<_>>();
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let full_torsion_order = two_torsion
+            .order
+            .widening_mul(&three_torsion.order)
+            .truncate();
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_two_torsion_basis = (
+        let two_quaternion_basis = (
             [
                 P,
                 iota_endomorphism(&P),
@@ -1772,7 +1691,7 @@ pub mod inke_i {
             ],
         );
         let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
-        let quaternion_three_torsion_basis = (
+        let three_quaternion_basis = (
             [
                 R,
                 iota_endomorphism(&R),
@@ -1786,7 +1705,6 @@ pub mod inke_i {
                 iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
             ],
         );
-        let quaternion_bases = [quaternion_two_torsion_basis, quaternion_three_torsion_basis];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -1819,8 +1737,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1829,8 +1747,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1839,8 +1757,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1849,8 +1767,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1859,8 +1777,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1869,8 +1787,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1881,8 +1799,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1891,8 +1809,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1901,8 +1819,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -1911,8 +1829,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1921,8 +1839,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1931,8 +1849,8 @@ pub mod inke_i {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -1942,21 +1860,15 @@ pub mod inke_i {
             field_characteristic,
             cofactor,
             starting_curve,
-            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
-            full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
-            three_torsion_exp: THREE_TORSION_EXP,
-            reduced_three_torsion_order,
-            three_torsion_order,
-            full_torsion_order,
-            inv_three_order_mod_two_order,
-            inv_two_order_mod_three_order,
+            two_torsion,
             two_torsion_basis,
+            two_quaternion_basis,
+            three_torsion,
             three_torsion_basis,
-            two_adic_basis,
-            three_adic_basis,
-            quaternion_bases,
+            three_quaternion_basis,
+            full_torsion_order,
         }
     }
 }
@@ -1964,7 +1876,7 @@ pub mod inke_i {
 pub mod inke_iii {
     use super::*;
     use crate::{
-        fields::{InkeFieldIII, InkeFieldIIIBase},
+        fields::{INKE_III_MODULUS, InkeFieldIII, InkeFieldIIIBase},
         inke::PublicParams,
     };
 
@@ -2070,28 +1982,30 @@ pub mod inke_iii {
         NUM_WORDS_P,
         NUM_WORDS_223,
         NUM_WORDS_233,
+        { FULL_TWO_TORSION_EXP + 1 },
+        { THREE_TORSION_EXP + 1 },
     > {
+        let field_characteristic = BigNum::new(&INKE_III_MODULUS);
+        let cofactor = BigNum::from_prime_factors(&[(5, 1), (7, 1)]);
         let starting_curve = Curve::new(&InkeFieldIII::ZERO);
 
-        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
-        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
-        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
-        let three_torsion_order = 3 * &reduced_three_torsion_order;
-        let cofactor = BigNum::from_prime_factors(&[(5, 1), (7, 1)]);
-        let full_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .truncate();
-        let field_characteristic =
-            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
-
-        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_two_order_mod_three_order = full_two_torsion_order.invert_mod(&three_torsion_order);
-
+        let two_torsion = TorsionParams::new(
+            2,
+            FULL_TWO_TORSION_EXP,
+            &[(3, THREE_TORSION_EXP)],
+            &cofactor,
+        );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
+        );
+
+        let three_torsion = TorsionParams::new(
+            3,
+            THREE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP)],
+            &cofactor,
         );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
@@ -2099,15 +2013,14 @@ pub mod inke_iii {
             &PointX::from_x_coord(&RS_X),
         );
 
-        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(2, exp))
-            .collect::<Vec<_>>();
-        let three_adic_basis = (0..=THREE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(3, exp))
-            .collect::<Vec<_>>();
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let full_torsion_order = two_torsion
+            .order
+            .widening_mul(&three_torsion.order)
+            .truncate();
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_two_torsion_basis = (
+        let two_quaternion_basis = (
             [
                 P,
                 iota_endomorphism(&P),
@@ -2122,7 +2035,7 @@ pub mod inke_iii {
             ],
         );
         let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
-        let quaternion_three_torsion_basis = (
+        let three_quaternion_basis = (
             [
                 R,
                 iota_endomorphism(&R),
@@ -2136,7 +2049,6 @@ pub mod inke_iii {
                 iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
             ],
         );
-        let quaternion_bases = [quaternion_two_torsion_basis, quaternion_three_torsion_basis];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -2169,8 +2081,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2179,8 +2091,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2189,8 +2101,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2199,8 +2111,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2209,8 +2121,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2219,8 +2131,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2231,8 +2143,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2241,8 +2153,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2251,8 +2163,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2261,8 +2173,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2271,8 +2183,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2281,8 +2193,8 @@ pub mod inke_iii {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2292,21 +2204,15 @@ pub mod inke_iii {
             field_characteristic,
             cofactor,
             starting_curve,
-            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
-            full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
-            three_torsion_exp: THREE_TORSION_EXP,
-            reduced_three_torsion_order,
-            three_torsion_order,
-            full_torsion_order,
-            inv_three_order_mod_two_order,
-            inv_two_order_mod_three_order,
+            two_torsion,
             two_torsion_basis,
+            two_quaternion_basis,
+            three_torsion,
             three_torsion_basis,
-            two_adic_basis,
-            three_adic_basis,
-            quaternion_bases,
+            three_quaternion_basis,
+            full_torsion_order,
         }
     }
 }
@@ -2314,7 +2220,7 @@ pub mod inke_iii {
 pub mod inke_v {
     use super::*;
     use crate::{
-        fields::{InkeFieldV, InkeFieldVBase},
+        fields::{INKE_V_MODULUS, InkeFieldV, InkeFieldVBase},
         inke::PublicParams,
     };
 
@@ -2426,30 +2332,37 @@ pub mod inke_v {
     const NUM_WORDS_223: usize = 17;
     const NUM_WORDS_233: usize = 21;
 
-    pub fn get_params()
-    -> PublicParams<InkeFieldV, NUM_WORDS_2, NUM_WORDS_3, NUM_WORDS_P, NUM_WORDS_223, NUM_WORDS_233>
-    {
+    pub fn get_params() -> PublicParams<
+        InkeFieldV,
+        NUM_WORDS_2,
+        NUM_WORDS_3,
+        NUM_WORDS_P,
+        NUM_WORDS_223,
+        NUM_WORDS_233,
+        { FULL_TWO_TORSION_EXP + 1 },
+        { THREE_TORSION_EXP + 1 },
+    > {
+        let field_characteristic = BigNum::new(&INKE_V_MODULUS);
+        let cofactor = BigNum::from_prime_power(7, 2);
         let starting_curve = Curve::new(&InkeFieldV::ZERO);
 
-        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
-        let reduced_full_two_torsion_order = 2 * &effective_two_torsion_order;
-        let full_two_torsion_order = 2 * &reduced_full_two_torsion_order;
-        let reduced_three_torsion_order = BigNum::from_prime_power(3, THREE_TORSION_EXP - 1);
-        let three_torsion_order = 3 * &reduced_three_torsion_order;
-        let cofactor = BigNum::from_prime_power(7, 2);
-        let full_torsion_order = full_two_torsion_order
-            .widening_mul(&three_torsion_order)
-            .truncate();
-        let field_characteristic =
-            full_torsion_order.widening_mul(&cofactor).truncate() - BigNum::one();
-
-        let inv_three_order_mod_two_order = three_torsion_order.invert_mod(&full_two_torsion_order);
-        let inv_two_order_mod_three_order = full_two_torsion_order.invert_mod(&three_torsion_order);
-
+        let two_torsion = TorsionParams::new(
+            2,
+            FULL_TWO_TORSION_EXP,
+            &[(3, THREE_TORSION_EXP)],
+            &cofactor,
+        );
         let two_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&P_X),
             &PointX::from_x_coord(&Q_X),
             &PointX::from_x_coord(&PQ_X),
+        );
+
+        let three_torsion = TorsionParams::new(
+            3,
+            THREE_TORSION_EXP,
+            &[(2, FULL_TWO_TORSION_EXP)],
+            &cofactor,
         );
         let three_torsion_basis = BasisX::from_points(
             &PointX::from_x_coord(&R_X),
@@ -2457,15 +2370,14 @@ pub mod inke_v {
             &PointX::from_x_coord(&RS_X),
         );
 
-        let two_adic_basis = (0..=FULL_TWO_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(2, exp))
-            .collect::<Vec<_>>();
-        let three_adic_basis = (0..=THREE_TORSION_EXP)
-            .map(|exp| BigNum::from_prime_power(3, exp))
-            .collect::<Vec<_>>();
+        let effective_two_torsion_order = BigNum::from_prime_power(2, EFFECTIVE_TWO_TORSION_EXP);
+        let full_torsion_order = two_torsion
+            .order
+            .widening_mul(&three_torsion.order)
+            .truncate();
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
-        let quaternion_two_torsion_basis = (
+        let two_quaternion_basis = (
             [
                 P,
                 iota_endomorphism(&P),
@@ -2480,7 +2392,7 @@ pub mod inke_v {
             ],
         );
         let (R, S) = starting_curve.lift_basis(&three_torsion_basis);
-        let quaternion_three_torsion_basis = (
+        let three_quaternion_basis = (
             [
                 R,
                 iota_endomorphism(&R),
@@ -2494,7 +2406,6 @@ pub mod inke_v {
                 iota_endomorphism(&frobenius_endomorphism(&field_characteristic, &S)),
             ],
         );
-        let quaternion_bases = [quaternion_two_torsion_basis, quaternion_three_torsion_basis];
 
         // Check that basis points are indeed on E_0
         debug_assert_eq!(
@@ -2527,8 +2438,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2537,8 +2448,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2547,8 +2458,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &full_two_torsion_order.to_le_bytes(),
-                    full_two_torsion_order.nbits()
+                    &two_torsion.order.to_le_bytes(),
+                    two_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2557,8 +2468,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.P,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2567,8 +2478,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.Q,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2577,8 +2488,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &two_torsion_basis.PQ,
-                    &reduced_full_two_torsion_order.to_le_bytes(),
-                    reduced_full_two_torsion_order.nbits()
+                    &two_torsion.reduced_order.to_le_bytes(),
+                    two_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2589,8 +2500,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2599,8 +2510,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2609,8 +2520,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &three_torsion_order.to_le_bytes(),
-                    three_torsion_order.nbits()
+                    &three_torsion.order.to_le_bytes(),
+                    three_torsion.order.nbits()
                 )
                 .is_zero(),
             SUCCESS_RETVAL
@@ -2619,8 +2530,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.P,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2629,8 +2540,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.Q,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2639,8 +2550,8 @@ pub mod inke_v {
             starting_curve
                 .xmul(
                     &three_torsion_basis.PQ,
-                    &reduced_three_torsion_order.to_le_bytes(),
-                    reduced_three_torsion_order.nbits()
+                    &three_torsion.reduced_order.to_le_bytes(),
+                    three_torsion.reduced_order.nbits()
                 )
                 .is_zero(),
             FAILURE_RETVAL
@@ -2650,21 +2561,15 @@ pub mod inke_v {
             field_characteristic,
             cofactor,
             starting_curve,
-            full_two_torsion_exp: FULL_TWO_TORSION_EXP,
-            full_two_torsion_order,
             effective_two_torsion_exp: EFFECTIVE_TWO_TORSION_EXP,
             effective_two_torsion_order,
-            three_torsion_exp: THREE_TORSION_EXP,
-            reduced_three_torsion_order,
-            three_torsion_order,
-            full_torsion_order,
-            inv_three_order_mod_two_order,
-            inv_two_order_mod_three_order,
+            two_torsion,
             two_torsion_basis,
+            two_quaternion_basis,
+            three_torsion,
             three_torsion_basis,
-            two_adic_basis,
-            three_adic_basis,
-            quaternion_bases,
+            three_quaternion_basis,
+            full_torsion_order,
         }
     }
 }

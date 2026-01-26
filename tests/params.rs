@@ -1,10 +1,8 @@
 #![allow(non_snake_case)]
 
 use fp2::traits::Fp2 as Fp2Trait;
-use num_bigint::BigUint;
 use poke::{
     FAILURE_RETVAL, SUCCESS_RETVAL,
-    bn::BigNum,
     params::{poke_i, poke_iii, poke_v},
     poke::PublicParams,
 };
@@ -27,6 +25,9 @@ fn starting_curve_has_j_invariant_1728<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -41,6 +42,9 @@ fn starting_curve_has_j_invariant_1728<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
     assert_eq!(
@@ -70,6 +74,9 @@ fn torsion_basis_points_have_correct_order<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -84,21 +91,15 @@ fn torsion_basis_points_have_correct_order<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let reduced_three_torsion_order = BigNum::<NUM_WORDS_3>::new(
-        &(BigUint::from_bytes_le(&params.three_torsion_order.to_le_bytes()) / BigUint::from(3u8))
-            .to_u64_digits(),
-    );
-    let reduced_five_torsion_order = BigNum::<NUM_WORDS_5>::new(
-        &(BigUint::from_bytes_le(&params.five_torsion_order.to_le_bytes()) / BigUint::from(5u8))
-            .to_u64_digits(),
-    );
-
     // Ensure [2^a] * (P, Q, P - Q) = O, and [2^a - 1] * (P, Q, P - Q) != O
     let two_torsion_basis_times_one_less_than_order = params
         .starting_curve
-        .basis_double_iter(&params.two_torsion_basis, params.full_two_torsion_exp - 1);
+        .basis_double_iter(&params.two_torsion_basis, params.two_torsion.exp - 1);
     assert_eq!(
         two_torsion_basis_times_one_less_than_order.P.is_zero(),
         FAILURE_RETVAL
@@ -114,7 +115,7 @@ fn torsion_basis_points_have_correct_order<
 
     let two_torsion_basis_times_order = params
         .starting_curve
-        .basis_double_iter(&params.two_torsion_basis, params.full_two_torsion_exp);
+        .basis_double_iter(&params.two_torsion_basis, params.two_torsion.exp);
     assert_eq!(two_torsion_basis_times_order.P.is_zero(), SUCCESS_RETVAL);
     assert_eq!(two_torsion_basis_times_order.Q.is_zero(), SUCCESS_RETVAL);
     assert_eq!(two_torsion_basis_times_order.PQ.is_zero(), SUCCESS_RETVAL);
@@ -122,18 +123,18 @@ fn torsion_basis_points_have_correct_order<
     // Ensure [3^b] * (R, S, R - S) = O, and [3^b - 1] * (R, S, R - S) != O
     let xR_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.P,
-        &reduced_three_torsion_order.to_le_bytes(),
-        reduced_three_torsion_order.nbits(),
+        &params.three_torsion.reduced_order.to_le_bytes(),
+        params.three_torsion.reduced_order.nbits(),
     );
     let xS_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.Q,
-        &reduced_three_torsion_order.to_le_bytes(),
-        reduced_three_torsion_order.nbits(),
+        &params.three_torsion.reduced_order.to_le_bytes(),
+        params.three_torsion.reduced_order.nbits(),
     );
     let xRS_times_one_less_than_order = params.starting_curve.xmul(
         &params.three_torsion_basis.PQ,
-        &reduced_three_torsion_order.to_le_bytes(),
-        reduced_three_torsion_order.nbits(),
+        &params.three_torsion.reduced_order.to_le_bytes(),
+        params.three_torsion.reduced_order.nbits(),
     );
     assert_eq!(xR_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
     assert_eq!(xS_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -141,18 +142,18 @@ fn torsion_basis_points_have_correct_order<
 
     let xR_times_order = params.starting_curve.xmul(
         &params.three_torsion_basis.P,
-        &params.three_torsion_order.to_le_bytes(),
-        params.three_torsion_order.nbits(),
+        &params.three_torsion.order.to_le_bytes(),
+        params.three_torsion.order.nbits(),
     );
     let xS_times_order = params.starting_curve.xmul(
         &params.three_torsion_basis.Q,
-        &params.three_torsion_order.to_le_bytes(),
-        params.three_torsion_order.nbits(),
+        &params.three_torsion.order.to_le_bytes(),
+        params.three_torsion.order.nbits(),
     );
     let xRS_times_order = params.starting_curve.xmul(
         &params.three_torsion_basis.PQ,
-        &params.three_torsion_order.to_le_bytes(),
-        params.three_torsion_order.nbits(),
+        &params.three_torsion.order.to_le_bytes(),
+        params.three_torsion.order.nbits(),
     );
     assert_eq!(xR_times_order.is_zero(), SUCCESS_RETVAL);
     assert_eq!(xS_times_order.is_zero(), SUCCESS_RETVAL);
@@ -161,18 +162,18 @@ fn torsion_basis_points_have_correct_order<
     // Ensure [5^c] * (X, Y, X - Y) = O and [5^c - 1] * (X, Y, X - Y) != O
     let xX_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.P,
-        &reduced_five_torsion_order.to_le_bytes(),
-        reduced_five_torsion_order.nbits(),
+        &params.five_torsion.reduced_order.to_le_bytes(),
+        params.five_torsion.reduced_order.nbits(),
     );
     let xY_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.Q,
-        &reduced_five_torsion_order.to_le_bytes(),
-        reduced_five_torsion_order.nbits(),
+        &params.five_torsion.reduced_order.to_le_bytes(),
+        params.five_torsion.reduced_order.nbits(),
     );
     let xXY_times_one_less_than_order = params.starting_curve.xmul(
         &params.five_torsion_basis.PQ,
-        &reduced_five_torsion_order.to_le_bytes(),
-        reduced_five_torsion_order.nbits(),
+        &params.five_torsion.reduced_order.to_le_bytes(),
+        params.five_torsion.reduced_order.nbits(),
     );
     assert_eq!(xX_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
     assert_eq!(xY_times_one_less_than_order.is_zero(), FAILURE_RETVAL);
@@ -180,18 +181,18 @@ fn torsion_basis_points_have_correct_order<
 
     let xX_times_order = params.starting_curve.xmul(
         &params.five_torsion_basis.P,
-        &params.five_torsion_order.to_le_bytes(),
-        params.five_torsion_order.nbits(),
+        &params.five_torsion.order.to_le_bytes(),
+        params.five_torsion.order.nbits(),
     );
     let xY_times_order = params.starting_curve.xmul(
         &params.five_torsion_basis.Q,
-        &params.five_torsion_order.to_le_bytes(),
-        params.five_torsion_order.nbits(),
+        &params.five_torsion.order.to_le_bytes(),
+        params.five_torsion.order.nbits(),
     );
     let xXY_times_order = params.starting_curve.xmul(
         &params.five_torsion_basis.PQ,
-        &params.five_torsion_order.to_le_bytes(),
-        params.five_torsion_order.nbits(),
+        &params.five_torsion.order.to_le_bytes(),
+        params.five_torsion.order.nbits(),
     );
     assert_eq!(xX_times_order.is_zero(), SUCCESS_RETVAL);
     assert_eq!(xY_times_order.is_zero(), SUCCESS_RETVAL);
@@ -215,6 +216,9 @@ fn torsion_basis_points_are_on_curve<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -229,6 +233,9 @@ fn torsion_basis_points_are_on_curve<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
     // Check (P, Q, P - Q), a basis of the 2^a-torsion
@@ -318,6 +325,9 @@ fn torsion_basis_points_are_linearly_independent<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -332,41 +342,30 @@ fn torsion_basis_points_are_linearly_independent<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let reduced_full_two_torsion_order = BigNum::<NUM_WORDS_2>::new(
-        &(BigUint::from_bytes_le(&params.full_two_torsion_order.to_le_bytes())
-            / BigUint::from(2u8))
-        .to_u64_digits(),
-    );
-    let reduced_three_torsion_order = BigNum::<NUM_WORDS_3>::new(
-        &(BigUint::from_bytes_le(&params.three_torsion_order.to_le_bytes()) / BigUint::from(3u8))
-            .to_u64_digits(),
-    );
-    let reduced_five_torsion_order = BigNum::<NUM_WORDS_5>::new(
-        &(BigUint::from_bytes_le(&params.five_torsion_order.to_le_bytes()) / BigUint::from(5u8))
-            .to_u64_digits(),
-    );
-
     // Check (P, Q, P - Q), a basis of the 2^a-torsion
     let pair = params.starting_curve.weil_pairing_2exp(
         &params.two_torsion_basis.P.x(),
         &params.two_torsion_basis.Q.x(),
         &params.two_torsion_basis.PQ.x(),
-        params.full_two_torsion_exp,
+        params.two_torsion.exp,
     );
     assert_eq!(
         pair.pow(
-            &reduced_full_two_torsion_order.to_le_bytes(),
-            reduced_full_two_torsion_order.nbits(),
+            &params.two_torsion.reduced_order.to_le_bytes(),
+            params.two_torsion.reduced_order.nbits(),
         )
         .equals(&Fp2::ONE),
         FAILURE_RETVAL,
     );
     assert_eq!(
         pair.pow(
-            &params.full_two_torsion_order.to_le_bytes(),
-            params.full_two_torsion_order.nbits(),
+            &params.two_torsion.order.to_le_bytes(),
+            params.two_torsion.order.nbits(),
         )
         .equals(&Fp2::ONE),
         SUCCESS_RETVAL,
@@ -377,21 +376,21 @@ fn torsion_basis_points_are_linearly_independent<
         &params.three_torsion_basis.P.x(),
         &params.three_torsion_basis.Q.x(),
         &params.three_torsion_basis.PQ.x(),
-        &params.three_torsion_order.to_le_bytes(),
-        params.three_torsion_order.nbits(),
+        &params.three_torsion.order.to_le_bytes(),
+        params.three_torsion.order.nbits(),
     );
     assert_eq!(
         pair.pow(
-            &reduced_three_torsion_order.to_le_bytes(),
-            reduced_three_torsion_order.nbits(),
+            &params.three_torsion.reduced_order.to_le_bytes(),
+            params.three_torsion.reduced_order.nbits(),
         )
         .equals(&Fp2::ONE),
         FAILURE_RETVAL,
     );
     assert_eq!(
         pair.pow(
-            &params.three_torsion_order.to_le_bytes(),
-            params.three_torsion_order.nbits(),
+            &params.three_torsion.order.to_le_bytes(),
+            params.three_torsion.order.nbits(),
         )
         .equals(&Fp2::ONE),
         SUCCESS_RETVAL,
@@ -402,21 +401,21 @@ fn torsion_basis_points_are_linearly_independent<
         &params.five_torsion_basis.P.x(),
         &params.five_torsion_basis.Q.x(),
         &params.five_torsion_basis.PQ.x(),
-        &params.five_torsion_order.to_le_bytes(),
-        params.five_torsion_order.nbits(),
+        &params.five_torsion.order.to_le_bytes(),
+        params.five_torsion.order.nbits(),
     );
     assert_eq!(
         pair.pow(
-            &reduced_five_torsion_order.to_le_bytes(),
-            reduced_five_torsion_order.nbits(),
+            &params.five_torsion.reduced_order.to_le_bytes(),
+            params.five_torsion.reduced_order.nbits(),
         )
         .equals(&Fp2::ONE),
         FAILURE_RETVAL,
     );
     assert_eq!(
         pair.pow(
-            &params.five_torsion_order.to_le_bytes(),
-            params.five_torsion_order.nbits(),
+            &params.five_torsion.order.to_le_bytes(),
+            params.five_torsion.order.nbits(),
         )
         .equals(&Fp2::ONE),
         SUCCESS_RETVAL,

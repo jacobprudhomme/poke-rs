@@ -258,6 +258,9 @@ fn all_methods_for_single_scalar_are_equal<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -272,14 +275,17 @@ fn all_methods_for_single_scalar_are_equal<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let s = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
+    let s = sample_random_unit_mod_prime_power(5, &params.five_torsion.order);
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
         &[5],
-        &params.five_torsion_order,
-        &params.five_torsion_cofactor,
+        &params.five_torsion.order,
+        &params.five_torsion.cofactor,
     );
     let xP = P.to_pointx();
     let xQ = Q.to_pointx();
@@ -348,6 +354,9 @@ fn all_methods_for_different_scalars_are_equal<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -362,15 +371,18 @@ fn all_methods_for_different_scalars_are_equal<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let s1 = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
-    let s2 = sample_random_unit_mod_prime_power(5, &params.five_torsion_order);
+    let s1 = sample_random_unit_mod_prime_power(5, &params.five_torsion.order);
+    let s2 = sample_random_unit_mod_prime_power(5, &params.five_torsion.order);
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
         &[5],
-        &params.five_torsion_order,
-        &params.five_torsion_cofactor,
+        &params.five_torsion.order,
+        &params.five_torsion.cofactor,
     );
     let xP = P.to_pointx();
     let xQ = Q.to_pointx();
@@ -398,7 +410,7 @@ fn all_methods_for_different_scalars_are_equal<
             &basis,
             &s1,
             &s2,
-            &params.five_torsion_order,
+            &params.five_torsion.order,
         )
     };
     let res_inv_s1 = {
@@ -408,7 +420,7 @@ fn all_methods_for_different_scalars_are_equal<
             &basis,
             &s1,
             &s2,
-            &params.five_torsion_order,
+            &params.five_torsion.order,
         )
     };
 
@@ -446,6 +458,9 @@ fn all_methods_for_scalar_matrix_are_equal<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -460,14 +475,17 @@ fn all_methods_for_scalar_matrix_are_equal<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion_order);
+    let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion.order);
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
         &[5],
-        &params.five_torsion_order,
-        &params.five_torsion_cofactor,
+        &params.five_torsion.order,
+        &params.five_torsion.cofactor,
     );
     let xP = P.to_pointx();
     let xQ = Q.to_pointx();
@@ -490,7 +508,7 @@ fn all_methods_for_scalar_matrix_are_equal<
             &params.starting_curve,
             &basis,
             &S,
-            &params.five_torsion_order,
+            &params.five_torsion.order,
         )
     };
 
@@ -523,6 +541,9 @@ fn all_methods_for_special_case_are_equal<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     #[case] params: PublicParams<
         Fp2,
@@ -537,14 +558,17 @@ fn all_methods_for_special_case_are_equal<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion_order);
+    let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion.order);
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
         &[5],
-        &params.five_torsion_order,
-        &params.five_torsion_cofactor,
+        &params.five_torsion.order,
+        &params.five_torsion.cofactor,
     );
     let xP = P.to_pointx();
     let xQ = Q.to_pointx();

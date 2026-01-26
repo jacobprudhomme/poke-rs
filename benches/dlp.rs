@@ -29,6 +29,9 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: PublicParams<
         Fp2,
@@ -43,19 +46,22 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
 ) -> (BasisX<Fp2>, Fp2, Point<Fp2>) {
     // The Weil pairing of a basis of the n-torsion subgroup will be the generator of an order-n subgroup of Fp^2
     let (U, V, eUV) = sample_random_torsion_basis(
         &pub_params.starting_curve,
         &[5],
-        &pub_params.five_torsion_order,
-        &pub_params.five_torsion_cofactor,
+        &pub_params.five_torsion.order,
+        &pub_params.five_torsion.cofactor,
     );
     let UV = pub_params.starting_curve.sub(&U, &V);
 
-    let x = sample_random_unit_mod_prime_power(5, &pub_params.five_torsion_order);
-    let y = sample_random_unit_mod_prime_power(5, &pub_params.five_torsion_order);
+    let x = sample_random_unit_mod_prime_power(5, &pub_params.five_torsion.order);
+    let y = sample_random_unit_mod_prime_power(5, &pub_params.five_torsion.order);
 
     let W1 = pub_params
         .starting_curve
@@ -85,6 +91,9 @@ fn generic_method<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParams<
         Fp2,
@@ -99,6 +108,9 @@ fn generic_method<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
     basis: &BasisX<Fp2>,
     basis_pairing: &Fp2,
@@ -114,30 +126,30 @@ fn generic_method<
         &point.to_pointx().x(),
         &V.to_pointx().x(),
         &WV.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
     let contravariant_pairing = pub_params.starting_curve.weil_pairing(
         &point.to_pointx().x(),
         &mU.to_pointx().x(),
         &WmU.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
 
     let (x, _) = solve_dlp_small_prime_power_order(
         basis_pairing,
         &covariant_pairing,
         5,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
+        pub_params.five_torsion.exp,
+        &pub_params.five_torsion.p_adic_basis,
     );
     let (y, _) = solve_dlp_small_prime_power_order(
         basis_pairing,
         &contravariant_pairing,
         5,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
+        pub_params.five_torsion.exp,
+        &pub_params.five_torsion.p_adic_basis,
     );
 
     (x, y)
@@ -156,6 +168,9 @@ fn power_of_five_specialized_method<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParams<
         Fp2,
@@ -170,6 +185,9 @@ fn power_of_five_specialized_method<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
     basis: &BasisX<Fp2>,
     basis_pairing: &Fp2,
@@ -185,28 +203,28 @@ fn power_of_five_specialized_method<
         &point.to_pointx().x(),
         &V.to_pointx().x(),
         &WV.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
     let contravariant_pairing = pub_params.starting_curve.weil_pairing(
         &point.to_pointx().x(),
         &mU.to_pointx().x(),
         &WmU.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
 
     let (x, _) = solve_dlp_order_power_of_five(
         basis_pairing,
         &covariant_pairing,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
+        pub_params.five_torsion.exp,
+        &pub_params.five_torsion.p_adic_basis,
     );
     let (y, _) = solve_dlp_order_power_of_five(
         basis_pairing,
         &contravariant_pairing,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
+        pub_params.five_torsion.exp,
+        &pub_params.five_torsion.p_adic_basis,
     );
 
     (x, y)
@@ -225,6 +243,9 @@ fn power_of_five_specialized_method_explicit_subgroup<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParams<
         Fp2,
@@ -239,6 +260,9 @@ fn power_of_five_specialized_method_explicit_subgroup<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
     basis: &BasisX<Fp2>,
     basis_pairing: &Fp2,
@@ -259,22 +283,22 @@ fn power_of_five_specialized_method_explicit_subgroup<
         &U.to_pointx().x(),
         &double_V.to_pointx().x(),
         &U2V.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
     let generator_cubed = pub_params.starting_curve.weil_pairing(
         &U.to_pointx().x(),
         &minus_double_V.to_pointx().x(),
         &Um2V.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
     let generator_to_four = pub_params.starting_curve.weil_pairing(
         &U.to_pointx().x(),
         &minus_V.to_pointx().x(),
         &UmV.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
     let prime_order_subgroup = [
         Fp2::ONE,
@@ -292,28 +316,28 @@ fn power_of_five_specialized_method_explicit_subgroup<
         &point.to_pointx().x(),
         &V.to_pointx().x(),
         &WV.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
     let contravariant_pairing = pub_params.starting_curve.weil_pairing(
         &point.to_pointx().x(),
         &mU.to_pointx().x(),
         &WmU.to_pointx().x(),
-        &pub_params.five_torsion_order.to_le_bytes(),
-        pub_params.five_torsion_order.nbits(),
+        &pub_params.five_torsion.order.to_le_bytes(),
+        pub_params.five_torsion.order.nbits(),
     );
 
     let (x, _) = solve_dlp_order_power_of_five_explicit_subgroup(
         &prime_order_subgroup,
         &covariant_pairing,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
+        pub_params.five_torsion.exp,
+        &pub_params.five_torsion.p_adic_basis,
     );
     let (y, _) = solve_dlp_order_power_of_five_explicit_subgroup(
         &prime_order_subgroup,
         &contravariant_pairing,
-        pub_params.five_torsion_exp,
-        &pub_params.five_adic_basis,
+        pub_params.five_torsion.exp,
+        &pub_params.five_torsion.p_adic_basis,
     );
 
     (x, y)

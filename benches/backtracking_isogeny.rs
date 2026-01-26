@@ -88,9 +88,9 @@ fn backtracking_isogeny(c: &mut Criterion) {
             apply_backtracking_isogeny_three_chain_then_prime_power(
                 &params_i.starting_curve,
                 &K3_i,
-                params_i.three_torsion_exp,
+                params_i.three_torsion.exp,
                 &K5_i,
-                params_i.five_torsion_exp,
+                params_i.five_torsion.exp,
                 &params_i.two_torsion_basis,
             )
         })
@@ -100,9 +100,9 @@ fn backtracking_isogeny(c: &mut Criterion) {
             apply_backtracking_isogeny_three_chain_then_prime_power(
                 &params_iii.starting_curve,
                 &K3_iii,
-                params_iii.three_torsion_exp,
+                params_iii.three_torsion.exp,
                 &K5_iii,
-                params_iii.five_torsion_exp,
+                params_iii.five_torsion.exp,
                 &params_iii.two_torsion_basis,
             )
         })
@@ -112,9 +112,9 @@ fn backtracking_isogeny(c: &mut Criterion) {
             apply_backtracking_isogeny_three_chain_then_prime_power(
                 &params_v.starting_curve,
                 &K3_v,
-                params_v.three_torsion_exp,
+                params_v.three_torsion.exp,
                 &K5_v,
-                params_v.five_torsion_exp,
+                params_v.five_torsion.exp,
                 &params_v.two_torsion_basis,
             )
         })
@@ -128,9 +128,9 @@ fn backtracking_isogeny(c: &mut Criterion) {
             apply_backtracking_isogeny_composite(
                 &params_i.starting_curve,
                 &K3_i,
-                params_i.three_torsion_exp,
+                params_i.three_torsion.exp,
                 &K5_i,
-                params_i.five_torsion_exp,
+                params_i.five_torsion.exp,
                 &params_i.two_torsion_basis,
             )
         })
@@ -140,9 +140,9 @@ fn backtracking_isogeny(c: &mut Criterion) {
             apply_backtracking_isogeny_composite(
                 &params_iii.starting_curve,
                 &K3_iii,
-                params_iii.three_torsion_exp,
+                params_iii.three_torsion.exp,
                 &K5_iii,
-                params_iii.five_torsion_exp,
+                params_iii.five_torsion.exp,
                 &params_iii.two_torsion_basis,
             )
         })
@@ -152,9 +152,9 @@ fn backtracking_isogeny(c: &mut Criterion) {
             apply_backtracking_isogeny_composite(
                 &params_v.starting_curve,
                 &K3_v,
-                params_v.three_torsion_exp,
+                params_v.three_torsion.exp,
                 &K5_v,
-                params_v.five_torsion_exp,
+                params_v.five_torsion.exp,
                 &params_v.two_torsion_basis,
             )
         })

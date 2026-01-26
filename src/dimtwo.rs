@@ -19,6 +19,7 @@ use crate::{
     },
     inke,
     masking::mask_basis_by_same_scalar,
+    params::TorsionParams,
     poke,
     rand::sample_random_torsion_basis,
 };
@@ -30,6 +31,8 @@ pub fn generate_2d_isogeny_inke<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &inke::PublicParams<
         Fp2,
@@ -38,6 +41,8 @@ pub fn generate_2d_isogeny_inke<
         NUM_WORDS_P,
         NUM_WORDS_223,
         NUM_WORDS_233,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
     >,
     q: &BigNum<NUM_WORDS_2>,
     q_dual: &BigNum<NUM_WORDS_2>,
@@ -51,7 +56,7 @@ pub fn generate_2d_isogeny_inke<
     // FIXME: When I manage to get around the shortcomings of const generics, I can use
     // widening_mul() here instead, and only progressively widen the BigNums as I multiply
     let norm: BigNum<NUM_WORDS_223> =
-        q.widen() * q_dual.widen() * pub_params.three_torsion_order.widen();
+        q.widen() * q_dual.widen() * pub_params.three_torsion.order.widen();
     let (theta, ok) = represent_integer(&norm, &pub_params.field_characteristic);
     retval &= ok;
 
@@ -60,20 +65,20 @@ pub fn generate_2d_isogeny_inke<
     // Find kernel of degree-3^b backtracking isogeny of theta
     let K3 = find_kernel_of_backtracking_isogeny_prime_power_degree(
         &pub_params.starting_curve,
-        &pub_params.quaternion_bases[1],
+        &pub_params.three_quaternion_basis,
         &theta,
-        &pub_params.reduced_three_torsion_order,
+        &pub_params.three_torsion.reduced_order,
     );
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny
     let theta_P = apply_endomorphism_from_quaternion(
         &pub_params.starting_curve,
-        &pub_params.quaternion_bases[0].0,
+        &pub_params.two_quaternion_basis.0,
         &theta,
     );
     let theta_Q = apply_endomorphism_from_quaternion(
         &pub_params.starting_curve,
-        &pub_params.quaternion_bases[0].1,
+        &pub_params.two_quaternion_basis.1,
         &theta,
     );
     let mut theta_two_torsion_basis = [
@@ -87,7 +92,7 @@ pub fn generate_2d_isogeny_inke<
 
     let (codomain, ok) = pub_params.starting_curve.three_isogeny_chain(
         &K3.to_pointx(),
-        pub_params.three_torsion_exp,
+        pub_params.three_torsion.exp,
         &mut theta_two_torsion_basis,
     );
     retval &= ok;
@@ -100,7 +105,7 @@ pub fn generate_2d_isogeny_inke<
     let (scaled_theta_backtrack_P, scaled_theta_backtrack_Q) = mask_basis_by_same_scalar(
         &codomain,
         &(theta_backtrack_P, theta_backtrack_Q),
-        &pub_params.inv_three_order_mod_two_order,
+        &pub_params.two_torsion.inv_coproduct,
     );
 
     let two_torsion_basis_E0 = pub_params
@@ -130,6 +135,9 @@ pub fn generate_2d_isogeny_poke<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &poke::PublicParams<
         Fp2,
@@ -144,6 +152,9 @@ pub fn generate_2d_isogeny_poke<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
     q: &BigNum<NUM_WORDS_2>,
     q_dual: &BigNum<NUM_WORDS_2>,
@@ -157,7 +168,7 @@ pub fn generate_2d_isogeny_poke<
     // FIXME: When I manage to get around the shortcomings of const generics, I can use
     // widening_mul() here instead, and only progressively widen the BigNums as I multiply
     let norm: BigNum<NUM_WORDS_2235> =
-        q.widen() * q_dual.widen() * pub_params.three_torsion_order.widen();
+        q.widen() * q_dual.widen() * pub_params.three_torsion.order.widen();
     let (theta, ok) = represent_integer(&norm, &pub_params.field_characteristic);
     retval &= ok;
 
@@ -166,20 +177,20 @@ pub fn generate_2d_isogeny_poke<
     // Find kernel of degree-3^b backtracking isogeny of theta
     let K3 = find_kernel_of_backtracking_isogeny_prime_power_degree(
         &pub_params.starting_curve,
-        &pub_params.quaternion_bases[1],
+        &pub_params.three_quaternion_basis,
         &theta,
-        &pub_params.reduced_three_torsion_order,
+        &pub_params.three_torsion.reduced_order,
     );
 
     // Apply composition of backtracking isogeny with endomorphism to the 2^a-torsion basis to obtain the kernel of the 2D-isogeny
     let theta_P = apply_endomorphism_from_quaternion(
         &pub_params.starting_curve,
-        &pub_params.quaternion_bases[0].0,
+        &pub_params.two_quaternion_basis.0,
         &theta,
     );
     let theta_Q = apply_endomorphism_from_quaternion(
         &pub_params.starting_curve,
-        &pub_params.quaternion_bases[0].1,
+        &pub_params.two_quaternion_basis.1,
         &theta,
     );
     let mut theta_two_torsion_basis = [
@@ -193,7 +204,7 @@ pub fn generate_2d_isogeny_poke<
 
     let (codomain, ok) = pub_params.starting_curve.three_isogeny_chain(
         &K3.to_pointx(),
-        pub_params.three_torsion_exp,
+        pub_params.three_torsion.exp,
         &mut theta_two_torsion_basis,
     );
     retval &= ok;
@@ -227,19 +238,16 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     Fp2: Fp2Trait,
     const NUM_WORDS_2: usize,
     const NUM_WORDS_ORD: usize,
-    const NUM_WORDS_COF: usize,
+    const NUM_WORDS_CO: usize,
+    const P_ADIC_BASIS_LEN: usize,
 >(
     domain: &EllipticProduct<Fp2>,
     kernel: (&ProductPoint<Fp2>, &ProductPoint<Fp2>),
     chain_length: usize,
     degree: &BigNum<NUM_WORDS_2>,
     degree_dual: &BigNum<NUM_WORDS_2>,
+    torsion_params: &TorsionParams<NUM_WORDS_ORD, NUM_WORDS_CO, P_ADIC_BASIS_LEN>,
     torsion_basis: &BasisX<Fp2>,
-    torsion_basis_order_base: u8,
-    torsion_basis_order_exp: usize,
-    torsion_basis_order: &BigNum<NUM_WORDS_ORD>,
-    torsion_basis_cofactor: &BigNum<NUM_WORDS_COF>,
-    p_adic_basis_for_torsion_basis_order_base: &[BigNum<NUM_WORDS_ORD>],
 ) -> (Curve<Fp2>, (Point<Fp2>, Point<Fp2>), u32) {
     let mut retval = SUCCESS_RETVAL;
 
@@ -253,9 +261,9 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     // Generate random basis of the 5^c-torsion on E_AB
     let (U, V, eUV_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
-        &[torsion_basis_order_base],
-        torsion_basis_order,
-        torsion_basis_cofactor,
+        &[torsion_params.base],
+        &torsion_params.order,
+        &torsion_params.cofactor,
     );
     let UV = embedded_isogeny_codomain.sub(&U, &V);
 
@@ -313,36 +321,36 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
         &U_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &UV_aux_curve.to_pointx().x(),
-        &torsion_basis_order.to_le_bytes(),
-        torsion_basis_order.nbits(),
+        &torsion_params.order.to_le_bytes(),
+        torsion_params.order.nbits(),
     );
     let ePV = aux_curve.weil_pairing(
         &P_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &PV_aux_curve.to_pointx().x(),
-        &torsion_basis_order.to_le_bytes(),
-        torsion_basis_order.nbits(),
+        &torsion_params.order.to_le_bytes(),
+        torsion_params.order.nbits(),
     );
     let ePmU = aux_curve.weil_pairing(
         &P_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &PmU_aux_curve.to_pointx().x(),
-        &torsion_basis_order.to_le_bytes(),
-        torsion_basis_order.nbits(),
+        &torsion_params.order.to_le_bytes(),
+        torsion_params.order.nbits(),
     );
     let eQV = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &QV_aux_curve.to_pointx().x(),
-        &torsion_basis_order.to_le_bytes(),
-        torsion_basis_order.nbits(),
+        &torsion_params.order.to_le_bytes(),
+        torsion_params.order.nbits(),
     );
     let eQmU = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &QmU_aux_curve.to_pointx().x(),
-        &torsion_basis_order.to_le_bytes(),
-        torsion_basis_order.nbits(),
+        &torsion_params.order.to_le_bytes(),
+        torsion_params.order.nbits(),
     );
 
     // Used to make a choice of scalar factor later
@@ -355,33 +363,33 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     let (x, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &ePV,
-        torsion_basis_order_base,
-        torsion_basis_order_exp,
-        p_adic_basis_for_torsion_basis_order_base,
+        torsion_params.base,
+        torsion_params.exp,
+        &torsion_params.p_adic_basis,
     );
     retval &= ok;
     let (y, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &ePmU,
-        torsion_basis_order_base,
-        torsion_basis_order_exp,
-        p_adic_basis_for_torsion_basis_order_base,
+        torsion_params.base,
+        torsion_params.exp,
+        &torsion_params.p_adic_basis,
     );
     retval &= ok;
     let (w, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eQV,
-        torsion_basis_order_base,
-        torsion_basis_order_exp,
-        p_adic_basis_for_torsion_basis_order_base,
+        torsion_params.base,
+        torsion_params.exp,
+        &torsion_params.p_adic_basis,
     );
     retval &= ok;
     let (z, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eQmU,
-        torsion_basis_order_base,
-        torsion_basis_order_exp,
-        p_adic_basis_for_torsion_basis_order_base,
+        torsion_params.base,
+        torsion_params.exp,
+        &torsion_params.p_adic_basis,
     );
     retval &= ok;
 
@@ -447,18 +455,21 @@ pub fn eval_2d_two_isogeny_chain_inke<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     domain: &EllipticProduct<Fp2>,
     kernel: (&ProductPoint<Fp2>, &ProductPoint<Fp2>),
     chain_length: usize,
     degree: &BigNum<NUM_WORDS_2>,
     degree_dual: &BigNum<NUM_WORDS_2>,
+    torsion_params: (
+        &TorsionParams<NUM_WORDS_2, NUM_WORDS_3, TWO_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_3, NUM_WORDS_2, THREE_ADIC_BASIS_LEN>,
+    ),
     full_torsion_basis: &BasisX<Fp2>,
-    torsion_basis_prime_power_exps: (usize, usize),
-    torsion_basis_orders: (&BigNum<NUM_WORDS_2>, &BigNum<NUM_WORDS_3>),
     full_torsion_basis_order: &BigNum<NUM_WORDS_P>,
     full_torsion_basis_cofactor: &BigNum<1>,
-    p_adic_bases: (&[BigNum<NUM_WORDS_2>], &[BigNum<NUM_WORDS_3>]),
     intermediate_bignum_sizes: PhantomData<([(); NUM_WORDS_223], [(); NUM_WORDS_233])>,
 ) -> (
     (Point<Fp2>, Point<Fp2>),
@@ -580,44 +591,32 @@ pub fn eval_2d_two_isogeny_chain_inke<
     let (x, ok) = solve_dlp_order_powers_of_two_three(
         &eUV_aux,
         &ePV,
-        torsion_basis_prime_power_exps,
-        torsion_basis_orders,
-        inv_torsion_basis_orders,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
     let (y, ok) = solve_dlp_order_powers_of_two_three(
         &eUV_aux,
         &ePmU,
-        torsion_basis_prime_power_exps,
-        torsion_basis_orders,
-        inv_torsion_basis_orders,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
     let (w, ok) = solve_dlp_order_powers_of_two_three(
         &eUV_aux,
         &eQV,
-        torsion_basis_prime_power_exps,
-        torsion_basis_orders,
-        inv_torsion_basis_orders,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
     let (z, ok) = solve_dlp_order_powers_of_two_three(
         &eUV_aux,
         &eQmU,
-        torsion_basis_prime_power_exps,
-        torsion_basis_orders,
-        inv_torsion_basis_orders,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
@@ -691,17 +690,19 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
     Fp2: Fp2Trait,
     const NUM_WORDS_2: usize,
     const NUM_WORDS_3: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     domain: &EllipticProduct<Fp2>,
     kernel: (&ProductPoint<Fp2>, &ProductPoint<Fp2>),
     chain_length: usize,
     degree: &BigNum<NUM_WORDS_2>,
     degree_dual: &BigNum<NUM_WORDS_2>,
+    torsion_params: (
+        &TorsionParams<NUM_WORDS_2, NUM_WORDS_3, TWO_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_3, NUM_WORDS_2, THREE_ADIC_BASIS_LEN>,
+    ),
     torsion_bases: (&BasisX<Fp2>, &BasisX<Fp2>),
-    torsion_basis_prime_power_exps: (usize, usize),
-    torsion_basis_orders: (&BigNum<NUM_WORDS_2>, &BigNum<NUM_WORDS_3>),
-    torsion_basis_cofactors: (&BigNum<NUM_WORDS_3>, &BigNum<NUM_WORDS_2>),
-    p_adic_bases: (&[BigNum<NUM_WORDS_2>], &[BigNum<NUM_WORDS_3>]),
 ) -> (
     (Point<Fp2>, Point<Fp2>),
     (Point<Fp2>, Point<Fp2>),
@@ -723,16 +724,16 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
     // Generate random bases of the different torsion subgroups on E_AB
     let (U, V, eUV_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
-        &[2],
-        torsion_basis_orders.0,
-        torsion_basis_cofactors.0,
+        &[torsion_params.0.base],
+        &torsion_params.0.order,
+        &torsion_params.0.cofactor,
     );
     let UV = embedded_isogeny_codomain.sub(&U, &V);
     let (W, Z, _) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
-        &[3],
-        torsion_basis_orders.1,
-        torsion_basis_cofactors.1,
+        &[torsion_params.1.base],
+        &torsion_params.1.order,
+        &torsion_params.1.cofactor,
     );
     let WZ = embedded_isogeny_codomain.sub(&W, &Z);
 
@@ -820,15 +821,15 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
         &U_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &UV_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let eWZ_aux = aux_curve.weil_pairing(
         &W_aux_curve.to_pointx().x(),
         &Z_aux_curve.to_pointx().x(),
         &WZ_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
 
     // Compute the pairings for which we will solve the discrete log w.r.t.
@@ -837,58 +838,58 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
         &P_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &PV_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let ePmU = aux_curve.weil_pairing(
         &P_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &PmU_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let eQV = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &QV_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let eQmU = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &QmU_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
 
     let eRZ = aux_curve.weil_pairing(
         &R_aux_curve.to_pointx().x(),
         &Z_aux_curve.to_pointx().x(),
         &RZ_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
     let eRmW = aux_curve.weil_pairing(
         &R_aux_curve.to_pointx().x(),
         &W_aux_curve.to_pointx().x(),
         &RmW_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
     let eSZ = aux_curve.weil_pairing(
         &S_aux_curve.to_pointx().x(),
         &Z_aux_curve.to_pointx().x(),
         &SZ_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
     let eSmW = aux_curve.weil_pairing(
         &S_aux_curve.to_pointx().x(),
         &W_aux_curve.to_pointx().x(),
         &SmW_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
 
     // Used to make a choice of scalar factor later
@@ -901,33 +902,33 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
     let (x2, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &ePV,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
     let (y2, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &ePmU,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
     let (w2, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eQV,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
     let (z2, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eQmU,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
 
@@ -935,33 +936,33 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
     let (x3, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eRZ,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
     let (y3, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eRmW,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
     let (w3, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eSZ,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
     let (z3, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eSmW,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
 
@@ -1093,31 +1094,23 @@ pub fn eval_2d_two_isogeny_chain_poke<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     domain: &EllipticProduct<Fp2>,
     kernel: (&ProductPoint<Fp2>, &ProductPoint<Fp2>),
     chain_length: usize,
     degree: &BigNum<NUM_WORDS_2>,
     degree_dual: &BigNum<NUM_WORDS_2>,
+    torsion_params: (
+        &TorsionParams<NUM_WORDS_2, NUM_WORDS_35, TWO_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_3, NUM_WORDS_25, THREE_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_5, NUM_WORDS_23, FIVE_ADIC_BASIS_LEN>,
+    ),
     full_torsion_basis: &BasisX<Fp2>,
-    torsion_basis_prime_power_exps: (usize, usize, usize),
-    partial_products_of_prime_powers: (
-        &BigNum<NUM_WORDS_35>,
-        &BigNum<NUM_WORDS_25>,
-        &BigNum<NUM_WORDS_23>,
-    ),
-    inv_partial_products_of_prime_powers: (
-        &BigNum<NUM_WORDS_2>,
-        &BigNum<NUM_WORDS_3>,
-        &BigNum<NUM_WORDS_5>,
-    ),
     full_torsion_basis_order: &BigNum<NUM_WORDS_235>,
     full_torsion_basis_cofactor: &BigNum<1>,
-    p_adic_bases: (
-        &[BigNum<NUM_WORDS_2>],
-        &[BigNum<NUM_WORDS_3>],
-        &[BigNum<NUM_WORDS_5>],
-    ),
     intermediate_bignum_sizes: PhantomData<(
         [(); NUM_WORDS_2235],
         [(); NUM_WORDS_2335],
@@ -1238,44 +1231,32 @@ pub fn eval_2d_two_isogeny_chain_poke<
     let (x, ok) = solve_dlp_order_powers_of_two_three_five(
         &eUV_aux,
         &ePV,
-        torsion_basis_prime_power_exps,
-        partial_products_of_prime_powers,
-        inv_partial_products_of_prime_powers,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
     let (y, ok) = solve_dlp_order_powers_of_two_three_five(
         &eUV_aux,
         &ePmU,
-        torsion_basis_prime_power_exps,
-        partial_products_of_prime_powers,
-        inv_partial_products_of_prime_powers,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
     let (w, ok) = solve_dlp_order_powers_of_two_three_five(
         &eUV_aux,
         &eQV,
-        torsion_basis_prime_power_exps,
-        partial_products_of_prime_powers,
-        inv_partial_products_of_prime_powers,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
     let (z, ok) = solve_dlp_order_powers_of_two_three_five(
         &eUV_aux,
         &eQmU,
-        torsion_basis_prime_power_exps,
-        partial_products_of_prime_powers,
-        inv_partial_products_of_prime_powers,
+        torsion_params,
         full_torsion_basis_order,
-        p_adic_bases,
         intermediate_bignum_sizes,
     );
     retval &= ok;
@@ -1343,29 +1324,21 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_25: usize,
     const NUM_WORDS_35: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     domain: &EllipticProduct<Fp2>,
     kernel: (&ProductPoint<Fp2>, &ProductPoint<Fp2>),
     chain_length: usize,
     degree: &BigNum<NUM_WORDS_2>,
     degree_dual: &BigNum<NUM_WORDS_2>,
+    torsion_params: (
+        &TorsionParams<NUM_WORDS_2, NUM_WORDS_35, TWO_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_3, NUM_WORDS_25, THREE_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_5, NUM_WORDS_23, FIVE_ADIC_BASIS_LEN>,
+    ),
     torsion_bases: (&BasisX<Fp2>, &BasisX<Fp2>, &BasisX<Fp2>),
-    torsion_basis_prime_power_exps: (usize, usize, usize),
-    torsion_basis_orders: (
-        &BigNum<NUM_WORDS_2>,
-        &BigNum<NUM_WORDS_3>,
-        &BigNum<NUM_WORDS_5>,
-    ),
-    torsion_basis_cofactors: (
-        &BigNum<NUM_WORDS_35>,
-        &BigNum<NUM_WORDS_25>,
-        &BigNum<NUM_WORDS_23>,
-    ),
-    p_adic_bases: (
-        &[BigNum<NUM_WORDS_2>],
-        &[BigNum<NUM_WORDS_3>],
-        &[BigNum<NUM_WORDS_5>],
-    ),
 ) -> (
     (Point<Fp2>, Point<Fp2>),
     (Point<Fp2>, Point<Fp2>),
@@ -1388,23 +1361,23 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
     // Generate random bases of the different torsion subgroups on E_AB
     let (M, N, eMN_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
-        &[2],
-        torsion_basis_orders.0,
-        torsion_basis_cofactors.0,
+        &[torsion_params.0.base],
+        &torsion_params.0.order,
+        &torsion_params.0.cofactor,
     );
     let MN = embedded_isogeny_codomain.sub(&M, &N);
     let (U, V, _) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
-        &[3],
-        torsion_basis_orders.1,
-        torsion_basis_cofactors.1,
+        &[torsion_params.1.base],
+        &torsion_params.1.order,
+        &torsion_params.1.cofactor,
     );
     let UV = embedded_isogeny_codomain.sub(&U, &V);
     let (W, Z, _) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
-        &[5],
-        torsion_basis_orders.2,
-        torsion_basis_cofactors.2,
+        &[torsion_params.2.base],
+        &torsion_params.2.order,
+        &torsion_params.2.cofactor,
     );
     let WZ = embedded_isogeny_codomain.sub(&W, &Z);
 
@@ -1523,22 +1496,22 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
         &M_aux_curve.to_pointx().x(),
         &N_aux_curve.to_pointx().x(),
         &MN_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let eUV_aux = aux_curve.weil_pairing(
         &U_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &UV_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
     let eWZ_aux = aux_curve.weil_pairing(
         &W_aux_curve.to_pointx().x(),
         &Z_aux_curve.to_pointx().x(),
         &WZ_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.2.to_le_bytes(),
-        torsion_basis_orders.2.nbits(),
+        &torsion_params.2.order.to_le_bytes(),
+        torsion_params.2.order.nbits(),
     );
 
     // Compute the pairings for which we will solve the discrete log w.r.t.
@@ -1547,87 +1520,87 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
         &P_aux_curve.to_pointx().x(),
         &N_aux_curve.to_pointx().x(),
         &PN_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let ePmM = aux_curve.weil_pairing(
         &P_aux_curve.to_pointx().x(),
         &M_aux_curve.to_pointx().x(),
         &PmM_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let eQN = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &N_aux_curve.to_pointx().x(),
         &QN_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
     let eQmM = aux_curve.weil_pairing(
         &Q_aux_curve.to_pointx().x(),
         &M_aux_curve.to_pointx().x(),
         &QmM_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.0.to_le_bytes(),
-        torsion_basis_orders.0.nbits(),
+        &torsion_params.0.order.to_le_bytes(),
+        torsion_params.0.order.nbits(),
     );
 
     let eRV = aux_curve.weil_pairing(
         &R_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &RV_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
     let eRmU = aux_curve.weil_pairing(
         &R_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &RmU_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
     let eSV = aux_curve.weil_pairing(
         &S_aux_curve.to_pointx().x(),
         &V_aux_curve.to_pointx().x(),
         &SV_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
     let eSmU = aux_curve.weil_pairing(
         &S_aux_curve.to_pointx().x(),
         &U_aux_curve.to_pointx().x(),
         &SmU_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.1.to_le_bytes(),
-        torsion_basis_orders.1.nbits(),
+        &torsion_params.1.order.to_le_bytes(),
+        torsion_params.1.order.nbits(),
     );
 
     let eXZ = aux_curve.weil_pairing(
         &X_aux_curve.to_pointx().x(),
         &Z_aux_curve.to_pointx().x(),
         &XZ_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.2.to_le_bytes(),
-        torsion_basis_orders.2.nbits(),
+        &torsion_params.2.order.to_le_bytes(),
+        torsion_params.2.order.nbits(),
     );
     let eXmW = aux_curve.weil_pairing(
         &X_aux_curve.to_pointx().x(),
         &W_aux_curve.to_pointx().x(),
         &XmW_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.2.to_le_bytes(),
-        torsion_basis_orders.2.nbits(),
+        &torsion_params.2.order.to_le_bytes(),
+        torsion_params.2.order.nbits(),
     );
     let eYZ = aux_curve.weil_pairing(
         &Y_aux_curve.to_pointx().x(),
         &Z_aux_curve.to_pointx().x(),
         &YZ_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.2.to_le_bytes(),
-        torsion_basis_orders.2.nbits(),
+        &torsion_params.2.order.to_le_bytes(),
+        torsion_params.2.order.nbits(),
     );
     let eYmW = aux_curve.weil_pairing(
         &Y_aux_curve.to_pointx().x(),
         &W_aux_curve.to_pointx().x(),
         &YmW_aux_curve.to_pointx().x(),
-        &torsion_basis_orders.2.to_le_bytes(),
-        torsion_basis_orders.2.nbits(),
+        &torsion_params.2.order.to_le_bytes(),
+        torsion_params.2.order.nbits(),
     );
 
     // Used to make a choice of scalar factor later
@@ -1641,99 +1614,99 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
     let (x2, ok) = solve_dlp_small_prime_power_order(
         &eMN_aux,
         &ePN,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
     let (y2, ok) = solve_dlp_small_prime_power_order(
         &eMN_aux,
         &ePmM,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
     let (w2, ok) = solve_dlp_small_prime_power_order(
         &eMN_aux,
         &eQN,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
     let (z2, ok) = solve_dlp_small_prime_power_order(
         &eMN_aux,
         &eQmM,
-        2,
-        torsion_basis_prime_power_exps.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
 
     let (x3, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eRV,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
     let (y3, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eRmU,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
     let (w3, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eSV,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
     let (z3, ok) = solve_dlp_small_prime_power_order(
         &eUV_aux,
         &eSmU,
-        3,
-        torsion_basis_prime_power_exps.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
 
     let (x5, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eXZ,
-        5,
-        torsion_basis_prime_power_exps.2,
-        p_adic_bases.2,
+        torsion_params.2.base,
+        torsion_params.2.exp,
+        &torsion_params.2.p_adic_basis,
     );
     retval &= ok;
     let (y5, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eXmW,
-        5,
-        torsion_basis_prime_power_exps.2,
-        p_adic_bases.2,
+        torsion_params.2.base,
+        torsion_params.2.exp,
+        &torsion_params.2.p_adic_basis,
     );
     retval &= ok;
     let (w5, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eYZ,
-        5,
-        torsion_basis_prime_power_exps.2,
-        p_adic_bases.2,
+        torsion_params.2.base,
+        torsion_params.2.exp,
+        &torsion_params.2.p_adic_basis,
     );
     retval &= ok;
     let (z5, ok) = solve_dlp_small_prime_power_order(
         &eWZ_aux,
         &eYmW,
-        5,
-        torsion_basis_prime_power_exps.2,
-        p_adic_bases.2,
+        torsion_params.2.base,
+        torsion_params.2.exp,
+        &torsion_params.2.p_adic_basis,
     );
     retval &= ok;
 

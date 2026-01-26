@@ -29,6 +29,8 @@ fn apply_2d_isogeny_to_full_torsion_basis_inke<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParamsInke<
         Fp2,
@@ -37,6 +39,8 @@ fn apply_2d_isogeny_to_full_torsion_basis_inke<
         NUM_WORDS_P,
         NUM_WORDS_223,
         NUM_WORDS_233,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
     >,
     domain: &EllipticProduct<Fp2>,
     kernel: &(ProductPoint<Fp2>, ProductPoint<Fp2>),
@@ -75,56 +79,44 @@ fn apply_2d_isogeny_to_full_torsion_basis_inke<
             pub_params.effective_two_torsion_exp,
             degree,
             degree_dual,
+            (&pub_params.two_torsion, &pub_params.three_torsion),
             &full_torsion_basis,
-            (
-                pub_params.full_two_torsion_exp,
-                pub_params.three_torsion_exp,
-            ),
-            (
-                &pub_params.full_two_torsion_order,
-                &pub_params.three_torsion_order,
-            ),
-            (
-                &pub_params.inv_three_order_mod_two_order,
-                &pub_params.inv_two_order_mod_three_order,
-            ),
             &pub_params.full_torsion_order,
             &pub_params.cofactor,
-            (&pub_params.two_adic_basis, &pub_params.three_adic_basis),
             PhantomData::<([(); NUM_WORDS_223], [(); NUM_WORDS_233])>,
         );
 
     let two_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &full_torsion_basis_EA,
-        &pub_params.three_torsion_order,
+        &pub_params.two_torsion.coproduct,
     );
     let two_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &two_torsion_basis_EA,
-        &pub_params.inv_three_order_mod_two_order,
+        &pub_params.two_torsion.inv_coproduct,
     );
 
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &full_torsion_basis_EA,
-        &pub_params.full_two_torsion_order,
+        &pub_params.three_torsion.coproduct,
     );
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &three_torsion_basis_EA,
-        &pub_params.inv_two_order_mod_three_order,
+        &pub_params.three_torsion.inv_coproduct,
     );
 
     let three_torsion_basis_EA1 = mask_basis_by_same_scalar(
         &intermediate_curve,
         &full_torsion_basis_EA1,
-        &pub_params.full_two_torsion_order,
+        &pub_params.three_torsion.coproduct,
     );
     let three_torsion_basis_EA1 = mask_basis_by_same_scalar(
         &intermediate_curve,
         &three_torsion_basis_EA1,
-        &pub_params.inv_two_order_mod_three_order,
+        &pub_params.three_torsion.inv_coproduct,
     );
 
     (
@@ -141,6 +133,8 @@ fn apply_2d_isogeny_to_individual_torsion_bases_inke<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParamsInke<
         Fp2,
@@ -149,6 +143,8 @@ fn apply_2d_isogeny_to_individual_torsion_bases_inke<
         NUM_WORDS_P,
         NUM_WORDS_223,
         NUM_WORDS_233,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
     >,
     domain: &EllipticProduct<Fp2>,
     kernel: &(ProductPoint<Fp2>, ProductPoint<Fp2>),
@@ -168,23 +164,11 @@ fn apply_2d_isogeny_to_individual_torsion_bases_inke<
             pub_params.effective_two_torsion_exp,
             degree,
             degree_dual,
+            (&pub_params.two_torsion, &pub_params.three_torsion),
             (
                 &pub_params.two_torsion_basis,
                 &pub_params.three_torsion_basis,
             ),
-            (
-                pub_params.full_two_torsion_exp,
-                pub_params.three_torsion_exp,
-            ),
-            (
-                &pub_params.full_two_torsion_order,
-                &pub_params.three_torsion_order,
-            ),
-            (
-                &(&pub_params.three_torsion_order * &pub_params.cofactor.widen()),
-                &(&pub_params.full_two_torsion_order * &pub_params.cofactor.widen()),
-            ),
-            (&pub_params.two_adic_basis, &pub_params.three_adic_basis),
         );
 
     (
@@ -207,6 +191,9 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParamsPoke<
         Fp2,
@@ -221,6 +208,9 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
     domain: &EllipticProduct<Fp2>,
     kernel: &(ProductPoint<Fp2>, ProductPoint<Fp2>),
@@ -263,29 +253,14 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
         pub_params.effective_two_torsion_exp,
         degree,
         degree_dual,
+        (
+            &pub_params.two_torsion,
+            &pub_params.three_torsion,
+            &pub_params.five_torsion,
+        ),
         &full_torsion_basis,
-        (
-            pub_params.full_two_torsion_exp,
-            pub_params.three_torsion_exp,
-            pub_params.five_torsion_exp,
-        ),
-        (
-            &pub_params.three_times_five_torsion_order,
-            &pub_params.two_times_five_torsion_order,
-            &pub_params.two_times_three_torsion_order,
-        ),
-        (
-            &pub_params.inv_three_five_orders_mod_two_order,
-            &pub_params.inv_two_five_orders_mod_three_order,
-            &pub_params.inv_two_three_orders_mod_five_order,
-        ),
         &pub_params.full_torsion_order,
         &pub_params.cofactor,
-        (
-            &pub_params.two_adic_basis,
-            &pub_params.three_adic_basis,
-            &pub_params.five_adic_basis,
-        ),
         PhantomData::<(
             [(); NUM_WORDS_2235],
             [(); NUM_WORDS_2335],
@@ -296,34 +271,34 @@ fn apply_2d_isogeny_to_full_torsion_basis_poke<
     let two_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &full_torsion_basis_EA,
-        &pub_params.three_times_five_torsion_order,
+        &pub_params.two_torsion.coproduct,
     );
     let two_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &two_torsion_basis_EA,
-        &pub_params.inv_three_five_orders_mod_two_order,
+        &pub_params.two_torsion.inv_coproduct,
     );
 
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &full_torsion_basis_EA,
-        &pub_params.two_times_five_torsion_order,
+        &pub_params.three_torsion.coproduct,
     );
     let three_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &three_torsion_basis_EA,
-        &pub_params.inv_two_five_orders_mod_three_order,
+        &pub_params.three_torsion.inv_coproduct,
     );
 
     let five_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &full_torsion_basis_EA,
-        &pub_params.two_times_three_torsion_order,
+        &pub_params.five_torsion.coproduct,
     );
     let five_torsion_basis_EA = mask_basis_by_same_scalar(
         &codomain_curve,
         &five_torsion_basis_EA,
-        &pub_params.inv_two_three_orders_mod_five_order,
+        &pub_params.five_torsion.inv_coproduct,
     );
 
     (
@@ -346,6 +321,9 @@ fn apply_2d_isogeny_to_individual_torsion_bases_poke<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParamsPoke<
         Fp2,
@@ -360,6 +338,9 @@ fn apply_2d_isogeny_to_individual_torsion_bases_poke<
         NUM_WORDS_2235,
         NUM_WORDS_2335,
         NUM_WORDS_2355,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
+        FIVE_ADIC_BASIS_LEN,
     >,
     domain: &EllipticProduct<Fp2>,
     kernel: &(ProductPoint<Fp2>, ProductPoint<Fp2>),
@@ -380,29 +361,14 @@ fn apply_2d_isogeny_to_individual_torsion_bases_poke<
             degree,
             degree_dual,
             (
+                &pub_params.two_torsion,
+                &pub_params.three_torsion,
+                &pub_params.five_torsion,
+            ),
+            (
                 &pub_params.two_torsion_basis,
                 &pub_params.three_torsion_basis,
                 &pub_params.five_torsion_basis,
-            ),
-            (
-                pub_params.full_two_torsion_exp,
-                pub_params.three_torsion_exp,
-                pub_params.five_torsion_exp,
-            ),
-            (
-                &pub_params.full_two_torsion_order,
-                &pub_params.three_torsion_order,
-                &pub_params.five_torsion_order,
-            ),
-            (
-                &(&pub_params.three_times_five_torsion_order * &pub_params.cofactor.widen()),
-                &(&pub_params.two_times_five_torsion_order * &pub_params.cofactor.widen()),
-                &(&pub_params.two_times_three_torsion_order * &pub_params.cofactor.widen()),
-            ),
-            (
-                &pub_params.two_adic_basis,
-                &pub_params.three_adic_basis,
-                &pub_params.five_adic_basis,
             ),
         );
 

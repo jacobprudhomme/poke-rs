@@ -1,5 +1,5 @@
 // POKE level I: p = 2^129 * 3^164 * 5^18 - 1
-const POKE_I_MODULUS: [u64; 7] = [
+pub const POKE_I_MODULUS: [u64; 7] = [
     0xffffffffffffffff,
     0xffffffffffffffff,
     0x3d346b3e65f69451,
@@ -16,7 +16,7 @@ fp2::define_fp2_from_modulus!(
 );
 
 // POKE level III: p = 2^192 * 3^243 * 5^28 * 7^2 - 1
-const POKE_III_MODULUS: [u64; 11] = [
+pub const POKE_III_MODULUS: [u64; 11] = [
     0xffffffffffffffff,
     0xffffffffffffffff,
     0xffffffffffffffff,
@@ -37,7 +37,7 @@ fp2::define_fp2_from_modulus!(
 );
 
 // POKE level V: p = 2^256 * 3^324 * 5^36 * 547 - 1
-const POKE_V_MODULUS: [u64; 14] = [
+pub const POKE_V_MODULUS: [u64; 14] = [
     0xffffffffffffffff,
     0xffffffffffffffff,
     0xffffffffffffffff,
@@ -61,7 +61,7 @@ fp2::define_fp2_from_modulus!(
 );
 
 // INKE level I: p = 2^128 * 3^162 * 127 - 1
-const INKE_I_MODULUS: [u64; 7] = [
+pub const INKE_I_MODULUS: [u64; 7] = [
     0xffffffffffffffff,
     0xffffffffffffffff,
     0xbd94329674e2c7f6,
@@ -78,7 +78,7 @@ fp2::define_fp2_from_modulus!(
 );
 
 // INKE level III: p = 2^192 * 3^243 * 5 * 7 - 1
-const INKE_III_MODULUS: [u64; 10] = [
+pub const INKE_III_MODULUS: [u64; 10] = [
     0xffffffffffffffff,
     0xffffffffffffffff,
     0xffffffffffffffff,
@@ -98,7 +98,7 @@ fp2::define_fp2_from_modulus!(
 );
 
 // INKE level V: p = 2^257 * 3^324 * 7^2 - 1
-const INKE_V_MODULUS: [u64; 13] = [
+pub const INKE_V_MODULUS: [u64; 13] = [
     0xffffffffffffffff,
     0xffffffffffffffff,
     0xffffffffffffffff,

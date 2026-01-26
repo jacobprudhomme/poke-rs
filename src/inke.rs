@@ -18,6 +18,7 @@ use crate::{
         mask_basisx_by_diagonal_scalars, mask_basisx_by_diagonal_scalars_points_only,
         mask_basisx_by_same_scalar,
     },
+    params::TorsionParams,
     rand::{
         sample_random_element_mod, sample_random_secret_degree, sample_random_unit_mod_prime_power,
     },
@@ -30,25 +31,21 @@ pub struct PublicParams<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 > {
     pub field_characteristic: BigNum<NUM_WORDS_P>,
     pub cofactor: BigNum<1>,
     pub starting_curve: Curve<Fp2>,
-    pub full_two_torsion_order: BigNum<NUM_WORDS_2>,
-    pub full_two_torsion_exp: usize,
     pub effective_two_torsion_order: BigNum<NUM_WORDS_2>,
     pub effective_two_torsion_exp: usize,
-    pub reduced_three_torsion_order: BigNum<NUM_WORDS_3>,
-    pub three_torsion_order: BigNum<NUM_WORDS_3>,
-    pub three_torsion_exp: usize,
-    pub full_torsion_order: BigNum<NUM_WORDS_P>,
-    pub inv_three_order_mod_two_order: BigNum<NUM_WORDS_2>,
-    pub inv_two_order_mod_three_order: BigNum<NUM_WORDS_3>,
+    pub two_torsion: TorsionParams<NUM_WORDS_2, NUM_WORDS_3, TWO_ADIC_BASIS_LEN>,
     pub two_torsion_basis: BasisX<Fp2>,
+    pub two_quaternion_basis: ([Point<Fp2>; 4], [Point<Fp2>; 4]),
+    pub three_torsion: TorsionParams<NUM_WORDS_3, NUM_WORDS_2, THREE_ADIC_BASIS_LEN>,
     pub three_torsion_basis: BasisX<Fp2>,
-    pub two_adic_basis: Vec<BigNum<NUM_WORDS_2>>,
-    pub three_adic_basis: Vec<BigNum<NUM_WORDS_3>>,
-    pub quaternion_bases: [([Point<Fp2>; 4], [Point<Fp2>; 4]); 2],
+    pub three_quaternion_basis: ([Point<Fp2>; 4], [Point<Fp2>; 4]),
+    pub full_torsion_order: BigNum<NUM_WORDS_P>,
 }
 
 pub struct PrvKey<Fp2: Fp2Trait, const NUM_WORDS_2: usize> {
@@ -81,6 +78,8 @@ pub fn keygen<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParams<
         Fp2,
@@ -89,6 +88,8 @@ pub fn keygen<
         NUM_WORDS_P,
         NUM_WORDS_223,
         NUM_WORDS_233,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
     >,
 ) -> (PubKey<Fp2>, PrvKey<Fp2, NUM_WORDS_2>, u32) {
     let mut retval = SUCCESS_RETVAL;
@@ -107,23 +108,11 @@ pub fn keygen<
             pub_params.effective_two_torsion_exp,
             &q,
             &q_dual,
+            (&pub_params.two_torsion, &pub_params.three_torsion),
             (
                 &pub_params.two_torsion_basis,
                 &pub_params.three_torsion_basis,
             ),
-            (
-                pub_params.full_two_torsion_exp,
-                pub_params.three_torsion_exp,
-            ),
-            (
-                &pub_params.full_two_torsion_order,
-                &pub_params.three_torsion_order,
-            ),
-            (
-                &(&pub_params.three_torsion_order * pub_params.cofactor.widen()),
-                &(&pub_params.full_two_torsion_order * pub_params.cofactor.widen()),
-            ),
-            (&pub_params.two_adic_basis, &pub_params.three_adic_basis),
         );
     retval &= ok;
 
@@ -143,10 +132,10 @@ pub fn keygen<
         &intermediate_curve.sub(&R_A1, &S_A1).to_pointx(),
     );
 
-    let alpha = sample_random_unit_mod_prime_power(2, &pub_params.full_two_torsion_order);
-    let beta = sample_random_unit_mod_prime_power(2, &pub_params.full_two_torsion_order);
-    let gamma = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion_order);
-    let gamma_prime = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion_order);
+    let alpha = sample_random_unit_mod_prime_power(2, &pub_params.two_torsion.order);
+    let beta = sample_random_unit_mod_prime_power(2, &pub_params.two_torsion.order);
+    let gamma = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion.order);
+    let gamma_prime = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion.order);
 
     let masked_two_torsion_basis_EA =
         mask_basisx_by_diagonal_scalars(&codomain_curve, &two_torsion_basis_EA, &alpha, &beta);
@@ -180,6 +169,8 @@ pub fn encrypt<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParams<
         Fp2,
@@ -188,6 +179,8 @@ pub fn encrypt<
         NUM_WORDS_P,
         NUM_WORDS_223,
         NUM_WORDS_233,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
     >,
     pub_key: &PubKey<Fp2>,
     message: &[u8],
@@ -200,7 +193,7 @@ where
     /* Sample scalars used for masking torsion points images or generating new kernels */
 
     // Sample scalar used to generate new kernels for sender's parallel isogenies
-    let r = sample_random_element_mod(&pub_params.three_torsion_order);
+    let r = sample_random_element_mod(&pub_params.three_torsion.order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
     let omega1 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
@@ -229,7 +222,7 @@ where
     let mut two_torsion_basis_EB = pub_params.two_torsion_basis.to_array();
     let (codomain_curve, kernel_has_right_order) = pub_params.starting_curve.three_isogeny_chain(
         &psi_kernel,
-        pub_params.three_torsion_exp,
+        pub_params.three_torsion.exp,
         &mut two_torsion_basis_EB,
     );
     retval &= kernel_has_right_order;
@@ -242,7 +235,7 @@ where
     let mut two_torsion_basis_EAB = pub_key.masked_two_torsion_basis_img.to_array();
     let (shared_end_curve, kernel_has_right_order) = pub_key.codomain_curve.three_isogeny_chain(
         &psi_dblprime_kernel,
-        pub_params.three_torsion_exp,
+        pub_params.three_torsion.exp,
         &mut two_torsion_basis_EAB,
     );
     retval &= kernel_has_right_order;
@@ -258,7 +251,7 @@ where
     // Compute codomain of sender's secret intermediate parallel isogeny to obtain shared secret curve
     let (secret_curve, _) = pub_key.intermediate_curve.three_isogeny_chain(
         &psi_prime_kernel,
-        pub_params.three_torsion_exp,
+        pub_params.three_torsion.exp,
         &mut [],
     );
 
@@ -290,6 +283,8 @@ pub fn decrypt<
     const NUM_WORDS_P: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     pub_params: &PublicParams<
         Fp2,
@@ -298,6 +293,8 @@ pub fn decrypt<
         NUM_WORDS_P,
         NUM_WORDS_223,
         NUM_WORDS_233,
+        TWO_ADIC_BASIS_LEN,
+        THREE_ADIC_BASIS_LEN,
     >,
     prv_key: &PrvKey<Fp2, NUM_WORDS_2>,
     ciphertext: &Ciphertext<Fp2>,
@@ -310,10 +307,10 @@ where
     // Construct kernel generators for our parallel 2D-isogeny Phi' (<([-q] P_B, P_AB'), ([-q] Q_B, Q_AB')>)
     let alpha_q = prv_key
         .alpha
-        .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
+        .mul_mod_power_of_two(&prv_key.q, &pub_params.two_torsion.order);
     let beta_q = prv_key
         .beta
-        .mul_mod_power_of_two(&prv_key.q, &pub_params.full_two_torsion_order);
+        .mul_mod_power_of_two(&prv_key.q, &pub_params.two_torsion.order);
 
     let (scaled_P_B, scaled_Q_B) = mask_basisx_by_diagonal_scalars_points_only(
         &ciphertext.codomain_curve,

@@ -6,6 +6,7 @@ use crate::{
     FAILURE_RETVAL, SUCCESS_RETVAL,
     bn::BigNum,
     modular::{crt2, crt3},
+    params::TorsionParams,
 };
 
 // Works for primes < 256. Assumes generator `generator` generates the subgroup.
@@ -70,57 +71,62 @@ pub fn solve_dlp_order_powers_of_two_three<
     const NUM_WORDS_23: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
 >(
     generator: &Fp2,
     value: &Fp2,
-    es: (usize, usize),
-    prime_power_orders: (&BigNum<NUM_WORDS_2>, &BigNum<NUM_WORDS_3>),
-    inv_prime_power_orders: (&BigNum<NUM_WORDS_2>, &BigNum<NUM_WORDS_3>),
-    full_product_of_prime_power_orders: &BigNum<NUM_WORDS_23>,
-    p_adic_bases: (&[BigNum<NUM_WORDS_2>], &[BigNum<NUM_WORDS_3>]),
+    torsion_params: (
+        &TorsionParams<NUM_WORDS_2, NUM_WORDS_3, TWO_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_3, NUM_WORDS_2, THREE_ADIC_BASIS_LEN>,
+    ),
+    full_order: &BigNum<NUM_WORDS_23>,
     intermediate_bignum_sizes: PhantomData<([(); NUM_WORDS_223], [(); NUM_WORDS_233])>,
 ) -> (BigNum<NUM_WORDS_23>, u32) {
     let mut retval = SUCCESS_RETVAL;
 
     let generator_of_power_of_two_subgroup = generator.pow(
-        &prime_power_orders.1.to_le_bytes(),
-        prime_power_orders.1.nbits(),
+        &torsion_params.0.coproduct.to_le_bytes(),
+        torsion_params.0.coproduct.nbits(),
     );
     let value_in_power_of_two_subgroup = value.pow(
-        &prime_power_orders.1.to_le_bytes(),
-        prime_power_orders.1.nbits(),
+        &torsion_params.0.coproduct.to_le_bytes(),
+        torsion_params.0.coproduct.nbits(),
     );
     let (result_mod_power_of_two, ok) = solve_dlp_small_prime_power_order(
         &generator_of_power_of_two_subgroup,
         &value_in_power_of_two_subgroup,
-        2,
-        es.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
 
     let generator_of_power_of_three_subgroup = generator.pow(
-        &prime_power_orders.0.to_le_bytes(),
-        prime_power_orders.0.nbits(),
+        &torsion_params.1.coproduct.to_le_bytes(),
+        torsion_params.1.coproduct.nbits(),
     );
     let value_in_power_of_three_subgroup = value.pow(
-        &prime_power_orders.0.to_le_bytes(),
-        prime_power_orders.0.nbits(),
+        &torsion_params.1.coproduct.to_le_bytes(),
+        torsion_params.1.coproduct.nbits(),
     );
     let (result_mod_power_of_three, ok) = solve_dlp_small_prime_power_order(
         &generator_of_power_of_three_subgroup,
         &value_in_power_of_three_subgroup,
-        3,
-        es.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
 
     let result = crt2(
         (&result_mod_power_of_two, &result_mod_power_of_three),
-        prime_power_orders,
-        inv_prime_power_orders,
-        full_product_of_prime_power_orders,
+        (&torsion_params.0.order, &torsion_params.1.order),
+        (
+            &torsion_params.0.inv_coproduct,
+            &torsion_params.1.inv_coproduct,
+        ),
+        full_order,
         intermediate_bignum_sizes,
     );
 
@@ -139,26 +145,18 @@ pub fn solve_dlp_order_powers_of_two_three_five<
     const NUM_WORDS_2235: usize,
     const NUM_WORDS_2335: usize,
     const NUM_WORDS_2355: usize,
+    const TWO_ADIC_BASIS_LEN: usize,
+    const THREE_ADIC_BASIS_LEN: usize,
+    const FIVE_ADIC_BASIS_LEN: usize,
 >(
     generator: &Fp2,
     value: &Fp2,
-    es: (usize, usize, usize),
-    partial_products_of_prime_power_orders: (
-        &BigNum<NUM_WORDS_35>,
-        &BigNum<NUM_WORDS_25>,
-        &BigNum<NUM_WORDS_23>,
+    torsion_params: (
+        &TorsionParams<NUM_WORDS_2, NUM_WORDS_35, TWO_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_3, NUM_WORDS_25, THREE_ADIC_BASIS_LEN>,
+        &TorsionParams<NUM_WORDS_5, NUM_WORDS_23, FIVE_ADIC_BASIS_LEN>,
     ),
-    inv_partial_products_of_prime_power_orders: (
-        &BigNum<NUM_WORDS_2>,
-        &BigNum<NUM_WORDS_3>,
-        &BigNum<NUM_WORDS_5>,
-    ),
-    full_product_of_prime_power_orders: &BigNum<NUM_WORDS_235>,
-    p_adic_bases: (
-        &[BigNum<NUM_WORDS_2>],
-        &[BigNum<NUM_WORDS_3>],
-        &[BigNum<NUM_WORDS_5>],
-    ),
+    full_order: &BigNum<NUM_WORDS_235>,
     intermediate_bignum_sizes: PhantomData<(
         [(); NUM_WORDS_2235],
         [(); NUM_WORDS_2335],
@@ -168,53 +166,53 @@ pub fn solve_dlp_order_powers_of_two_three_five<
     let mut retval = SUCCESS_RETVAL;
 
     let generator_of_power_of_two_subgroup = generator.pow(
-        &partial_products_of_prime_power_orders.0.to_le_bytes(),
-        partial_products_of_prime_power_orders.0.nbits(),
+        &torsion_params.0.coproduct.to_le_bytes(),
+        torsion_params.0.coproduct.nbits(),
     );
     let value_in_power_of_two_subgroup = value.pow(
-        &partial_products_of_prime_power_orders.0.to_le_bytes(),
-        partial_products_of_prime_power_orders.0.nbits(),
+        &torsion_params.0.coproduct.to_le_bytes(),
+        torsion_params.0.coproduct.nbits(),
     );
     let (result_mod_power_of_two, ok) = solve_dlp_small_prime_power_order(
         &generator_of_power_of_two_subgroup,
         &value_in_power_of_two_subgroup,
-        2,
-        es.0,
-        p_adic_bases.0,
+        torsion_params.0.base,
+        torsion_params.0.exp,
+        &torsion_params.0.p_adic_basis,
     );
     retval &= ok;
 
     let generator_of_power_of_three_subgroup = generator.pow(
-        &partial_products_of_prime_power_orders.1.to_le_bytes(),
-        partial_products_of_prime_power_orders.1.nbits(),
+        &torsion_params.1.coproduct.to_le_bytes(),
+        torsion_params.1.coproduct.nbits(),
     );
     let value_in_power_of_three_subgroup = value.pow(
-        &partial_products_of_prime_power_orders.1.to_le_bytes(),
-        partial_products_of_prime_power_orders.1.nbits(),
+        &torsion_params.1.coproduct.to_le_bytes(),
+        torsion_params.1.coproduct.nbits(),
     );
     let (result_mod_power_of_three, ok) = solve_dlp_small_prime_power_order(
         &generator_of_power_of_three_subgroup,
         &value_in_power_of_three_subgroup,
-        3,
-        es.1,
-        p_adic_bases.1,
+        torsion_params.1.base,
+        torsion_params.1.exp,
+        &torsion_params.1.p_adic_basis,
     );
     retval &= ok;
 
     let generator_of_power_of_five_subgroup = generator.pow(
-        &partial_products_of_prime_power_orders.2.to_le_bytes(),
-        partial_products_of_prime_power_orders.2.nbits(),
+        &torsion_params.2.coproduct.to_le_bytes(),
+        torsion_params.2.coproduct.nbits(),
     );
     let value_in_power_of_five_subgroup = value.pow(
-        &partial_products_of_prime_power_orders.2.to_le_bytes(),
-        partial_products_of_prime_power_orders.2.nbits(),
+        &torsion_params.2.coproduct.to_le_bytes(),
+        torsion_params.2.coproduct.nbits(),
     );
     let (result_mod_power_of_five, ok) = solve_dlp_small_prime_power_order(
         &generator_of_power_of_five_subgroup,
         &value_in_power_of_five_subgroup,
-        5,
-        es.2,
-        p_adic_bases.2,
+        torsion_params.2.base,
+        torsion_params.2.exp,
+        &torsion_params.2.p_adic_basis,
     );
     retval &= ok;
 
@@ -224,9 +222,17 @@ pub fn solve_dlp_order_powers_of_two_three_five<
             &result_mod_power_of_three,
             &result_mod_power_of_five,
         ),
-        partial_products_of_prime_power_orders,
-        inv_partial_products_of_prime_power_orders,
-        full_product_of_prime_power_orders,
+        (
+            &torsion_params.0.coproduct,
+            &torsion_params.1.coproduct,
+            &torsion_params.2.coproduct,
+        ),
+        (
+            &torsion_params.0.inv_coproduct,
+            &torsion_params.1.inv_coproduct,
+            &torsion_params.2.inv_coproduct,
+        ),
+        full_order,
         intermediate_bignum_sizes,
     );
 

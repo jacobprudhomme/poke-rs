@@ -249,33 +249,16 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let s_i = sample_random_unit_mod_prime_power(3, &params_i.three_torsion_order);
-    let s_iii = sample_random_unit_mod_prime_power(3, &params_iii.three_torsion_order);
-    let s_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion_order);
-
-    // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = params_i
-        .full_two_torsion_order
-        .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
-        .truncate::<3>();
-    let cofactor_iii = params_iii
-        .full_two_torsion_order
-        .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
-        .truncate::<5>();
-    let cofactor_v = params_v
-        .full_two_torsion_order
-        .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
-        .truncate::<6>();
+    let s_i = sample_random_unit_mod_prime_power(3, &params_i.three_torsion.order);
+    let s_iii = sample_random_unit_mod_prime_power(3, &params_iii.three_torsion.order);
+    let s_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion.order);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[3],
-        &params_i.three_torsion_order,
-        &cofactor_i,
+        &params_i.three_torsion.order,
+        &params_i.cofactor,
     );
     let xP_i = P_i.to_pointx();
     let xQ_i = Q_i.to_pointx();
@@ -284,8 +267,8 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
         &[3],
-        &params_iii.three_torsion_order,
-        &cofactor_iii,
+        &params_iii.three_torsion.order,
+        &params_iii.cofactor,
     );
     let xP_iii = P_iii.to_pointx();
     let xQ_iii = Q_iii.to_pointx();
@@ -294,8 +277,8 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[3],
-        &params_v.three_torsion_order,
-        &cofactor_v,
+        &params_v.three_torsion.order,
+        &params_v.cofactor,
     );
     let xP_v = P_v.to_pointx();
     let xQ_v = Q_v.to_pointx();
@@ -421,36 +404,19 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let s1_i = sample_random_unit_mod_prime_power(3, &params_i.three_torsion_order);
-    let s2_i = sample_random_unit_mod_prime_power(3, &params_i.three_torsion_order);
-    let s1_iii = sample_random_unit_mod_prime_power(3, &params_iii.three_torsion_order);
-    let s2_iii = sample_random_unit_mod_prime_power(3, &params_iii.three_torsion_order);
-    let s1_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion_order);
-    let s2_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion_order);
-
-    // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = params_i
-        .full_two_torsion_order
-        .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
-        .truncate::<3>();
-    let cofactor_iii = params_iii
-        .full_two_torsion_order
-        .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
-        .truncate::<5>();
-    let cofactor_v = params_v
-        .full_two_torsion_order
-        .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
-        .truncate::<6>();
+    let s1_i = sample_random_unit_mod_prime_power(3, &params_i.three_torsion.order);
+    let s2_i = sample_random_unit_mod_prime_power(3, &params_i.three_torsion.order);
+    let s1_iii = sample_random_unit_mod_prime_power(3, &params_iii.three_torsion.order);
+    let s2_iii = sample_random_unit_mod_prime_power(3, &params_iii.three_torsion.order);
+    let s1_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion.order);
+    let s2_v = sample_random_unit_mod_prime_power(3, &params_v.three_torsion.order);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[3],
-        &params_i.three_torsion_order,
-        &cofactor_i,
+        &params_i.three_torsion.order,
+        &params_i.cofactor,
     );
     let xP_i = P_i.to_pointx();
     let xQ_i = Q_i.to_pointx();
@@ -459,8 +425,8 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
         &[3],
-        &params_iii.three_torsion_order,
-        &cofactor_iii,
+        &params_iii.three_torsion.order,
+        &params_iii.cofactor,
     );
     let xP_iii = P_iii.to_pointx();
     let xQ_iii = Q_iii.to_pointx();
@@ -469,8 +435,8 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[3],
-        &params_v.three_torsion_order,
-        &cofactor_v,
+        &params_v.three_torsion.order,
+        &params_v.cofactor,
     );
     let xP_v = P_v.to_pointx();
     let xQ_v = Q_v.to_pointx();
@@ -579,7 +545,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
                 &basis,
                 &s1_i,
                 &s2_i,
-                &params_i.three_torsion_order,
+                &params_i.three_torsion.order,
             )
         })
     });
@@ -591,7 +557,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
                 &basis,
                 &s1_iii,
                 &s2_iii,
-                &params_iii.three_torsion_order,
+                &params_iii.three_torsion.order,
             )
         })
     });
@@ -603,7 +569,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
                 &basis,
                 &s1_v,
                 &s2_v,
-                &params_v.three_torsion_order,
+                &params_v.three_torsion.order,
             )
         })
     });
@@ -618,7 +584,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
                 &basis,
                 &s1_i,
                 &s2_i,
-                &params_i.three_torsion_order,
+                &params_i.three_torsion.order,
             )
         })
     });
@@ -630,7 +596,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
                 &basis,
                 &s1_iii,
                 &s2_iii,
-                &params_iii.three_torsion_order,
+                &params_iii.three_torsion.order,
             )
         })
     });
@@ -642,7 +608,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
                 &basis,
                 &s1_v,
                 &s2_v,
-                &params_v.three_torsion_order,
+                &params_v.three_torsion.order,
             )
         })
     });
@@ -656,33 +622,16 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let S_i = sample_random_invertible_matrix_mod_prime_power(3, &params_i.three_torsion_order);
-    let S_iii = sample_random_invertible_matrix_mod_prime_power(3, &params_iii.three_torsion_order);
-    let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion_order);
-
-    // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = params_i
-        .full_two_torsion_order
-        .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
-        .truncate::<3>();
-    let cofactor_iii = params_iii
-        .full_two_torsion_order
-        .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
-        .truncate::<5>();
-    let cofactor_v = params_v
-        .full_two_torsion_order
-        .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
-        .truncate::<6>();
+    let S_i = sample_random_invertible_matrix_mod_prime_power(3, &params_i.three_torsion.order);
+    let S_iii = sample_random_invertible_matrix_mod_prime_power(3, &params_iii.three_torsion.order);
+    let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion.order);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[3],
-        &params_i.three_torsion_order,
-        &cofactor_i,
+        &params_i.three_torsion.order,
+        &params_i.cofactor,
     );
     let xP_i = P_i.to_pointx();
     let xQ_i = Q_i.to_pointx();
@@ -691,8 +640,8 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
         &[3],
-        &params_iii.three_torsion_order,
-        &cofactor_iii,
+        &params_iii.three_torsion.order,
+        &params_iii.cofactor,
     );
     let xP_iii = P_iii.to_pointx();
     let xQ_iii = Q_iii.to_pointx();
@@ -701,8 +650,8 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[3],
-        &params_v.three_torsion_order,
-        &cofactor_v,
+        &params_v.three_torsion.order,
+        &params_v.cofactor,
     );
     let xP_v = P_v.to_pointx();
     let xQ_v = Q_v.to_pointx();
@@ -774,7 +723,7 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
                 &params_i.starting_curve,
                 &basis,
                 &S_i,
-                &params_i.three_torsion_order,
+                &params_i.three_torsion.order,
             )
         })
     });
@@ -785,7 +734,7 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
                 &params_iii.starting_curve,
                 &basis,
                 &S_iii,
-                &params_iii.three_torsion_order,
+                &params_iii.three_torsion.order,
             )
         })
     });
@@ -796,7 +745,7 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
                 &params_v.starting_curve,
                 &basis,
                 &S_v,
-                &params_v.three_torsion_order,
+                &params_v.three_torsion.order,
             )
         })
     });
@@ -810,33 +759,16 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let S_i = sample_random_invertible_matrix_mod_prime_power(3, &params_i.three_torsion_order);
-    let S_iii = sample_random_invertible_matrix_mod_prime_power(3, &params_iii.three_torsion_order);
-    let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion_order);
-
-    // Compute cofactor for 3^b-torsion basis at each level
-    let cofactor_i = params_i
-        .full_two_torsion_order
-        .widening_mul(&params_i.five_torsion_order)
-        .widening_mul(&params_i.cofactor)
-        .truncate::<3>();
-    let cofactor_iii = params_iii
-        .full_two_torsion_order
-        .widening_mul(&params_iii.five_torsion_order)
-        .widening_mul(&params_iii.cofactor)
-        .truncate::<5>();
-    let cofactor_v = params_v
-        .full_two_torsion_order
-        .widening_mul(&params_v.five_torsion_order)
-        .widening_mul(&params_v.cofactor)
-        .truncate::<6>();
+    let S_i = sample_random_invertible_matrix_mod_prime_power(3, &params_i.three_torsion.order);
+    let S_iii = sample_random_invertible_matrix_mod_prime_power(3, &params_iii.three_torsion.order);
+    let S_v = sample_random_invertible_matrix_mod_prime_power(3, &params_v.three_torsion.order);
 
     // Generate random bases of given order
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[3],
-        &params_i.three_torsion_order,
-        &cofactor_i,
+        &params_i.three_torsion.order,
+        &params_i.cofactor,
     );
     let xP_i = P_i.to_pointx();
     let xQ_i = Q_i.to_pointx();
@@ -844,9 +776,9 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
 
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
-        &[3],
-        &params_iii.three_torsion_order,
-        &cofactor_iii,
+        &[params_iii.three_torsion.base],
+        &params_iii.three_torsion.order,
+        &params_iii.cofactor,
     );
     let xP_iii = P_iii.to_pointx();
     let xQ_iii = Q_iii.to_pointx();
@@ -855,8 +787,8 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[3],
-        &params_v.three_torsion_order,
-        &cofactor_v,
+        &params_v.three_torsion.order,
+        &params_v.cofactor,
     );
     let xP_v = P_v.to_pointx();
     let xQ_v = Q_v.to_pointx();

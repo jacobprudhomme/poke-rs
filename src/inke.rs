@@ -95,7 +95,10 @@ pub fn keygen<
     let mut retval = SUCCESS_RETVAL;
 
     // Keep generating elements until we find an invertible one
-    let (q, q_dual) = sample_random_secret_degree(&pub_params.effective_two_torsion_order, &[3]);
+    let (q, q_dual) = sample_random_secret_degree(
+        &pub_params.effective_two_torsion_order,
+        &[pub_params.three_torsion.base],
+    );
 
     let (domain, (P1P2, Q1Q2), ok) = generate_2d_isogeny_inke(pub_params, &q, &q_dual);
     retval &= ok;
@@ -132,10 +135,22 @@ pub fn keygen<
         &intermediate_curve.sub(&R_A1, &S_A1).to_pointx(),
     );
 
-    let alpha = sample_random_unit_mod_prime_power(2, &pub_params.two_torsion.order);
-    let beta = sample_random_unit_mod_prime_power(2, &pub_params.two_torsion.order);
-    let gamma = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion.order);
-    let gamma_prime = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion.order);
+    let alpha = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.two_torsion.order,
+    );
+    let beta = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.two_torsion.order,
+    );
+    let gamma = sample_random_unit_mod_prime_power(
+        pub_params.three_torsion.base,
+        &pub_params.three_torsion.order,
+    );
+    let gamma_prime = sample_random_unit_mod_prime_power(
+        pub_params.three_torsion.base,
+        &pub_params.three_torsion.order,
+    );
 
     let masked_two_torsion_basis_EA =
         mask_basisx_by_diagonal_scalars(&codomain_curve, &two_torsion_basis_EA, &alpha, &beta);
@@ -196,8 +211,14 @@ where
     let r = sample_random_element_mod(&pub_params.three_torsion.order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let omega1 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
-    let omega2 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
+    let omega1 = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.effective_two_torsion_order,
+    );
+    let omega2 = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.effective_two_torsion_order,
+    );
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 

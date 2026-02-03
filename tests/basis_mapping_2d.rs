@@ -462,7 +462,10 @@ fn both_methods_give_same_result_poke<
         FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let (q, q_dual) = sample_random_secret_degree(&params.effective_two_torsion_order, &[3, 5]);
+    let (q, q_dual) = sample_random_secret_degree(
+        &params.effective_two_torsion_order,
+        &[params.three_torsion.base, params.five_torsion.base],
+    );
     let (mut domain, mut kernel, mut ok) = generate_2d_isogeny_poke(&params, &q, &q_dual);
     while ok == FAILURE_RETVAL {
         (domain, kernel, ok) = generate_2d_isogeny_poke(&params, &q, &q_dual);

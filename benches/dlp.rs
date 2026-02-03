@@ -54,14 +54,20 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<
     // The Weil pairing of a basis of the n-torsion subgroup will be the generator of an order-n subgroup of Fp^2
     let (U, V, eUV) = sample_random_torsion_basis(
         &pub_params.starting_curve,
-        &[5],
+        &[pub_params.five_torsion.base],
         &pub_params.five_torsion.order,
         &pub_params.five_torsion.cofactor,
     );
     let UV = pub_params.starting_curve.sub(&U, &V);
 
-    let x = sample_random_unit_mod_prime_power(5, &pub_params.five_torsion.order);
-    let y = sample_random_unit_mod_prime_power(5, &pub_params.five_torsion.order);
+    let x = sample_random_unit_mod_prime_power(
+        pub_params.five_torsion.base,
+        &pub_params.five_torsion.order,
+    );
+    let y = sample_random_unit_mod_prime_power(
+        pub_params.five_torsion.base,
+        &pub_params.five_torsion.order,
+    );
 
     let W1 = pub_params
         .starting_curve
@@ -140,14 +146,14 @@ fn generic_method<
     let (x, _) = solve_dlp_small_prime_power_order(
         basis_pairing,
         &covariant_pairing,
-        5,
+        pub_params.five_torsion.base,
         pub_params.five_torsion.exp,
         &pub_params.five_torsion.p_adic_basis,
     );
     let (y, _) = solve_dlp_small_prime_power_order(
         basis_pairing,
         &contravariant_pairing,
-        5,
+        pub_params.five_torsion.base,
         pub_params.five_torsion.exp,
         &pub_params.five_torsion.p_adic_basis,
     );

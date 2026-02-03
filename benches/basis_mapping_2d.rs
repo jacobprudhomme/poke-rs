@@ -384,10 +384,18 @@ fn basis_mapping_2d_inke(c: &mut Criterion) {
     let params_iii = inke_iii::get_params();
     let params_v = inke_v::get_params();
 
-    let (q_i, q_dual_i) = sample_random_secret_degree(&params_i.effective_two_torsion_order, &[3]);
-    let (q_iii, q_dual_iii) =
-        sample_random_secret_degree(&params_iii.effective_two_torsion_order, &[3]);
-    let (q_v, q_dual_v) = sample_random_secret_degree(&params_v.effective_two_torsion_order, &[3]);
+    let (q_i, q_dual_i) = sample_random_secret_degree(
+        &params_i.effective_two_torsion_order,
+        &[params_i.three_torsion.base],
+    );
+    let (q_iii, q_dual_iii) = sample_random_secret_degree(
+        &params_iii.effective_two_torsion_order,
+        &[params_iii.three_torsion.base],
+    );
+    let (q_v, q_dual_v) = sample_random_secret_degree(
+        &params_v.effective_two_torsion_order,
+        &[params_v.three_torsion.base],
+    );
 
     let (domain_i, kernel_i, _) = generate_2d_isogeny_inke(&params_i, &q_i, &q_dual_i);
     let (domain_iii, kernel_iii, _) = generate_2d_isogeny_inke(&params_iii, &q_iii, &q_dual_iii);
@@ -458,12 +466,18 @@ fn basis_mapping_2d_poke(c: &mut Criterion) {
     let params_iii = poke_iii::get_params();
     let params_v = poke_v::get_params();
 
-    let (q_i, q_dual_i) =
-        sample_random_secret_degree(&params_i.effective_two_torsion_order, &[3, 5]);
-    let (q_iii, q_dual_iii) =
-        sample_random_secret_degree(&params_iii.effective_two_torsion_order, &[3, 5]);
-    let (q_v, q_dual_v) =
-        sample_random_secret_degree(&params_v.effective_two_torsion_order, &[3, 5]);
+    let (q_i, q_dual_i) = sample_random_secret_degree(
+        &params_i.effective_two_torsion_order,
+        &[params_i.three_torsion.base, params_i.five_torsion.base],
+    );
+    let (q_iii, q_dual_iii) = sample_random_secret_degree(
+        &params_iii.effective_two_torsion_order,
+        &[params_iii.three_torsion.base, params_iii.five_torsion.base],
+    );
+    let (q_v, q_dual_v) = sample_random_secret_degree(
+        &params_v.effective_two_torsion_order,
+        &[params_v.three_torsion.base, params_v.five_torsion.base],
+    );
 
     let (domain_i, kernel_i, _) = generate_2d_isogeny_poke(&params_i, &q_i, &q_dual_i);
     let (domain_iii, kernel_iii, _) = generate_2d_isogeny_poke(&params_iii, &q_iii, &q_dual_iii);

@@ -127,7 +127,10 @@ pub fn keygen<
     // Keep generating elements until we find an invertible one
     // FIXME: I generate a q in [0, 2^(a-2) - 1] here. Should we be generating in [0, 2^(a-4)]
     // like in POKE-INKE? Or in [0, 2^(a-3) - 1] like in POKE-PKE?
-    let (q, q_dual) = sample_random_secret_degree(&pub_params.effective_two_torsion_order, &[3, 5]);
+    let (q, q_dual) = sample_random_secret_degree(
+        &pub_params.effective_two_torsion_order,
+        &[pub_params.three_torsion.base, pub_params.five_torsion.base],
+    );
 
     let (domain, (P1P2, Q1Q2), ok) = generate_2d_isogeny_poke(pub_params, &q, &q_dual);
     retval &= ok;
@@ -168,10 +171,22 @@ pub fn keygen<
         &codomain_curve.sub(&X_A, &Y_A).to_pointx(),
     );
 
-    let alpha = sample_random_unit_mod_prime_power(2, &pub_params.two_torsion.order);
-    let beta = sample_random_unit_mod_prime_power(2, &pub_params.two_torsion.order);
-    let gamma = sample_random_unit_mod_prime_power(3, &pub_params.three_torsion.order);
-    let delta = sample_random_unit_mod_prime_power(5, &pub_params.five_torsion.order);
+    let alpha = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.two_torsion.order,
+    );
+    let beta = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.two_torsion.order,
+    );
+    let gamma = sample_random_unit_mod_prime_power(
+        pub_params.three_torsion.base,
+        &pub_params.three_torsion.order,
+    );
+    let delta = sample_random_unit_mod_prime_power(
+        pub_params.five_torsion.base,
+        &pub_params.five_torsion.order,
+    );
 
     let masked_two_torsion_basis_EA =
         mask_basisx_by_diagonal_scalars(&codomain_curve, &two_torsion_basis_EA, &alpha, &beta);
@@ -249,8 +264,14 @@ where
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
     // FIXME: Should this be full 2^a torsion, or effective 2^(a-2) torsion?
-    let omega1 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
-    let omega2 = sample_random_unit_mod_prime_power(2, &pub_params.effective_two_torsion_order);
+    let omega1 = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.effective_two_torsion_order,
+    );
+    let omega2 = sample_random_unit_mod_prime_power(
+        pub_params.two_torsion.base,
+        &pub_params.effective_two_torsion_order,
+    );
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
     let D = sample_random_invertible_matrix_mod_prime_power(5, &pub_params.five_torsion.order);

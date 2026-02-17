@@ -24,7 +24,7 @@ use crate::{
     },
     params::TorsionParams,
     rand::{
-        sample_random_element_mod, sample_random_invertible_matrix_mod_prime_power,
+        sample_random_element_mod, sample_random_invertible_matrix_mod_special_prime_power,
         sample_random_secret_degree, sample_random_unit_mod_power_of_two,
         sample_random_unit_mod_special_prime_power,
     },
@@ -263,7 +263,10 @@ where
     let omega2 = sample_random_unit_mod_power_of_two(&pub_params.effective_two_torsion_order);
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
-    let D = sample_random_invertible_matrix_mod_prime_power(5, &pub_params.five_torsion.order);
+    let D = sample_random_invertible_matrix_mod_special_prime_power(
+        pub_params.five_torsion.base,
+        &pub_params.five_torsion.order,
+    );
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 

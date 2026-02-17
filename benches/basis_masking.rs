@@ -7,7 +7,7 @@ use poke::{
     bn::BigNum,
     params::{poke_i, poke_iii, poke_v},
     rand::{
-        sample_random_invertible_matrix_mod_prime_power, sample_random_torsion_basis,
+        sample_random_invertible_matrix_mod_special_prime_power, sample_random_torsion_basis,
         sample_random_unit_mod_special_prime_power,
     },
 };
@@ -642,15 +642,15 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let S_i = sample_random_invertible_matrix_mod_prime_power(
+    let S_i = sample_random_invertible_matrix_mod_special_prime_power(
         params_i.three_torsion.base,
         &params_i.three_torsion.order,
     );
-    let S_iii = sample_random_invertible_matrix_mod_prime_power(
+    let S_iii = sample_random_invertible_matrix_mod_special_prime_power(
         params_iii.three_torsion.base,
         &params_iii.three_torsion.order,
     );
-    let S_v = sample_random_invertible_matrix_mod_prime_power(
+    let S_v = sample_random_invertible_matrix_mod_special_prime_power(
         params_v.three_torsion.base,
         &params_v.three_torsion.order,
     );
@@ -791,15 +791,15 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let S_i = sample_random_invertible_matrix_mod_prime_power(
+    let S_i = sample_random_invertible_matrix_mod_special_prime_power(
         params_i.three_torsion.base,
         &params_i.three_torsion.order,
     );
-    let S_iii = sample_random_invertible_matrix_mod_prime_power(
+    let S_iii = sample_random_invertible_matrix_mod_special_prime_power(
         params_iii.three_torsion.base,
         &params_iii.three_torsion.order,
     );
-    let S_v = sample_random_invertible_matrix_mod_prime_power(
+    let S_v = sample_random_invertible_matrix_mod_special_prime_power(
         params_v.three_torsion.base,
         &params_v.three_torsion.order,
     );

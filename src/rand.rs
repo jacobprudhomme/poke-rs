@@ -2,7 +2,6 @@ use core::array;
 
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{curve::Curve, projective_point::Point};
-use num_bigint::{BigUint, RandBigInt as _};
 use rand::Rng as _;
 
 use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
@@ -74,37 +73,33 @@ pub fn sample_random_secret_degree<const NUM_WORDS_2: usize>(
 }
 
 // FIXME: Validate that this algorithm generates a uniformly random invertible matrices in SL_2(Z_(5^c))
-pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usize>(
+// WARN: modulus_base must satisfy 2^64 == 1 (mod modulus_base)
+pub fn sample_random_invertible_matrix_mod_special_prime_power<const NUM_WORDS_MOD: usize>(
     modulus_base: u8,
     modulus: &BigNum<NUM_WORDS_MOD>,
 ) -> [[BigNum<NUM_WORDS_MOD>; 2]; 2] {
-    let mut rng = old_rand::thread_rng();
-
-    let ONE = BigUint::from(1u8);
-    let modulus_base = BigUint::from(modulus_base);
-    let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
-
     // Randomly generate the first 3 elements
-    let mut matrix: [[BigUint; 2]; 2] = array::from_fn(|_| [BigUint::ZERO; 2]);
-    matrix[0][0] = rng.gen_biguint_range(&ONE, &modulus); // This avoids getting a zero-term for the term in the determinant with our degree of freedom
-    matrix[0][1] = rng.gen_biguint_below(&modulus);
-    matrix[1][0] = rng.gen_biguint_below(&modulus);
-    while ((&matrix[0][1] * &matrix[1][0]) % &modulus_base) == BigUint::ZERO
-        && ((&modulus - &matrix[0][0]) % &modulus_base) == BigUint::ZERO
+    let mut matrix: [[BigNum<NUM_WORDS_MOD>; 2]; 2] =
+        array::from_fn(|_| array::from_fn(|_| BigNum::<NUM_WORDS_MOD>::zero()));
+
+    matrix[0][1] = sample_random_element_mod(modulus);
+    matrix[1][0] = sample_random_element_mod(modulus);
+    let cross_term = modulus - matrix[0][1].mul_mod(&matrix[1][0], modulus);
+
+    // Select the 1st and 4th elements so that gcd(det(D), modulus) == 1, i.e. so D is invertible in modulus
+    // FIXME: Is this the fastest way to do this? If we fix 3/4 of the elements with the necessary properties
+    // to ensure success instead, and only regenerate the 4th, how many iterations do we save? What is the
+    // expected number of iterations in both cases?
+    matrix[0][0] = sample_random_element_mod(modulus);
+    matrix[1][1] = sample_random_element_mod(modulus);
+    while (matrix[0][0].mul_mod(&matrix[1][1], modulus) + &cross_term)
+        .is_divisible_by_special_prime(modulus_base)
     {
-        matrix[0][0] = rng.gen_biguint_range(&ONE, &modulus); // This avoids getting a zero-term for the term in the determinant with our degree of freedom
+        matrix[0][0] = sample_random_element_mod(modulus);
+        matrix[1][1] = sample_random_element_mod(modulus);
     }
 
-    // Select the 4th element to have gcd(det(D), 5^c) == 1
-    // FIXME: Is this valid? I would assume the operations between 3 random numbers also gives a random number. Prove this
-    let cross_term = (&modulus - ((&matrix[0][1] * &matrix[1][0]) % &modulus)) % &modulus;
-    let mut element = rng.gen_biguint_below(&modulus);
-    while (&cross_term + (&matrix[0][0] * &element) % &modulus) % &modulus_base == BigUint::ZERO {
-        element = rng.gen_biguint_below(&modulus);
-    }
-    matrix[1][1] = element;
-
-    matrix.map(|row| row.map(|element| BigNum::new(&element.to_u64_digits())))
+    matrix
 }
 
 // Randomly find a basis of the given torsion subgroup on the given curve

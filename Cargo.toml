@@ -6,8 +6,6 @@ edition = "2024"
 [dependencies]
 fp2 = "0.3"
 isogeny = { path = "isogeny_rs" }
-num-bigint = { version = "0.4", features = ["rand"] }
-old_rand = { version = "0.8", package = "rand" }
 rand = "0.9"
 rand_core = "0.9"
 rug = "1.28.0"
@@ -15,6 +13,7 @@ sha3 = "0.10"
 
 [dev-dependencies]
 criterion = "0.7"
+num-bigint = { version = "0.4" }
 rstest = "0.26"
 rstest_reuse = "0.7.0"
 sha2 = "0.10"

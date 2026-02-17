@@ -28,6 +28,17 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
         (result % p) == 0
     }
 
+    pub fn reduce_mod<const NUM_WORDS_MOD: usize>(
+        &self,
+        modulus: &BigNum<NUM_WORDS_MOD>,
+    ) -> BigNum<NUM_WORDS_MOD> {
+        let this = Integer::from_digits(self.as_le_words(), Order::Lsf);
+        let modulus = Integer::from_digits(modulus.as_le_words(), Order::Lsf);
+
+        let result = this % modulus;
+        BigNum::new(result.as_limbs())
+    }
+
     pub fn mul_mod_power_of_two<const NUM_WORDS_RHS: usize, const NUM_WORDS_MOD: usize>(
         &self,
         rhs: &BigNum<NUM_WORDS_RHS>,
@@ -55,15 +66,18 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
         BigNum::new(&result)
     }
 
-    pub fn reduce_mod<const NUM_WORDS_MOD: usize>(
+    pub fn mul_mod<const NUM_WORDS_RHS: usize, const NUM_WORDS_MOD: usize>(
         &self,
+        rhs: &BigNum<NUM_WORDS_RHS>,
         modulus: &BigNum<NUM_WORDS_MOD>,
     ) -> BigNum<NUM_WORDS_MOD> {
-        let this = BigUint::from_bytes_le(&self.to_le_bytes());
-        let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
+        let lhs = Integer::from_digits(self.as_le_words(), Order::Lsf);
+        let rhs = Integer::from_digits(rhs.as_le_words(), Order::Lsf);
+        let modulus = Integer::from_digits(modulus.as_le_words(), Order::Lsf);
 
-        let result = this % modulus;
-        BigNum::new(&result.to_u64_digits())
+        let result = (lhs * rhs) % modulus;
+
+        BigNum::new(result.as_limbs())
     }
 
     // WARN: Assumes n is a unit with respect to the modulus

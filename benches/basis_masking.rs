@@ -253,6 +253,7 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[params_i.three_torsion.base],
+        &[&params_i.three_torsion.reduced_order],
         &params_i.three_torsion.order,
         &params_i.cofactor,
     );
@@ -263,6 +264,7 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
         &[params_iii.three_torsion.base],
+        &[&params_iii.three_torsion.reduced_order],
         &params_iii.three_torsion.order,
         &params_iii.cofactor,
     );
@@ -273,6 +275,7 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[params_v.three_torsion.base],
+        &[&params_v.three_torsion.reduced_order],
         &params_v.three_torsion.order,
         &params_v.cofactor,
     );
@@ -429,6 +432,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[params_i.three_torsion.base],
+        &[&params_i.three_torsion.reduced_order],
         &params_i.three_torsion.order,
         &params_i.cofactor,
     );
@@ -439,6 +443,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
         &[params_iii.three_torsion.base],
+        &[&params_iii.three_torsion.reduced_order],
         &params_iii.three_torsion.order,
         &params_iii.cofactor,
     );
@@ -449,6 +454,7 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[params_v.three_torsion.base],
+        &[&params_v.three_torsion.reduced_order],
         &params_v.three_torsion.order,
         &params_v.cofactor,
     );
@@ -653,6 +659,7 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[params_i.three_torsion.base],
+        &[&params_i.three_torsion.reduced_order],
         &params_i.three_torsion.order,
         &params_i.cofactor,
     );
@@ -663,6 +670,7 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
         &[params_iii.three_torsion.base],
+        &[&params_iii.three_torsion.reduced_order],
         &params_iii.three_torsion.order,
         &params_iii.cofactor,
     );
@@ -673,6 +681,7 @@ fn mask_basis_by_scalar_matrix(c: &mut Criterion) {
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[params_v.three_torsion.base],
+        &[&params_v.three_torsion.reduced_order],
         &params_v.three_torsion.order,
         &params_v.cofactor,
     );
@@ -799,6 +808,7 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let (P_i, Q_i, _) = sample_random_torsion_basis(
         &params_i.starting_curve,
         &[params_i.three_torsion.base],
+        &[&params_i.three_torsion.reduced_order],
         &params_i.three_torsion.order,
         &params_i.cofactor,
     );
@@ -809,6 +819,7 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let (P_iii, Q_iii, _) = sample_random_torsion_basis(
         &params_iii.starting_curve,
         &[params_iii.three_torsion.base],
+        &[&params_iii.three_torsion.reduced_order],
         &params_iii.three_torsion.order,
         &params_iii.cofactor,
     );
@@ -819,6 +830,7 @@ fn special_case_mask_basis_by_scalar_matrix_and_keep_xP_xQ_only(c: &mut Criterio
     let (P_v, Q_v, _) = sample_random_torsion_basis(
         &params_v.starting_curve,
         &[params_v.three_torsion.base],
+        &[&params_v.three_torsion.reduced_order],
         &params_v.three_torsion.order,
         &params_v.cofactor,
     );

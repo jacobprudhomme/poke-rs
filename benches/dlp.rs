@@ -55,6 +55,7 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<
     let (U, V, eUV) = sample_random_torsion_basis(
         &pub_params.starting_curve,
         &[pub_params.five_torsion.base],
+        &[&pub_params.five_torsion.reduced_order],
         &pub_params.five_torsion.order,
         &pub_params.five_torsion.cofactor,
     );

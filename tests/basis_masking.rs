@@ -273,7 +273,8 @@ fn all_methods_for_single_scalar_are_equal<
     );
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
-        &[5],
+        &[params.five_torsion.base],
+        &[&params.five_torsion.reduced_order],
         &params.five_torsion.order,
         &params.five_torsion.cofactor,
     );
@@ -376,7 +377,8 @@ fn all_methods_for_different_scalars_are_equal<
     );
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
-        &[5],
+        &[params.five_torsion.base],
+        &[&params.five_torsion.reduced_order],
         &params.five_torsion.order,
         &params.five_torsion.cofactor,
     );
@@ -479,7 +481,8 @@ fn all_methods_for_scalar_matrix_are_equal<
     let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion.order);
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
-        &[5],
+        &[params.five_torsion.base],
+        &[&params.five_torsion.reduced_order],
         &params.five_torsion.order,
         &params.five_torsion.cofactor,
     );
@@ -562,7 +565,8 @@ fn all_methods_for_special_case_are_equal<
     let S = sample_random_invertible_matrix_mod_prime_power(5, &params.five_torsion.order);
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
-        &[5],
+        &[params.five_torsion.base],
+        &[&params.five_torsion.reduced_order],
         &params.five_torsion.order,
         &params.five_torsion.cofactor,
     );

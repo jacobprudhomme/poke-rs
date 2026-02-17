@@ -111,28 +111,21 @@ pub fn sample_random_invertible_matrix_mod_prime_power<const NUM_WORDS_MOD: usiz
 // WARN: Only works for torsion subgroup orders with prime factors < 256
 pub fn sample_random_torsion_basis<
     Fp2: Fp2Trait,
+    const NUM_PRIME_FACTORS: usize,
     const NUM_WORDS_TORSION: usize,
     const NUM_WORDS_COF: usize,
 >(
     curve: &Curve<Fp2>,
-    torsion_subgroup_order_prime_factors: &[u8],
+    torsion_subgroup_order_prime_factors: &[u8; NUM_PRIME_FACTORS],
+    torsion_subgroup_reduced_orders: &[&BigNum<NUM_WORDS_TORSION>; NUM_PRIME_FACTORS],
     torsion_subgroup_order: &BigNum<NUM_WORDS_TORSION>,
     order_cofactor: &BigNum<NUM_WORDS_COF>,
 ) -> (Point<Fp2>, Point<Fp2>, Fp2) {
     let mut rng = rand::rng();
 
-    let torsion_subgroup_order_prime_factors = torsion_subgroup_order_prime_factors
-        .iter()
-        .map(|&prime| BigUint::from(prime))
-        .collect::<Vec<_>>();
-    let torsion_subgroup_order_biguint =
-        BigUint::from_bytes_le(&torsion_subgroup_order.to_le_bytes());
+    let torsion_subgroup_order_prime_factors =
+        torsion_subgroup_order_prime_factors.map(|prime| BigNum::<1>::from_prime(prime.into()));
 
-    let reduced_torsion_subgroup_orders = &torsion_subgroup_order_prime_factors
-        .iter()
-        .map(|prime| &torsion_subgroup_order_biguint / prime)
-        .map(|reduced_order| BigNum::<NUM_WORDS_TORSION>::new(&reduced_order.to_u64_digits()))
-        .collect::<Vec<_>>();
 
     // Generate a point of the desired order
     // ASK: Should I break the loop condition only at the very end, all conditions being tested at once?
@@ -152,7 +145,7 @@ pub fn sample_random_torsion_basis<
             continue;
         }
 
-        let mut Us_saturated = reduced_torsion_subgroup_orders.iter().map(|reduced_order| {
+        let mut Us_saturated = torsion_subgroup_reduced_orders.iter().map(|reduced_order| {
             curve.mul(
                 &U_in_torsion_subgroup,
                 &reduced_order.to_le_bytes(),
@@ -181,7 +174,7 @@ pub fn sample_random_torsion_basis<
             continue;
         }
 
-        let mut Vs_saturated = reduced_torsion_subgroup_orders.iter().map(|reduced_order| {
+        let mut Vs_saturated = torsion_subgroup_reduced_orders.iter().map(|reduced_order| {
             curve.mul(
                 &V_in_torsion_subgroup,
                 &reduced_order.to_le_bytes(),
@@ -207,7 +200,7 @@ pub fn sample_random_torsion_basis<
         );
 
         // ASK: Is it a problem that any() short-circuits? See above comment
-        let eUVs_saturated = reduced_torsion_subgroup_orders
+        let eUVs_saturated = torsion_subgroup_reduced_orders
             .iter()
             .map(|reduced_order| eUV.pow(&reduced_order.to_le_bytes(), reduced_order.nbits()))
             .collect::<Vec<_>>();
@@ -219,17 +212,16 @@ pub fn sample_random_torsion_basis<
         }
         // FIXME: Is this check necessary? Because of the fact that the group might have order m*n
         // ASK: Is it a problem that any() short-circuits? See above comment
-        if eUVs_saturated.iter().zip(torsion_subgroup_order_prime_factors.iter()).any(|(eUV_saturated, prime)| {
-            eUV_saturated
-                .pow(
-                    &prime.to_bytes_le(),
-                    prime.bits()
-                        .try_into()
-                        .expect("Size in bits of constant 5 is too big to fit in a usize (we do not ever expect this to happen)"),
-                )
-                .equals(&Fp2::ONE)
-                == FAILURE_RETVAL
-        }) {
+        if eUVs_saturated
+            .iter()
+            .zip(torsion_subgroup_order_prime_factors.iter())
+            .any(|(eUV_saturated, prime)| {
+                eUV_saturated
+                    .pow(&prime.to_le_bytes(), prime.nbits())
+                    .equals(&Fp2::ONE)
+                    == FAILURE_RETVAL
+            })
+        {
             continue;
         }
 

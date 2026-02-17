@@ -262,6 +262,7 @@ pub fn eval_2d_two_isogeny_chain_on_prime_power_torsion_basis<
     let (U, V, eUV_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[torsion_params.base],
+        &[&torsion_params.reduced_order],
         &torsion_params.order,
         &torsion_params.cofactor,
     );
@@ -452,7 +453,7 @@ pub fn eval_2d_two_isogeny_chain_inke<
     Fp2: Fp2Trait,
     const NUM_WORDS_2: usize,
     const NUM_WORDS_3: usize,
-    const NUM_WORDS_P: usize,
+    const NUM_WORDS_23: usize,
     const NUM_WORDS_223: usize,
     const NUM_WORDS_233: usize,
     const TWO_ADIC_BASIS_LEN: usize,
@@ -468,7 +469,7 @@ pub fn eval_2d_two_isogeny_chain_inke<
         &TorsionParams<NUM_WORDS_3, NUM_WORDS_2, THREE_ADIC_BASIS_LEN>,
     ),
     full_torsion_basis: &BasisX<Fp2>,
-    full_torsion_basis_order: &BigNum<NUM_WORDS_P>,
+    full_torsion_basis_order: &BigNum<NUM_WORDS_23>,
     full_torsion_basis_cofactor: &BigNum<1>,
     intermediate_bignum_sizes: PhantomData<([(); NUM_WORDS_223], [(); NUM_WORDS_233])>,
 ) -> (
@@ -489,7 +490,11 @@ pub fn eval_2d_two_isogeny_chain_inke<
     // Generate random basis of the (2^a * 3^b)-torsion on E_AB
     let (U, V, eUV_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
-        &[2, 3],
+        &[torsion_params.0.base, torsion_params.1.base],
+        &[
+            &torsion_params.0.coproduct.widen(),
+            &torsion_params.1.coproduct.widen(),
+        ],
         full_torsion_basis_order,
         full_torsion_basis_cofactor,
     );
@@ -725,6 +730,7 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
     let (U, V, eUV_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[torsion_params.0.base],
+        &[&torsion_params.0.reduced_order],
         &torsion_params.0.order,
         &torsion_params.0.cofactor,
     );
@@ -732,6 +738,7 @@ pub fn eval_2d_two_isogeny_chain_inke_separate_bases<
     let (W, Z, _) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[torsion_params.1.base],
+        &[&torsion_params.1.reduced_order],
         &torsion_params.1.order,
         &torsion_params.1.cofactor,
     );
@@ -1124,6 +1131,11 @@ pub fn eval_2d_two_isogeny_chain_poke<
     let (U, V, eUV_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[2, 3, 5],
+        &[
+            &torsion_params.0.coproduct.widen(),
+            &torsion_params.1.coproduct.widen(),
+            &torsion_params.2.coproduct.widen(),
+        ],
         full_torsion_basis_order,
         full_torsion_basis_cofactor,
     );
@@ -1356,6 +1368,7 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
     let (M, N, eMN_AB) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[torsion_params.0.base],
+        &[&torsion_params.0.reduced_order],
         &torsion_params.0.order,
         &torsion_params.0.cofactor,
     );
@@ -1363,6 +1376,7 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
     let (U, V, _) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[torsion_params.1.base],
+        &[&torsion_params.1.reduced_order],
         &torsion_params.1.order,
         &torsion_params.1.cofactor,
     );
@@ -1370,6 +1384,7 @@ pub fn eval_2d_two_isogeny_chain_poke_separate_bases<
     let (W, Z, _) = sample_random_torsion_basis(
         &embedded_isogeny_codomain,
         &[torsion_params.2.base],
+        &[&torsion_params.2.reduced_order],
         &torsion_params.2.order,
         &torsion_params.2.cofactor,
     );

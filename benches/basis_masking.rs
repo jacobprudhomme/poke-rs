@@ -8,7 +8,7 @@ use poke::{
     params::{poke_i, poke_iii, poke_v},
     rand::{
         sample_random_invertible_matrix_mod_prime_power, sample_random_torsion_basis,
-        sample_random_unit_mod_prime_power,
+        sample_random_unit_mod_special_prime_power,
     },
 };
 
@@ -236,15 +236,15 @@ fn mask_basis_by_same_scalar(c: &mut Criterion) {
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let s_i = sample_random_unit_mod_prime_power(
+    let s_i = sample_random_unit_mod_special_prime_power(
         params_i.three_torsion.base,
         &params_i.three_torsion.order,
     );
-    let s_iii = sample_random_unit_mod_prime_power(
+    let s_iii = sample_random_unit_mod_special_prime_power(
         params_iii.three_torsion.base,
         &params_iii.three_torsion.order,
     );
-    let s_v = sample_random_unit_mod_prime_power(
+    let s_v = sample_random_unit_mod_special_prime_power(
         params_v.three_torsion.base,
         &params_v.three_torsion.order,
     );
@@ -400,27 +400,27 @@ fn mask_basis_by_different_scalars(c: &mut Criterion) {
     let params_v = poke_v::get_params();
 
     // Generate scalars by which to multiply basis points
-    let s1_i = sample_random_unit_mod_prime_power(
+    let s1_i = sample_random_unit_mod_special_prime_power(
         params_i.three_torsion.base,
         &params_i.three_torsion.order,
     );
-    let s2_i = sample_random_unit_mod_prime_power(
+    let s2_i = sample_random_unit_mod_special_prime_power(
         params_i.three_torsion.base,
         &params_i.three_torsion.order,
     );
-    let s1_iii = sample_random_unit_mod_prime_power(
+    let s1_iii = sample_random_unit_mod_special_prime_power(
         params_iii.three_torsion.base,
         &params_iii.three_torsion.order,
     );
-    let s2_iii = sample_random_unit_mod_prime_power(
+    let s2_iii = sample_random_unit_mod_special_prime_power(
         params_iii.three_torsion.base,
         &params_iii.three_torsion.order,
     );
-    let s1_v = sample_random_unit_mod_prime_power(
+    let s1_v = sample_random_unit_mod_special_prime_power(
         params_v.three_torsion.base,
         &params_v.three_torsion.order,
     );
-    let s2_v = sample_random_unit_mod_prime_power(
+    let s2_v = sample_random_unit_mod_special_prime_power(
         params_v.three_torsion.base,
         &params_v.three_torsion.order,
     );

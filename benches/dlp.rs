@@ -11,7 +11,7 @@ use poke::{
     },
     params::{poke_i, poke_iii, poke_v},
     poke::PublicParams,
-    rand::{sample_random_torsion_basis, sample_random_unit_mod_prime_power},
+    rand::{sample_random_torsion_basis, sample_random_unit_mod_special_prime_power},
 };
 
 // Sample a basis of the 5^c-torsion, along with the Weil pairing on it,
@@ -60,11 +60,11 @@ fn generate_fp2_power_of_five_torsion_basis_and_lc_point<
     );
     let UV = pub_params.starting_curve.sub(&U, &V);
 
-    let x = sample_random_unit_mod_prime_power(
+    let x = sample_random_unit_mod_special_prime_power(
         pub_params.five_torsion.base,
         &pub_params.five_torsion.order,
     );
-    let y = sample_random_unit_mod_prime_power(
+    let y = sample_random_unit_mod_special_prime_power(
         pub_params.five_torsion.base,
         &pub_params.five_torsion.order,
     );

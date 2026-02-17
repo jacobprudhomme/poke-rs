@@ -6,6 +6,28 @@ use rug::{Integer, integer::Order};
 use crate::bn::BigNum;
 
 impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
+    pub fn is_divisible_by_two(&self) -> bool {
+        (self.as_le_words()[0] & 1) == 0
+    }
+
+    // WARN: Requires that 2^64 == 1 (mod p)
+    // This works because 2^64 == 1 (mod p), so xi*(2^64)^i + ... + x0*(2^64)^0 (mod p)
+    // == xi + ... + x0 (mod p) == (xi (mod p) + ... + x0 (mod p)) (mod p)
+    pub fn is_divisible_by_special_prime(&self, p: u8) -> bool {
+        let p: u64 = p.into();
+
+        let mut result = 0;
+        for word in self.as_le_words() {
+            // FIXME: Can we still justify this as constant-time with this conditional step?
+            if u64::MAX - result < p - 1 {
+                result %= p;
+            }
+
+            result += word % p;
+        }
+        (result % p) == 0
+    }
+
     pub fn mul_mod_power_of_two<const NUM_WORDS_RHS: usize, const NUM_WORDS_MOD: usize>(
         &self,
         rhs: &BigNum<NUM_WORDS_RHS>,

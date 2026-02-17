@@ -9,7 +9,7 @@ use poke::{
     poke::PublicParams,
     rand::{
         sample_random_invertible_matrix_mod_prime_power, sample_random_torsion_basis,
-        sample_random_unit_mod_prime_power,
+        sample_random_unit_mod_special_prime_power,
     },
 };
 use rstest::rstest;
@@ -267,7 +267,10 @@ fn all_methods_for_single_scalar_are_equal<
         FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let s = sample_random_unit_mod_prime_power(5, &params.five_torsion.order);
+    let s = sample_random_unit_mod_special_prime_power(
+        params.five_torsion.base,
+        &params.five_torsion.order,
+    );
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
         &[5],
@@ -363,8 +366,14 @@ fn all_methods_for_different_scalars_are_equal<
         FIVE_ADIC_BASIS_LEN,
     >,
 ) {
-    let s1 = sample_random_unit_mod_prime_power(5, &params.five_torsion.order);
-    let s2 = sample_random_unit_mod_prime_power(5, &params.five_torsion.order);
+    let s1 = sample_random_unit_mod_special_prime_power(
+        params.five_torsion.base,
+        &params.five_torsion.order,
+    );
+    let s2 = sample_random_unit_mod_special_prime_power(
+        params.five_torsion.base,
+        &params.five_torsion.order,
+    );
     let (P, Q, _) = sample_random_torsion_basis(
         &params.starting_curve,
         &[5],

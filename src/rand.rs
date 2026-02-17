@@ -3,65 +3,74 @@ use core::array;
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{curve::Curve, projective_point::Point};
 use num_bigint::{BigUint, RandBigInt as _};
+use rand::Rng as _;
 
 use crate::{FAILURE_RETVAL, SUCCESS_RETVAL, bn::BigNum};
-
-pub fn sample_random_secret_degree<const NUM_WORDS_2: usize>(
-    effective_two_torsion: &BigNum<NUM_WORDS_2>,
-    odd_primes_coprime_to: &[u8],
-) -> (BigNum<NUM_WORDS_2>, BigNum<NUM_WORDS_2>) {
-    let mut rng = old_rand::thread_rng();
-
-    let TWO = BigUint::from(2u8);
-    let coprime_to = odd_primes_coprime_to
-        .iter()
-        .map(|&n| BigUint::from(n))
-        .collect::<Vec<_>>();
-
-    // Keep generating elements until we find one such that q*(2^a - q) is coprime to all given primes
-    let effective_two_torsion = BigUint::from_bytes_le(&effective_two_torsion.to_le_bytes());
-    let mut element = rng.gen_biguint_below(&effective_two_torsion);
-    let mut dual_element = &effective_two_torsion - &element;
-    while &element % &TWO == BigUint::ZERO
-        || coprime_to
-            .iter()
-            .any(|p| &element % p == BigUint::ZERO || &dual_element % p == BigUint::ZERO)
-    {
-        element = rng.gen_biguint_below(&effective_two_torsion);
-        dual_element = &effective_two_torsion - &element;
-    }
-
-    (
-        BigNum::new(&element.to_u64_digits()),
-        BigNum::new(&dual_element.to_u64_digits()),
-    )
-}
 
 pub fn sample_random_element_mod<const NUM_WORDS_MOD: usize>(
     modulus: &BigNum<NUM_WORDS_MOD>,
 ) -> BigNum<NUM_WORDS_MOD> {
-    let mut rng = old_rand::thread_rng();
+    let mut rng = rand::rng();
 
-    let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
-    let element = rng.gen_biguint_below(&modulus);
+    let actual_num_words = modulus.nbits().div_ceil(u64::BITS as usize);
+    let zero_out_mask =
+        u64::MAX >> (u64::BITS - ((modulus.nbits() - 1) % (u64::BITS as usize)) as u32 - 1);
 
-    BigNum::new(&element.to_u64_digits())
+    let mut words = [0; NUM_WORDS_MOD];
+    rng.fill(&mut words[..actual_num_words]);
+    words[actual_num_words - 1] &= zero_out_mask;
+
+    let mut element = BigNum::new(&words);
+    while &element >= modulus {
+        rng.fill(&mut words[..actual_num_words]);
+        words[actual_num_words - 1] &= zero_out_mask;
+
+        element = BigNum::new(&words);
+    }
+
+    element
 }
 
-pub fn sample_random_unit_mod_prime_power<const NUM_WORDS_MOD: usize>(
+pub fn sample_random_unit_mod_power_of_two<const NUM_WORDS_MOD: usize>(
+    modulus: &BigNum<NUM_WORDS_MOD>,
+) -> BigNum<NUM_WORDS_MOD> {
+    let mut unit = sample_random_element_mod(modulus);
+    while unit.is_divisible_by_two() {
+        unit = sample_random_element_mod(modulus);
+    }
+
+    unit
+}
+
+// WARN: modulus_base must satisfy 2^64 == 1 (mod modulus_base)
+pub fn sample_random_unit_mod_special_prime_power<const NUM_WORDS_MOD: usize>(
     modulus_base: u8,
     modulus: &BigNum<NUM_WORDS_MOD>,
 ) -> BigNum<NUM_WORDS_MOD> {
-    let mut rng = old_rand::thread_rng();
-
-    // Keep generating elements until we find an invertible one
-    let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
-    let mut unit = rng.gen_biguint_below(&modulus);
-    while &unit % BigUint::from(modulus_base) == BigUint::ZERO {
-        unit = rng.gen_biguint_below(&modulus);
+    let mut unit = sample_random_element_mod(modulus);
+    while unit.is_divisible_by_special_prime(modulus_base) {
+        unit = sample_random_element_mod(modulus);
     }
 
-    BigNum::new(&unit.to_u64_digits())
+    unit
+}
+
+// WARN: All primes in special_primes_coprime_to must satisfy 2^64 == 1 (mod p)
+pub fn sample_random_secret_degree<const NUM_WORDS_2: usize>(
+    effective_two_torsion: &BigNum<NUM_WORDS_2>,
+    special_primes_coprime_to: &[u8],
+) -> (BigNum<NUM_WORDS_2>, BigNum<NUM_WORDS_2>) {
+    // Keep generating elements until we find one such that q*(2^a - q) is coprime to all given primes
+    let mut element = sample_random_unit_mod_power_of_two(effective_two_torsion);
+    let mut dual_element = effective_two_torsion - &element;
+    while special_primes_coprime_to.iter().any(|&p| {
+        element.is_divisible_by_special_prime(p) || dual_element.is_divisible_by_special_prime(p)
+    }) {
+        element = sample_random_unit_mod_power_of_two(&effective_two_torsion);
+        dual_element = effective_two_torsion - &element;
+    }
+
+    (element, dual_element)
 }
 
 // FIXME: Validate that this algorithm generates a uniformly random invertible matrices in SL_2(Z_(5^c))

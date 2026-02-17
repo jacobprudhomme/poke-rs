@@ -4,7 +4,7 @@ use core::{
 };
 
 use isogeny::utilities::bn::{
-    bn_add_vartime, bn_bit_length_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
+    bn_add_vartime, bn_bit_length_vartime, bn_lt_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
     bn_sub_into_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
 use rug::{Integer, integer::Order};
@@ -15,7 +15,7 @@ pub struct BigNumArb {
     bitlen: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct BigNum<const NUM_WORDS: usize> {
     repr: [u64; NUM_WORDS],
     bitlen: usize,
@@ -153,6 +153,27 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
         BigNum {
             repr: words,
             bitlen: self.bitlen,
+        }
+    }
+}
+
+impl<const NUM_WORDS: usize> PartialOrd<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> {
+    fn partial_cmp(&self, other: &BigNum<NUM_WORDS>) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<const NUM_WORDS: usize> Ord for BigNum<NUM_WORDS> {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        let lhs_less_than_rhs = bn_lt_vartime(self.as_le_words(), other.as_le_words());
+        let lhs_equal_rhs = self == other;
+
+        if lhs_less_than_rhs {
+            cmp::Ordering::Less
+        } else if lhs_equal_rhs {
+            cmp::Ordering::Equal
+        } else {
+            cmp::Ordering::Greater
         }
     }
 }

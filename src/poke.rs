@@ -25,7 +25,8 @@ use crate::{
     params::TorsionParams,
     rand::{
         sample_random_element_mod, sample_random_invertible_matrix_mod_prime_power,
-        sample_random_secret_degree, sample_random_unit_mod_prime_power,
+        sample_random_secret_degree, sample_random_unit_mod_power_of_two,
+        sample_random_unit_mod_special_prime_power,
     },
 };
 
@@ -171,19 +172,13 @@ pub fn keygen<
         &codomain_curve.sub(&X_A, &Y_A).to_pointx(),
     );
 
-    let alpha = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.two_torsion.order,
-    );
-    let beta = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.two_torsion.order,
-    );
-    let gamma = sample_random_unit_mod_prime_power(
+    let alpha = sample_random_unit_mod_power_of_two(&pub_params.two_torsion.order);
+    let beta = sample_random_unit_mod_power_of_two(&pub_params.two_torsion.order);
+    let gamma = sample_random_unit_mod_special_prime_power(
         pub_params.three_torsion.base,
         &pub_params.three_torsion.order,
     );
-    let delta = sample_random_unit_mod_prime_power(
+    let delta = sample_random_unit_mod_special_prime_power(
         pub_params.five_torsion.base,
         &pub_params.five_torsion.order,
     );
@@ -264,14 +259,8 @@ where
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
     // FIXME: Should this be full 2^a torsion, or effective 2^(a-2) torsion?
-    let omega1 = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.effective_two_torsion_order,
-    );
-    let omega2 = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.effective_two_torsion_order,
-    );
+    let omega1 = sample_random_unit_mod_power_of_two(&pub_params.effective_two_torsion_order);
+    let omega2 = sample_random_unit_mod_power_of_two(&pub_params.effective_two_torsion_order);
 
     // Sample masking matrix for image of 5^c-torsion basis points on E_B and E_AB
     let D = sample_random_invertible_matrix_mod_prime_power(5, &pub_params.five_torsion.order);

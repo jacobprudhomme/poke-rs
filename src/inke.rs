@@ -20,7 +20,8 @@ use crate::{
     },
     params::TorsionParams,
     rand::{
-        sample_random_element_mod, sample_random_secret_degree, sample_random_unit_mod_prime_power,
+        sample_random_element_mod, sample_random_secret_degree,
+        sample_random_unit_mod_power_of_two, sample_random_unit_mod_special_prime_power,
     },
 };
 
@@ -135,19 +136,13 @@ pub fn keygen<
         &intermediate_curve.sub(&R_A1, &S_A1).to_pointx(),
     );
 
-    let alpha = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.two_torsion.order,
-    );
-    let beta = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.two_torsion.order,
-    );
-    let gamma = sample_random_unit_mod_prime_power(
+    let alpha = sample_random_unit_mod_power_of_two(&pub_params.two_torsion.order);
+    let beta = sample_random_unit_mod_power_of_two(&pub_params.two_torsion.order);
+    let gamma = sample_random_unit_mod_special_prime_power(
         pub_params.three_torsion.base,
         &pub_params.three_torsion.order,
     );
-    let gamma_prime = sample_random_unit_mod_prime_power(
+    let gamma_prime = sample_random_unit_mod_special_prime_power(
         pub_params.three_torsion.base,
         &pub_params.three_torsion.order,
     );
@@ -211,14 +206,8 @@ where
     let r = sample_random_element_mod(&pub_params.three_torsion.order);
 
     // Sample masking scalar for image of 2^a-torsion basis points on E_B and E_AB
-    let omega1 = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.effective_two_torsion_order,
-    );
-    let omega2 = sample_random_unit_mod_prime_power(
-        pub_params.two_torsion.base,
-        &pub_params.effective_two_torsion_order,
-    );
+    let omega1 = sample_random_unit_mod_power_of_two(&pub_params.effective_two_torsion_order);
+    let omega2 = sample_random_unit_mod_power_of_two(&pub_params.effective_two_torsion_order);
 
     /* Compute images of points, codomain curves through sender's secret parallel isogenies */
 

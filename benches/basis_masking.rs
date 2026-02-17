@@ -3,7 +3,6 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use fp2::traits::Fp2 as Fp2Trait;
 use isogeny::elliptic::{basis::BasisX, curve::Curve, point::PointX, projective_point::Point};
-use num_bigint::BigUint;
 use poke::{
     bn::BigNum,
     params::{poke_i, poke_iii, poke_v},
@@ -108,9 +107,7 @@ fn multiply_xonly_basis_by_scalars_negate_second_scalar<Fp2: Fp2Trait, const NUM
     s2: &BigNum<NUM_WORDS>,
     modulus: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
-    let s2_neg =
-        BigUint::from_bytes_le(&modulus.to_le_bytes()) - BigUint::from_bytes_le(&s2.to_le_bytes());
-    let s2_neg = BigNum::<NUM_WORDS>::new(&s2_neg.to_u64_digits());
+    let s2_neg = modulus - s2;
 
     let masked_xP = curve.xmul(&basis.P, &s1.to_le_bytes(), s1.nbits());
     let masked_xQ = curve.xmul(&basis.Q, &s2.to_le_bytes(), s2.nbits());
@@ -136,11 +133,7 @@ fn multiply_xonly_basis_by_scalars_using_invert_first_scalar<
     modulus: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
     // SAFETY: we expect units as input, just as in the protocol
-    let s1_inv_neg = BigUint::from_bytes_le(&modulus.to_le_bytes())
-        - BigUint::from_bytes_le(&s1.to_le_bytes())
-            .modinv(&BigUint::from_bytes_le(&modulus.to_le_bytes()))
-            .unwrap();
-    let s1_inv_neg = BigNum::new(&s1_inv_neg.to_u64_digits());
+    let s1_inv_neg = modulus - s1.invert_mod_vartime(&modulus);
     let s1_inv_neg_s2 = s1_inv_neg * s2;
 
     let masked_xP = curve.xmul(&basis.P, &s1.to_le_bytes(), s1.nbits());
@@ -168,14 +161,8 @@ fn multiply_xonly_basis_by_scalar_matrix_scalar_difference<
     S: &[[BigNum<NUM_WORDS>; 2]; 2],
     modulus: &BigNum<NUM_WORDS>,
 ) -> BasisX<Fp2> {
-    let s_diff1 = BigUint::from_bytes_le(&S[0][0].to_le_bytes())
-        + (BigUint::from_bytes_le(&modulus.to_le_bytes())
-            - BigUint::from_bytes_le(&S[1][0].to_le_bytes()));
-    let s_diff2 = BigUint::from_bytes_le(&S[0][1].to_le_bytes())
-        + (BigUint::from_bytes_le(&modulus.to_le_bytes())
-            - BigUint::from_bytes_le(&S[1][1].to_le_bytes()));
-    let s_diff1 = BigNum::<NUM_WORDS>::new(&s_diff1.to_u64_digits());
-    let s_diff2 = BigNum::<NUM_WORDS>::new(&s_diff2.to_u64_digits());
+    let s_diff1 = &S[0][0] + modulus - &S[1][0];
+    let s_diff2 = &S[0][1] + modulus - &S[1][1];
 
     let masked_xP = curve.ladder_biscalar(
         basis,

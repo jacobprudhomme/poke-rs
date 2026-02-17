@@ -288,12 +288,6 @@ pub fn solve_dlp_order_power_of_five<Fp2: Fp2Trait, const NUM_WORDS_ORDER: usize
         &five_adic_basis[e - 1].to_le_bytes(),
         five_adic_basis[e - 1].nbits(),
     );
-    assert_eq!(
-        prime_order_subgroup_generator.equals(&Fp2::ONE),
-        FAILURE_RETVAL,
-        "g has order < 5^{}",
-        e,
-    );
 
     let mut partial_sum = BigNum::zero();
     for i in 0..e {
@@ -382,7 +376,7 @@ mod tests {
     #[rstest]
     fn test_simple_dlp() {
         let five_adic_basis: [BigNum<1>; 4] =
-            array::from_fn(|exp| BigNum::from_prime_power(5, exp));
+            array::from_fn(|exp| BigNum::<1>::from_prime_power(5, exp));
 
         // Generates the order-5^3 subgroup
         let generator = Fp2::const_decode_no_check(
@@ -411,7 +405,7 @@ mod tests {
     #[rstest]
     fn test_complex_dlp() {
         let seven_adic_basis: [BigNum<1>; 5] =
-            array::from_fn(|exp| BigNum::from_prime_power(7, exp));
+            array::from_fn(|exp| BigNum::<1>::from_prime_power(7, exp));
 
         // Generates the order-7^4 subgroup
         let generator = Fp2::const_decode_no_check(

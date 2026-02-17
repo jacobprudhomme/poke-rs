@@ -36,7 +36,7 @@ impl<const NUM_WORDS_ORD: usize, const NUM_WORDS_CO: usize, const P_ADIC_BASIS_L
         let order = (base as u64) * &reduced_order;
 
         let coproduct = BigNum::from_prime_factors(coproduct_factors);
-        let inv_coproduct = coproduct.invert_mod(&order);
+        let inv_coproduct = coproduct.invert_mod_vartime(&order);
         let cofactor = &coproduct * cofactor.widen();
 
         let p_adic_basis = array::from_fn(|exp| BigNum::from_prime_power(base as usize, exp));
@@ -236,7 +236,8 @@ pub mod poke_i {
             .widening_mul(&five_torsion.order)
             .truncate();
 
-        let inv_three_order_mod_two_order = three_torsion.order.invert_mod(&two_torsion.order);
+        let inv_three_order_mod_two_order =
+            three_torsion.order.invert_mod_vartime(&two_torsion.order);
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
         let two_quaternion_basis = (
@@ -745,7 +746,8 @@ pub mod poke_iii {
             .widening_mul(&five_torsion.order)
             .truncate();
 
-        let inv_three_order_mod_two_order = three_torsion.order.invert_mod(&two_torsion.order);
+        let inv_three_order_mod_two_order =
+            three_torsion.order.invert_mod_vartime(&two_torsion.order);
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
         let two_quaternion_basis = (
@@ -1272,7 +1274,8 @@ pub mod poke_v {
             .widening_mul(&five_torsion.order)
             .truncate();
 
-        let inv_three_order_mod_two_order = three_torsion.order.invert_mod(&two_torsion.order);
+        let inv_three_order_mod_two_order =
+            three_torsion.order.invert_mod_vartime(&two_torsion.order);
 
         let (P, Q) = starting_curve.lift_basis(&two_torsion_basis);
         let two_quaternion_basis = (

@@ -7,7 +7,7 @@ use isogeny::utilities::bn::{
     bn_add_vartime, bn_bit_length_vartime, bn_mul_by_u64_vartime, bn_mul_vartime,
     bn_sub_into_vartime, factorisation_to_bn_vartime, prime_power_to_bn_vartime,
 };
-use num_bigint::BigUint;
+use rug::{Integer, integer::Order};
 
 #[derive(Debug, PartialEq)]
 pub struct BigNumArb {
@@ -336,7 +336,7 @@ impl<const NUM_WORDS: usize> MulAssign<BigNum<NUM_WORDS>> for BigNum<NUM_WORDS> 
 
 impl<const NUM_WORDS: usize> fmt::Display for BigNum<NUM_WORDS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        BigUint::from_bytes_le(&self.to_le_bytes()).fmt(f)
+        Integer::from_digits(self.as_le_words(), Order::Lsf).fmt(f)
     }
 }
 

@@ -307,8 +307,8 @@ pub fn represent_integer<const NUM_WORDS: usize, const NUM_WORDS_P: usize>(
     let PRIMES = SMALL_PRIMES.map(|prime| Integer::from(prime));
     let BAD_PRIMES = SMALL_BAD_PRIMES.map(|prime| Integer::from(prime));
 
-    let target_norm = Integer::from_digits(&target_norm.to_le_bytes(), Order::Lsf);
-    let p = Integer::from_digits(&p.to_le_bytes(), Order::Lsf);
+    let target_norm = Integer::from_digits(target_norm.as_le_words(), Order::Lsf);
+    let p = Integer::from_digits(p.as_le_words(), Order::Lsf);
     let target_norm_over_p = &target_norm / p.clone();
 
     // FIXME: does this do rounding division? And does rounding division mess up our parameters?

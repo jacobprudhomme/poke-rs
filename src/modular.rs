@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use isogeny::utilities::bn::bn_mul_vartime;
-use num_bigint::BigUint;
+use rug::{Integer, integer::Order};
 
 use crate::bn::BigNum;
 
@@ -45,18 +45,18 @@ impl<const NUM_WORDS: usize> BigNum<NUM_WORDS> {
     }
 
     // WARN: Assumes n is a unit with respect to the modulus
-    pub fn invert_mod<const NUM_WORDS_MOD: usize>(
+    pub fn invert_mod_vartime<const NUM_WORDS_MOD: usize>(
         &self,
         modulus: &BigNum<NUM_WORDS_MOD>,
     ) -> BigNum<NUM_WORDS_MOD> {
-        let this = BigUint::from_bytes_le(&self.to_le_bytes());
-        let modulus = BigUint::from_bytes_le(&modulus.to_le_bytes());
+        let this = Integer::from_digits(self.as_le_words(), Order::Lsf);
+        let modulus = Integer::from_digits(modulus.as_le_words(), Order::Lsf);
 
-        let Some(inverse) = this.modinv(&modulus) else {
-            unreachable!("Input should have been a unit with respect to the modulus");
+        let Ok(inverse) = this.invert(&modulus) else {
+            unreachable!("Input should be a unit with respect to the modulus");
         };
 
-        BigNum::new(&inverse.to_u64_digits())
+        BigNum::new(inverse.as_limbs())
     }
 }
 

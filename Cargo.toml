@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-fp2 = "0.3"
-isogeny = { path = "isogeny_rs" }
+fp2 = { git = "https://github.com/jacobprudhomme/fp2", branch = "additions-for-poke" }
+isogeny = { git = "https://github.com/jacobprudhomme/isogeny_rs", branch = "additions-for-poke" }
 rand = "0.9"
 rand_core = "0.9"
 rug = "1.28.0"

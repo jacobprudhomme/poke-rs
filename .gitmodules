@@ -1,4 +1,0 @@
-[submodule "isogeny_rs"]
-	path = isogeny_rs
-	url = git@github.com:jacobprudhomme/isogeny_rs.git
-	branch = additions-for-poke

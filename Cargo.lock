@@ -229,6 +229,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fp2"
+version = "0.3.0"
+source = "git+https://github.com/jacobprudhomme/fp2?branch=additions-for-poke#d3696aede54a5900425dec6cb41a73f24a473d5c"
+dependencies = [
+ "rand_core 0.9.3",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -351,7 +359,7 @@ dependencies = [
 name = "isogeny"
 version = "0.1.0"
 dependencies = [
- "fp2",
+ "fp2 0.3.0 (git+https://github.com/jacobprudhomme/fp2?branch=additions-for-poke)",
  "rand 0.9.2",
  "rand_core 0.9.3",
  "sha3",
@@ -500,7 +508,7 @@ name = "poke"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "fp2",
+ "fp2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "isogeny",
  "num-bigint",
  "rand 0.9.2",

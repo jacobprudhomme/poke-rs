@@ -2,9 +2,9 @@
 
 Rust implementations of POKÉ and INKE, compact and efficient public-key encryption schemes from higher-dimensional isogenies. These are meant to be cryptographic-quality reference implementations of the algorithms, both to give a real-world-ish estimate of their efficiency, as well as to give people a clean, correct and documented implementation they can refer to. However&mdash;and this should go without saying&mdash;**DO NOT USE THEM IN A PRODUCTION ENVIRONMENT**!
 
-These were implemented as one part of my master's thesis within [LASEC](https://lasec.epfl.ch) at EPFL: "Gotta Study 'Em All: An efficiency and security analysis of the POKÉ family of PKEs from higher-dimensional isogenies". This project was co-supervised by Dr. Andrea Basso at IBM Research Zürich and Prof. Péter Kutas at Eötvös Loránd University (ELTE).
+These were implemented as one part of my master's thesis within [LASEC](https://lasec.epfl.ch) at EPFL: "Gotta Study 'Em All: An efficiency and security analysis of the POKÉ family of PKEs from higher-dimensional isogenies". This project was co-supervised by [Dr. Andrea Basso](https://research.ibm.com/people/andrea-basso) at IBM Research Zürich (Foundational Cryptography group) and [Prof. Péter Kutas](https://sites.google.com/view/peterkutas89) at Eötvös Loránd University (ELTE, Department of Computer Algebra).
 
-This implementation relies heavily on the great libraries [fp2](https://github.com/GiacomoPope/fp2) and [isogeny_rs](https://github.com/GiacomoPope/isogeny_rs) by Dr. Giacomo Pope, for the former's finite field arithmetic, and the latter's 1D/2D-isogeny computations and other useful functionality (big number arithmetic, pairings, discrete logarithms, etc.).
+This implementation relies heavily on the great libraries [fp2](https://github.com/GiacomoPope/fp2) and [isogeny_rs](https://github.com/GiacomoPope/isogeny_rs) by [Dr. Giacomo Pope](https://giacomopope.com), for the former's finite field arithmetic, and the latter's 1D/2D-isogeny computations and other useful functionality (big number arithmetic, pairings, discrete logarithms, etc.).
 
 Source literature:
 
@@ -16,6 +16,40 @@ In the future, I plan to also include an implementation of PIKE:
 - [PIKE: Faster Isogeny-Based Public Key Encryption with Pairing-Assisted Decryption](https://eprint.iacr.org/2026/473)
 
 ## Using the library
+
+This library exposes submodules `poke` and `inke`, which contain the respective key generation, encryption and decryption functions for these each scheme, and a `params` submodule which allows for the selection of the parameter set to be used. At the top-level, constants `SUCCESS_RETVAL` and `FAILURE_RETVAL` are also exposed, to allow checking execution state of these functions.
+
+Here is an example:
+
+```rust
+use poke::{
+    SUCCESS_RETVAL,
+    inke::{decrypt, encrypt, keygen},
+    params,
+};
+
+fn main() {
+    let params = params::poke_i::get_params();
+
+    let mut status = true;
+
+    let (pub_key, prv_key, ok) = keygen(&params);
+    status &= ok;
+
+    let message = [1, 2, 3, 4];
+    let (ct, ok) = encrypt(&params, &pub_key, &message);
+    status &= ok;
+
+    let (dec_message, ok) = decrypt(&params, &prv_key, &ct);
+    status &= ok;
+
+    if status != SUCCESS_RETVAL {
+        println!("Something broke!");
+    } else {
+        println!(dec_message);
+    }
+}
+```
 
 ## Examples
 
@@ -73,6 +107,7 @@ All benchmarks were collected on an 2021 M1 MacBook Pro, 14", at 1000 iterations
 
 - [ ] Replace modular reduction from [rug](https://docs.rs/rug/latest/rug) with my own constant-time implementation (this is the only non-constant-time part remaining that can currently be made constant-time)
 - [ ] Add complete test suite
+- [ ] Improve ergonomics of the exposed interface
 - [ ] Integrate reusable parts of library into [isogeny_rs](https://github.com/GiacomoPope/isogeny_rs)
 - [ ] Split INKE out into its own package
 - [ ] Publish crate
